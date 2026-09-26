@@ -1,0 +1,25 @@
+// use prisma-8
+
+model Astro {
+  id          String      @id @default(uuid())
+  name        String
+  email       String      @unique
+  blog        Blogs[]
+}
+
+model User {
+  id          String      @id @default(uuid())
+  email       String      @unique
+  name        String
+  credits     Int
+}
+
+model Blogs {
+  id          String      @id @default(uuid())
+  title       String   
+  Descr       String
+  Like        Int
+  Comment     String
+  astroId     String?
+  astro       Astro?      @relation(fields: [astroId], references: [id])
+}
