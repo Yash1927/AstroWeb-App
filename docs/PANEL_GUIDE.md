@@ -2,7 +2,9 @@
 
 Plain-language instructions for running the app day to day, written for people who aren't technical. Update this guide whenever something in the owner panel or the astrologer panel changes.
 
-Last updated: 2026-09-30 (the panels aren't built yet)
+Last updated: 2026-09-30 (the panels are placeholders)
+
+The owner route at `/owner` and astrologer route at `/astrologer` currently show “Coming in a later step.” They are intentionally separate from the user app and do not show its bottom tabs. The owner panel is built in Step 3 and the astrologer panel starts in Step 4.
 
 ## For the owner
 

@@ -8,7 +8,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 | # | Step | Status | Feature doc | Notes |
 |---|---|---|---|---|
-| 1 | Foundation, design.css, app shell | Not started | — | |
+| 1 | Foundation, design.css, app shell | Done | [01-foundation-app-shell.md](features/01-foundation-app-shell.md) | Backend foundation, shared design system and routed app shell are in place. |
 | 2 | Database and seed | Not started | — | |
 | 3 | Owner panel | Not started | — | |
 | 4 | Astrologer login and profile | Not started | — | |
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Step 1: foundation, design.css and app shell.
+Step 2: database and seed.
 
 ## Known issues
 
@@ -35,5 +35,6 @@ Bugs, limitations and loose ends that aren't fixed yet. When one is fixed, remov
 
 | Issue | Where | Found | Plan |
 |---|---|---|---|
-| Boilerplate bugs listed in README §14: no `app.listen`, routes not mounted, wrong `db` import, broken WebSocket message handler, blog schema can't store likes or comments, CORS open to every site | `backend/` | Before Step 1 | Fixed in Steps 1, 2 and 10 |
-| The frontend is still the Vite starter template | `frontend/` | Before Step 1 | Replaced in Step 1 |
+| The WebSocket handler is attached at the wrong level and supports only one global call | `backend/src/realtime/` | Before Step 1 | Rebuilt in Step 10 |
+| The early database schema cannot represent the required app data | `backend/src/prisma/contract.prisma` | Before Step 1 | Rebuilt in Step 2 |
+| `npm audit` reports 5 moderate and 8 high issues in the backend development dependency tree; the production-only audit reports 0 | `backend/package-lock.json` | Step 1 | Review dependency upgrades with the Prisma stable upgrade before launch |

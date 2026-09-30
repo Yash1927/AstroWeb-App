@@ -1,10 +1,8 @@
-import { Router } from "express"; 
-import { client } from "../src/prisma/db";
+import { Router } from "express";
+import { db } from "../src/prisma/db";
 
 const router = Router();
 
-router.post("/auth", (req, res) => {
+void db;
 
-})
-
-export default router
+export default router;

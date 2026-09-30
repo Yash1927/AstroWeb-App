@@ -20,9 +20,13 @@ Each status is one of: Not started · Done · Needs manual check.
 | 10 | Access | Every route checks the role and the specific record, with tests | Not started | | |
 | 11 | Access | WebSocket: session auth on upgrade, `Origin` check, booking participants only, only during the call window | Not started | | |
 | 12 | Access | Short-lived TURN credentials for each call | Not started | | |
-| 13 | General | HTTPS only with HSTS; CORS limited to `APP_ORIGIN` (the boilerplate currently allows every site) | Not started | | |
+| 13 | General | HTTPS only with HSTS; CORS limited to `APP_ORIGIN` | Needs manual check | `backend/index.ts` (CORS); HTTPS and HSTS are not built | Local requests verified that the configured origin receives credentialed CORS headers and another origin does not receive permission for itself. Production HTTPS and HSTS remain for Step 16. |
 | 14 | General | Security headers with a Content Security Policy that still allows Razorpay and Google sign-in | Not started | | |
 | 15 | General | Every request validated with `zod` | Not started | | |
 | 16 | General | User and blog text never rendered as HTML | Not started | | |
 | 17 | General | No birth details, phone numbers or tokens in logs | Not started | | |
 | 18 | General | Neon connections keep `sslmode=require`; `.env` never committed | Not started | | |
+
+Step 1 also defaults CORS to deny cross-origin access when `APP_ORIGIN` is absent. The public health route accepts no body, params or query, so it has no request data to validate. No login, sessions, payments, personal data logging or protected records exist yet.
+
+`npm audit --omit=dev` reports no production dependency vulnerabilities as of 2026-09-30. The full backend audit reports 5 moderate and 8 high findings in development dependencies; the planned dependency review is tracked in `docs/PROGRESS.md`.

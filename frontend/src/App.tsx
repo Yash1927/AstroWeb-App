@@ -1,121 +1,207 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { lazy, Suspense } from 'react'
+import {
+  Link,
+  NavLink,
+  Outlet,
+  Route,
+  Routes,
+} from 'react-router-dom'
 
-function App() {
-  const [count, setCount] = useState(0)
+const DesignPage = import.meta.env.DEV
+  ? lazy(() => import('./screens/DesignPage'))
+  : null
+
+type TabIconProps = {
+  name: 'home' | 'history' | 'blogs' | 'settings'
+}
+
+function TabIcon({ name }: TabIconProps) {
+  if (name === 'home') {
+    return (
+      <svg aria-hidden="true" className="bottom-tab-bar__icon" viewBox="0 0 24 24">
+        <path d="M3.5 10.5 12 3l8.5 7.5v9a1.5 1.5 0 0 1-1.5 1.5h-4.5v-6h-5v6H5a1.5 1.5 0 0 1-1.5-1.5z" />
+      </svg>
+    )
+  }
+
+  if (name === 'history') {
+    return (
+      <svg aria-hidden="true" className="bottom-tab-bar__icon" viewBox="0 0 24 24">
+        <path d="M4 4v5h5M5.2 16.7A8.5 8.5 0 1 0 4 9M12 7v5l3 2" />
+      </svg>
+    )
+  }
+
+  if (name === 'blogs') {
+    return (
+      <svg aria-hidden="true" className="bottom-tab-bar__icon" viewBox="0 0 24 24">
+        <path d="M5 3.5h11a3 3 0 0 1 3 3V20H7a2 2 0 0 1-2-2zM5 17.5a2.5 2.5 0 0 1 2.5-2.5H19M9 8h6" />
+      </svg>
+    )
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
+    <svg aria-hidden="true" className="bottom-tab-bar__icon" viewBox="0 0 24 24">
+      <path d="M12 8.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7Z" />
+      <path d="m19 13.5 1.3 1-.2 2.2-1.5.7-.8 1.4.1 1.7-2 1-1.3-1-1.6.3-1 1.3-2.1-.7-.2-1.7-1.2-1.1-1.7.2-.9-2 1.1-1.3-.1-1.6-1.3-1 .7-2.1 1.7-.2 1.1-1.2-.2-1.7 2-1 1.3 1 1.6-.2 1-1.4 2.1.7.2 1.7 1.2 1.1 1.7-.1.9 2-1 1.3z" />
+    </svg>
+  )
+}
+
+const tabs = [
+  { label: 'Home', name: 'home' as const, path: '/', end: true },
+  { label: 'History', name: 'history' as const, path: '/history' },
+  { label: 'Blogs', name: 'blogs' as const, path: '/blogs' },
+  { label: 'Settings', name: 'settings' as const, path: '/settings' },
+]
+
+function BottomTabBar() {
+  return (
+    <nav aria-label="Main navigation" className="bottom-tab-bar">
+      {tabs.map((tab) => (
+        <NavLink
+          className="bottom-tab-bar__link"
+          end={tab.end}
+          key={tab.path}
+          to={tab.path}
         >
-          Count is {count}
-        </button>
+          <TabIcon name={tab.name} />
+          <span>{tab.label}</span>
+        </NavLink>
+      ))}
+    </nav>
+  )
+}
+
+function UserShell() {
+  return (
+    <div className="app-shell">
+      <main className="app-main">
+        <Outlet />
+      </main>
+      <BottomTabBar />
+    </div>
+  )
+}
+
+type PlaceholderProps = {
+  description: string
+  title: string
+}
+
+function Placeholder({ description, title }: PlaceholderProps) {
+  return (
+    <section className="screen">
+      <h1>{title}</h1>
+      <p className="screen__intro">{description}</p>
+    </section>
+  )
+}
+
+function LaterStep({ title }: { title: string }) {
+  return (
+    <section className="screen">
+      <h1>{title}</h1>
+      <p className="screen__intro">Coming in a later step.</p>
+    </section>
+  )
+}
+
+function PanelPlaceholder({ title }: { title: string }) {
+  return (
+    <main className="standalone-page screen">
+      <section className="card">
+        <h1>{title}</h1>
+        <p>Coming in a later step.</p>
       </section>
+    </main>
+  )
+}
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
+function NotFound() {
+  return (
+    <main className="standalone-page screen">
+      <section className="card">
+        <h1>Page not found</h1>
+        <p>This page does not exist.</p>
+        <Link className="button button--secondary" to="/">
+          Go home
+        </Link>
       </section>
+    </main>
+  )
+}
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+const policyPages = [
+  ['terms', 'Terms'],
+  ['privacy', 'Privacy'],
+  ['refunds', 'Refunds'],
+  ['shipping', 'Shipping'],
+  ['contact', 'Contact'],
+  ['about', 'About'],
+  ['pricing', 'Pricing'],
+] as const
+
+function App() {
+  return (
+    <Routes>
+      <Route element={<UserShell />}>
+        <Route
+          index
+          element={
+            <Placeholder
+              description="Astrologer profiles will appear here in Step 5."
+              title="Home"
+            />
+          }
+        />
+        <Route
+          path="history"
+          element={
+            <Placeholder
+              description="Your upcoming and past calls will appear here in Step 9."
+              title="History"
+            />
+          }
+        />
+        <Route
+          path="blogs"
+          element={
+            <Placeholder
+              description="Articles from astrologers will appear here in Step 14."
+              title="Blogs"
+            />
+          }
+        />
+        <Route path="blogs/:id" element={<LaterStep title="Blog post" />} />
+        <Route
+          path="settings"
+          element={
+            <Placeholder
+              description="Your details and account options will appear here in Step 6."
+              title="Settings"
+            />
+          }
+        />
+        <Route path="call/:bookingId" element={<LaterStep title="Call room" />} />
+        {policyPages.map(([path, title]) => (
+          <Route key={path} path={path} element={<LaterStep title={title} />} />
+        ))}
+      </Route>
+      <Route path="astrologer" element={<PanelPlaceholder title="Astrologer panel" />} />
+      <Route path="owner" element={<PanelPlaceholder title="Owner panel" />} />
+      {DesignPage ? (
+        <Route
+          path="_design"
+          element={
+            <Suspense fallback={<main className="design-page">Loading design page…</main>}>
+              <DesignPage />
+            </Suspense>
+          }
+        />
+      ) : null}
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   )
 }
 

@@ -1,9 +1,5 @@
 import { Router } from "express";
 
-const router = Router()
-
-router.post('/auth', (req, res) => {
-
-})
+const router = Router();
 
 export default router;

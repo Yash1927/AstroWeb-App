@@ -9,6 +9,8 @@ wss.on('connection', (ws) => {
     ws.on('error', console.error);
     wss.on('message', (data:any) => {
         const message = JSON.parse(data)
+
+        
     })
 
     ws.send("Something")
