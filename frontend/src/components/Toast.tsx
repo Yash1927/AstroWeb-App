@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { createPortal } from 'react-dom'
 
 type ToastProps = {
   kind?: 'success' | 'error'
@@ -20,7 +21,7 @@ export function Toast({
     return () => window.clearTimeout(timeout)
   }, [onDismiss, open])
 
-  return (
+  return createPortal(
     <div
       aria-hidden={!open}
       aria-live={kind === 'error' ? 'assertive' : 'polite'}
@@ -38,6 +39,7 @@ export function Toast({
       >
         <span aria-hidden="true">×</span>
       </button>
-    </div>
+    </div>,
+    document.body,
   )
 }

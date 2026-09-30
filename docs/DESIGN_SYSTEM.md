@@ -34,16 +34,16 @@ Last updated: 2026-09-30
 
 | Component | File | Variants / props | Used on |
 |---|---|---|---|
-| Button | `frontend/src/components/Button.tsx` | Primary, secondary, text, disabled, optional soft glow | Design page; ready for later screens |
-| Card | `frontend/src/components/Card.tsx` | Default, compact, interactive hover | Panel placeholders and design page |
-| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour | Design page; ready for people throughout the app |
-| BottomSheet | `frontend/src/components/BottomSheet.tsx` | Labelled modal, backdrop, close button, Escape key | Design page |
-| Dialog | `frontend/src/components/Dialog.tsx` | Labelled modal, backdrop, close button, Escape key | Design page |
-| Toast | `frontend/src/components/Toast.tsx` | Success or error; live region; closes after four seconds | Design page |
-| Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Design page |
+| Button | `frontend/src/components/Button.tsx` | Primary, secondary, text, disabled, optional soft glow | Design page and owner panel |
+| Card | `frontend/src/components/Card.tsx` | Default, compact, interactive hover | Owner and placeholder screens; design page |
+| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour | Owner astrologer list and profile; design page |
+| BottomSheet | `frontend/src/components/BottomSheet.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Design page |
+| Dialog | `frontend/src/components/Dialog.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Owner add, profile and password forms; design page |
+| Toast | `frontend/src/components/Toast.tsx` | Body portal; success or error; live region; closes after four seconds | Owner action feedback; design page |
+| Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Owner authentication/list loading; design page |
 | StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Design page |
-| Inputs and selects | `frontend/src/design.css` | Label, hint, error, input and select classes | Design page |
-| Chips | `frontend/src/design.css` | Default and selected | Design page |
+| Inputs and selects | `frontend/src/design.css` | Label, hint, error, input, rupee input and select classes | Owner forms and design page |
+| Chips | `frontend/src/design.css` | Default and selected | Owner section navigation and design page |
 | Bottom tab bar | `frontend/src/App.tsx` | Home, History, Blogs and Settings; gold active tab | User app shell and design preview |
 | Call control | `frontend/src/design.css` | Pressed and icon cross-fade states | Design page; call room comes later |
 
@@ -79,7 +79,7 @@ Last updated: 2026-09-30
 | Call room | `/call/:bookingId` | Later-step placeholder | 1 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
 | Astrologer panel | `/astrologer` | “Coming in a later step” | 1 |
-| Owner panel | `/owner` | “Coming in a later step” | 1 |
+| Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management and pricing/settings | 3 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
 | Not found | Any unmatched path | Link back to Home | 1 |
 
@@ -89,9 +89,13 @@ Messages shown in the UI, so the same situation always uses the same words.
 
 | Situation | Text | Where |
 |---|---|---|
-| Later feature route | “Coming in a later step.” | Call, blog post, policies and both panels |
+| Later feature route | “Coming in a later step.” | Call, blog post, policies and the astrologer panel |
 | Unknown route | “This page does not exist.” | Not-found screen |
 | Design success toast | “Your changes were saved.” | Development design page |
+| Owner login error | “The email or password is incorrect.” | Owner login |
+| Settings scope | “Changes apply to new bookings only.” | Owner pricing and call settings |
+| Temporary password hint | “At least 10 characters. Share it securely.” | Add astrologer |
+| Empty owner list | “No astrologers yet” | Owner astrologer section |
 
 ## Accessibility
 
@@ -100,7 +104,11 @@ Messages shown in the UI, so the same situation always uses the same words.
 - Current interactive targets have a minimum rendered size of 48×48px.
 - Body type starts at `1rem`, uses a 1.6 line height, and text containers do not use fixed heights.
 - Bottom sheets and dialogs have names, modal semantics, close buttons, backdrop dismissal and Escape handling. Closed overlays are inert.
+- Dialog and BottomSheet focus the close control once when they open. Re-rendering controlled form fields does not steal focus; their Escape listeners call the latest close callback.
+- Dialog, BottomSheet and Toast use React portals into `document.body`, so a transformed screen animation cannot confine their fixed positioning to the page column.
+- Owner settings validation places a specific error beside every invalid field and links it with `aria-describedby` and `aria-invalid`.
 - Toasts use polite or assertive live regions according to their kind.
 - Avatars use `Intl.Segmenter` for initials in Latin and non-Latin scripts and expose the person's name.
 - A 360px browser emulation check found no horizontal overflow on the app shell or design page.
+- Owner cards, action buttons and forms use wrapping/minmax layouts so they fit the 360px mobile baseline without fixed content widths. A fresh rendered check remains in the Step 3 manual try-out because no browser surface was available in the build session.
 - `prefers-reduced-motion: reduce` changes all animations and transitions to one 1ms iteration.

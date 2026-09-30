@@ -6,6 +6,7 @@ import {
   Route,
   Routes,
 } from 'react-router-dom'
+import OwnerPage from './screens/OwnerPage'
 
 const DesignPage = import.meta.env.DEV
   ? lazy(() => import('./screens/DesignPage'))
@@ -189,7 +190,7 @@ function App() {
         ))}
       </Route>
       <Route path="astrologer" element={<PanelPlaceholder title="Astrologer panel" />} />
-      <Route path="owner" element={<PanelPlaceholder title="Owner panel" />} />
+      <Route path="owner" element={<OwnerPage />} />
       {DesignPage ? (
         <Route
           path="_design"

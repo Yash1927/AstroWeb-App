@@ -24,6 +24,7 @@ npm install
 | Variable | File | What it's for | Needed from step | Example |
 |---|---|---|---|---|
 | `PORT` | `backend/.env` | Backend HTTP port; optional | 1 | `3000` |
+| `NODE_ENV` | `backend/.env` | Enables Secure cookies when set to `production`; optional in development | 3 | `development` |
 | `APP_ORIGIN` | `backend/.env` | The one browser origin allowed by CORS | 1 | `http://localhost:5173` |
 | `DATABASE_URL` | `backend/.env` | Neon pooled runtime connection | 2 | See `backend/.env.example` |
 | `DIRECT_DATABASE_URL` | `backend/.env` | Neon direct migration connection | 2 | See `backend/.env.example` |
@@ -50,6 +51,7 @@ npm install
 | Frontend dev server | `frontend/` | `npm run dev` |
 | Frontend production build | `frontend/` | `npm run build` |
 | Frontend lint | `frontend/` | `npm run lint` |
+| Frontend tests | `frontend/` | `npm test` |
 | Emit the Prisma contract | `backend/` | `npm run contract:emit` |
 | Plan a named migration | `backend/` | `npm run migration:plan -- --name <name>` |
 | Check migration packages | `backend/` | `npm run migration:check` |
@@ -60,11 +62,12 @@ npm install
 
 ## Running locally
 
-1. From `backend/`, copy `.env.example` to `.env`. Keep `PORT="3000"` and `APP_ORIGIN="http://localhost:5173"` for the normal local setup. The service placeholders are not used in Step 1.
+1. From `backend/`, copy `.env.example` to `.env`. Keep `PORT="3000"`, `NODE_ENV="development"` and `APP_ORIGIN="http://localhost:5173"` for the normal local setup. Set `SESSION_SECRET` to at least 32 random characters.
 2. Run `npm install`, then `npm run dev` in `backend/`.
 3. In another terminal, run `npm install`, then `npm run dev` in `frontend/`.
 4. Open `http://localhost:5173`. Vite forwards `/api` and `/ws` to `http://localhost:3000`.
 5. Open `http://localhost:5173/api/health` to verify the proxy and backend. It should show `{"ok":true}`.
+6. Open `http://localhost:5173/owner` and log in with the seeded owner credentials. The browser must go through the Vite origin so its `/api/owner` cookie and requests share one origin.
 
 The backend denies cross-origin access when `APP_ORIGIN` is missing. Requests through the Vite proxy remain same-origin.
 
@@ -99,4 +102,6 @@ _Write in Step 16:_ building and starting the app, production env vars, HTTPS an
 | A direct cross-origin request has no CORS permission | Set `APP_ORIGIN` to the exact frontend origin, without a trailing slash, and restart the backend. |
 | Migration commands cannot connect | Set `DIRECT_DATABASE_URL` to Neon's direct connection string, not the pooled `-pooler` hostname. |
 | The seed rejects its environment | Set a valid `OWNER_EMAIL` and an `OWNER_PASSWORD` of at least 10 characters. |
+| Owner login always returns 503 | Check `DATABASE_URL` and `SESSION_SECRET`; the session secret must contain at least 32 characters. |
+| The sixth owner login attempt returns 429 during development | Wait for the 15-minute window, or restart the backend process to clear the process-local development limiter. |
 | Prisma reports `RUNTIME.TEMPORAL_UNAVAILABLE` | Run `npm install`; `temporal-polyfill` must be installed and is loaded by `src/prisma/db.ts`. |

@@ -1,9 +1,9 @@
 # Step 2: Database and seed
 
-- **Status:** In progress
+- **Status:** Done
 - **Spec:** README §4, §5.2, §11, §13, §14 and §17
 - **Started:** 2026-09-30
-- **Finished:** —
+- **Finished:** 2026-09-30
 
 ## Goal
 
@@ -53,5 +53,4 @@ Replace the boilerplate database contract with the complete AstroWebApp data mod
 
 ## Follow-ups and known issues
 
-- Applying and seeding Neon currently requires `DIRECT_DATABASE_URL`, `OWNER_EMAIL` and `OWNER_PASSWORD` to be added to `backend/.env`.
-- Until that is done, the database-connected endpoints cannot be checked against the migrated contract and Step 2 remains in progress.
+- Prisma currently warns that a future `pg` major version will change `sslmode=require` semantics. README §13 explicitly requires `sslmode=require`; review the warning when upgrading `pg` or Prisma.

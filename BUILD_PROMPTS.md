@@ -209,6 +209,8 @@ Build Step 4: astrologer login and the profile with preview. Follow AGENTS.md (r
 Read first: README §2, §5.1 (what a Home card shows), §5.6, §8.1, §8.2, §9 and §12.
 
 - Astrologer login and logout at /astrologer: email + password, its own session cookie (12 hours), and the same rate limit as the owner. Deactivated astrologers can't log in.
+- Cookie paths: in backend/src/auth/session.ts, change the astrologer and user cookie paths from /api/astrologer and /api/user to "/". Later steps put their routes outside those paths (e.g. /api/me, /api/bookings) and the call WebSocket at /ws, so path-scoped cookies would never be sent there. The owner cookie can stay at /api/owner. Record this in docs/DECISIONS.md.
+- When the owner deactivates an astrologer or resets their password, delete that astrologer's existing sessions, so the change takes effect immediately.
 - If mustChangePassword is true, show "Set a new password" (at least 10 characters) before anything else.
 - Panel layout: Profile, Availability, Bookings and Blogs in the navigation, plus Log out. For now, Availability, Bookings and Blogs say "Coming in a later step".
 - Profile form:
@@ -279,7 +281,7 @@ Read first: README §2, §5.2, §5.5, §5.6, §12 (Accounts and sessions) and §
   - verifies the ID token with google-auth-library's verifyIdToken (aud = GOOGLE_CLIENT_ID, iss, exp)
   - requires email_verified
   - finds or creates the User by googleSub
-  User sessions last 30 days, in their own cookie. After sign-in, return the user to where they were; keep the chosen astrologer and call type across the Google redirect.
+  User sessions last 30 days, in their own cookie with path "/" (so it reaches /api/me, /api/bookings and /ws). After sign-in, return the user to where they were; keep the chosen astrologer and call type across the Google redirect.
 - History and Settings show a "Continue with Google" screen when signed out.
 - Continue the Home booking flow from the call-type sheet:
   - signed out → sign in

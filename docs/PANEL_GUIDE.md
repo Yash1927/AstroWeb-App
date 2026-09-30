@@ -2,20 +2,47 @@
 
 Plain-language instructions for running the app day to day, written for people who aren't technical. Update this guide whenever something in the owner panel or the astrologer panel changes.
 
-Last updated: 2026-09-30 (the panels are placeholders)
+Last updated: 2026-09-30
 
-The owner route at `/owner` and astrologer route at `/astrologer` currently show “Coming in a later step.” They are intentionally separate from the user app and do not show its bottom tabs. The owner panel is built in Step 3 and the astrologer panel starts in Step 4.
+The owner route at `/owner` is working. The astrologer route at `/astrologer` still shows “Coming in a later step.” Both are separate from the user app and do not show its bottom tabs.
 
 ## For the owner
 
-_Written from Step 3._ Cover how to:
-- log in
-- add an astrologer and give them their temporary password
-- hide, deactivate or reactivate an astrologer
-- reset an astrologer's password
-- change prices and call durations
-- delete blog comments (from Step 14)
-- refund a payment in the Razorpay dashboard (README §16.2, question 5)
+### Log in and out
+
+1. Open `/owner`.
+2. Enter the owner email and password created by the database seed.
+3. Use **Log out** when you finish. Logging out ends the server session, so the old cookie cannot be reused.
+
+Five failed attempts for the same email and internet address use the login allowance. The sixth is blocked for the rest of the 15-minute window. During local development, restarting the backend clears this in-memory block.
+
+### Add and manage an astrologer
+
+1. In **Astrologers**, choose **Add astrologer**.
+2. Enter their name, email and a temporary password of at least 10 characters.
+3. Send the temporary password to them through a secure private channel. The app never shows it again. They will have to replace it when astrologer login is built in Step 4.
+
+Each card has these actions:
+
+| Action | What it does |
+|---|---|
+| **View and edit** | Shows the full stored profile and lets you change the name or email. |
+| **Hide from Home** / **Show on Home** | Changes whether an eligible, saved profile may appear to users. Unsaved profiles remain off Home when Step 4 adds the saved-profile check. |
+| **Deactivate** | Stops the future astrologer login and hides the account from Home. |
+| **Reactivate** | Restores the account, but leaves it hidden until you choose **Show on Home**. |
+| **Reset password** | Stores a new temporary password and requires the astrologer to replace it on their next login. |
+
+### Change prices and call durations
+
+1. Open **Pricing & call settings**.
+2. Enter prices in rupees. The app stores them as whole paise.
+3. Choose 10, 15 or 30 minutes for each call type.
+4. Set how many calls belong in one subscription pack.
+5. Choose **Save changes**.
+
+The note “Changes apply to new bookings only.” means existing booking history will keep the amount originally charged once bookings are built.
+
+Deleting blog comments arrives in Step 14. Payment refunds are handled in the Razorpay dashboard after payments are built.
 
 ## For astrologers
 

@@ -71,3 +71,10 @@ Use this format:
 - **Context:** Prisma 8 release-candidate contracts map PostgreSQL `date`, `time` and `timestamptz` to the Temporal API. Node.js 24 does not provide that API globally.
 - **Decision:** Keep the native temporal contract types and load `temporal-polyfill/global` once in `backend/src/prisma/db.ts`.
 - **Consequences:** The database types stay faithful to README §11, while the Prisma runtime works on the project's Node.js 24 environment. `temporal-polyfill` is a runtime dependency.
+
+## D-008: New astrologers start listed but remain absent from Home until their profile is saved
+- **Date:** 2026-09-30
+- **Status:** Accepted (owner's instruction)
+- **Context:** The `Astrologer.isListed` schema default is false, while README §8.2 says a saved profile appears on Home immediately. Step 3 explicitly requires owner-created accounts to start with `isListed = true`.
+- **Decision:** The owner create route sets `isListed = true`. Step 4 will add the saved-profile marker, and the public Home query in Step 5 will require all three conditions: active, listed and profile saved.
+- **Consequences:** Creating an account expresses the owner's intent to list it, but no unfinished profile can appear publicly. Deactivation sets `isListed = false`; reactivation does not relist the account without another owner action.

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 type BottomSheetProps = {
   children: ReactNode
@@ -16,6 +17,11 @@ export function BottomSheet({
 }: BottomSheetProps) {
   const titleId = useId()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return
@@ -23,14 +29,14 @@ export function BottomSheet({
     closeButtonRef.current?.focus()
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
     }
 
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [onClose, open])
+  }, [open])
 
-  return (
+  return createPortal(
     <div
       aria-hidden={!open}
       className="modal-layer bottom-sheet-layer"
@@ -59,6 +65,7 @@ export function BottomSheet({
         </div>
         {children}
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }

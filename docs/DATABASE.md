@@ -6,7 +6,7 @@ Last updated: 2026-09-30
 
 ## Current state
 
-The complete 13-table contract and migration package exist in the repository. Migration `20260930T0841_database_schema` replaces the empty boilerplate tables, enables `btree_gist` and adds the active-booking overlap constraint. The package passes Prisma's offline integrity check but has not been applied to Neon because `DIRECT_DATABASE_URL` is not configured locally.
+The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Prisma reports that the database marker and live schema match the emitted contract.
 
 The running app and seed use pooled `DATABASE_URL`. Migration commands use direct `DIRECT_DATABASE_URL`. Money columns are whole paise. Instants are PostgreSQL `timestamptz`; local calendar dates and availability clock times use `date` and `time`.
 
@@ -20,7 +20,7 @@ The running app and seed use pooled `DATABASE_URL`. Migration commands use direc
 | `email` | text | No | Unique |
 | `passwordHash` | text | No | Argon2id hash; never the plain password |
 
-The Step 2 seed creates the one owner row. Login is not built yet.
+The Step 2 seed creates the one owner row. Step 3 reads its hash for owner login; neither the API nor UI returns the hash.
 
 ### `Astrologer`
 
@@ -28,7 +28,7 @@ The Step 2 seed creates the one owner row. Login is not built yet.
 |---|---|---|---|
 | `id` | text | No | UUID |
 | `email` | text | No | Unique |
-| `passwordHash` | text | No | Password login is built in Step 4 |
+| `passwordHash` | text | No | Step 3 owner actions create/reset an Argon2id temporary hash; astrologer login is built in Step 4 |
 | `mustChangePassword` | boolean | No | `true` |
 | `displayName` | text | No | — |
 | `expertise` | text[] | No | Empty array; null array elements are rejected |
@@ -39,6 +39,8 @@ The Step 2 seed creates the one owner row. Login is not built yet.
 | `createdAt` | timestamptz(3) | No | Current time |
 
 Relations: availability rules, availability exceptions, bookings and blogs.
+
+Step 3 owner creates override the database's `isListed = false` default with `true` and leave `mustChangePassword = true`. The saved-profile condition added in Step 4 will still keep unfinished accounts off Home. Deactivation sets both `isActive = false` and `isListed = false`; reactivation changes only `isActive`.
 
 ### `User`
 
@@ -178,6 +180,8 @@ The composite key makes `(blogId, userId)` unique.
 | `expiresAt` | timestamptz(3) | No | Revocation and expiry boundary |
 | `createdAt` | timestamptz(3) | No | Current time |
 
+Step 3 stores a random UUID as the session id and sends a signed form of that id in the role-specific cookie. Resolution verifies the signature, expected role and `expiresAt`. Logout and expired-session cleanup delete the row. Owner rows expire 12 hours after login.
+
 ## Rules the database enforces
 
 | Rule | Table | How | Step |
@@ -197,7 +201,7 @@ The composite key makes `(blogId, userId)` unique.
 | Migration | What it does | Step | Date | Applied |
 |---|---|---|---|---|
 | `20260926T0607_add_blog_relation` | Boilerplate: creates `Astro`, `User` and `Blogs` | Before Step 1 | 2026-09-26 | Existing baseline |
-| `20260930T0841_database_schema` | Replaces the boilerplate with the complete contract, extension and overlap constraint | 2 | 2026-09-30 | Pending required env |
+| `20260930T0841_database_schema` | Replaces the boilerplate with the complete contract, extension and overlap constraint | 2 | 2026-09-30 | Applied |
 
 The second migration was generated and self-emitted with Prisma 8. `npm run migration:check` reports that the package and its compiled `ops.json` are valid.
 

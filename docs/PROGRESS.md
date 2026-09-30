@@ -9,8 +9,8 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | # | Step | Status | Feature doc | Notes |
 |---|---|---|---|---|
 | 1 | Foundation, design.css, app shell | Done | [01-foundation-app-shell.md](features/01-foundation-app-shell.md) | Backend foundation, shared design system and routed app shell are in place. |
-| 2 | Database and seed | In progress | [02-database-and-seed.md](features/02-database-and-seed.md) | Contract, checked migration, seed, tests and endpoints are built; Neon apply/seed awaits the required environment values. |
-| 3 | Owner panel | Not started | — | |
+| 2 | Database and seed | Done | [02-database-and-seed.md](features/02-database-and-seed.md) | Neon marker and schema match the contract; the idempotent seed rows exist. |
+| 3 | Owner panel | Done | [03-owner-panel.md](features/03-owner-panel.md) | Owner sessions, protected account/settings API and the `/owner` UI are in place. |
 | 4 | Astrologer login and profile | Not started | — | |
 | 5 | Home page | Not started | — | |
 | 6 | Google login, details form, Settings | Not started | — | |
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Step 2: database and seed.
+Step 4: astrologer login and profile.
 
 ## Known issues
 
@@ -36,5 +36,5 @@ Bugs, limitations and loose ends that aren't fixed yet. When one is fixed, remov
 | Issue | Where | Found | Plan |
 |---|---|---|---|
 | The WebSocket handler is attached at the wrong level and supports only one global call | `backend/src/realtime/` | Before Step 1 | Rebuilt in Step 10 |
-| Neon still has the boilerplate schema until the checked Step 2 migration is applied | `backend/migrations/app/20260930T0841_database_schema/` | Step 2 | Configure the direct URL, then run `npm run db:migrate` |
+| Owner login throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/auth/login-rate-limit.ts` | Step 3 | Choose the production topology or a shared limiter store in Step 16 |
 | `npm audit` reports 5 moderate and 8 high issues in the backend development dependency tree; the production-only audit reports 0 | `backend/package-lock.json` | Step 1 | Review dependency upgrades with the Prisma stable upgrade before launch |

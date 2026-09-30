@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef } from 'react'
 import type { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 
 type DialogProps = {
   children: ReactNode
@@ -11,6 +12,11 @@ type DialogProps = {
 export function Dialog({ children, onClose, open, title }: DialogProps) {
   const titleId = useId()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const onCloseRef = useRef(onClose)
+
+  useEffect(() => {
+    onCloseRef.current = onClose
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return
@@ -18,14 +24,14 @@ export function Dialog({ children, onClose, open, title }: DialogProps) {
     closeButtonRef.current?.focus()
 
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') onClose()
+      if (event.key === 'Escape') onCloseRef.current()
     }
 
     document.addEventListener('keydown', closeOnEscape)
     return () => document.removeEventListener('keydown', closeOnEscape)
-  }, [onClose, open])
+  }, [open])
 
-  return (
+  return createPortal(
     <div
       aria-hidden={!open}
       className="modal-layer dialog-layer"
@@ -53,6 +59,7 @@ export function Dialog({ children, onClose, open, title }: DialogProps) {
         </div>
         {children}
       </section>
-    </div>
+    </div>,
+    document.body,
   )
 }
