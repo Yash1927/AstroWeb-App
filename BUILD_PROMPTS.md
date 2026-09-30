@@ -179,7 +179,7 @@ Read first: README §2, §3, §4, §9, §10 and §12 (Accounts and sessions; Acc
 - Owner UI at /owner: a login screen, then two sections, "Astrologers" and "Pricing & call settings".
 - Astrologers, as README §9 lists:
   - list them all
-  - add one: name, email, temporary password of at least 10 characters (mustChangePassword = true)
+  - add one: name, email, temporary password of at least 10 characters (mustChangePassword = true). Set isListed = true on create: README §8.2 says the card appears on Home once the astrologer saves their profile, and the schema default is false. Step 4 keeps astrologers who haven't saved a profile off Home. Record this in docs/DECISIONS.md.
   - view a full profile
   - edit name and email
   - hide from Home / show again (isListed)

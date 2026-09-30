@@ -57,3 +57,17 @@ Use this format:
 - **Context:** The owner wants to try each feature as soon as it's built.
 - **Decision:** Follow the 16 steps in `BUILD_PROMPTS.md`, using one Codex chat per step and the rules in `AGENTS.md`. The owner tests and commits each step.
 - **Consequences:** After every step the app still runs and the docs are up to date.
+
+## D-006: User details are nullable until booking
+- **Date:** 2026-09-30
+- **Status:** Accepted
+- **Context:** README §11 lists birth details and gender on `User`, while README §5.2 allows Google-signed-in users to like and comment before they complete the booking details form.
+- **Decision:** `birthDate`, `birthTime`, `birthPlace` and `gender` are nullable in the database, as `phone` already is. `googleSub`, `email` and `name` are required at sign-in.
+- **Consequences:** Step 6 can create a user immediately after verified Google sign-in. Booking routes must validate and require the missing details before creating a booking.
+
+## D-007: Use native temporal columns with a Node 24 polyfill
+- **Date:** 2026-09-30
+- **Status:** Accepted
+- **Context:** Prisma 8 release-candidate contracts map PostgreSQL `date`, `time` and `timestamptz` to the Temporal API. Node.js 24 does not provide that API globally.
+- **Decision:** Keep the native temporal contract types and load `temporal-polyfill/global` once in `backend/src/prisma/db.ts`.
+- **Consequences:** The database types stay faithful to README §11, while the Prisma runtime works on the project's Node.js 24 environment. `temporal-polyfill` is a runtime dependency.

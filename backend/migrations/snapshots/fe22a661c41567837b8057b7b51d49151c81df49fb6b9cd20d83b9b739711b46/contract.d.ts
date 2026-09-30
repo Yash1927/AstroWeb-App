@@ -677,25 +677,25 @@ type ContractBase = Omit<
         {
           readonly onCreate: { readonly id: 'uuidv4'; readonly kind: 'generator' };
           readonly ref: {
-            readonly column: 'id';
+            readonly entry: 'Astro';
+            readonly field: 'id';
             readonly namespace: 'public';
-            readonly table: 'Astro';
           };
         },
         {
           readonly onCreate: { readonly id: 'uuidv4'; readonly kind: 'generator' };
           readonly ref: {
-            readonly column: 'id';
+            readonly entry: 'Blogs';
+            readonly field: 'id';
             readonly namespace: 'public';
-            readonly table: 'Blogs';
           };
         },
         {
           readonly onCreate: { readonly id: 'uuidv4'; readonly kind: 'generator' };
           readonly ref: {
-            readonly column: 'id';
+            readonly entry: 'User';
+            readonly field: 'id';
             readonly namespace: 'public';
-            readonly table: 'User';
           };
         },
       ];

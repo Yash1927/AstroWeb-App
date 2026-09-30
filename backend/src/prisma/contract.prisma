@@ -1,25 +1,209 @@
 // use prisma-8
 
-model Astro {
-  id          String      @id @default(uuid())
-  name        String
-  email       String      @unique
-  blog        Blogs[]
+enum Gender {
+  male
+  female
+  other
+}
+
+enum AvailabilityExceptionKind {
+  blocked
+  extra
+}
+
+enum CallType {
+  normal
+  urgent
+  subscription
+}
+
+enum CallMode {
+  in_app
+  phone
+}
+
+enum BookingStatus {
+  pending_payment
+  confirmed
+  completed
+  missed
+  expired
+}
+
+enum PaymentPurpose {
+  normal_call
+  urgent_call
+  subscription_pack
+}
+
+enum PaymentStatus {
+  created
+  paid
+  failed
+  refunded
+}
+
+enum BlogStatus {
+  draft
+  published
+}
+
+enum SessionRole {
+  user
+  astrologer
+  owner
+}
+
+model Owner {
+  id           String @id @default(uuid())
+  email        String @unique
+  passwordHash String
+}
+
+model Astrologer {
+  id                    String                  @id @default(uuid())
+  email                 String                  @unique
+  passwordHash          String
+  mustChangePassword    Boolean                 @default(true)
+  displayName           String
+  expertise             String[]                @default([])
+  languages             String[]                @default([])
+  experienceYears       Int                     @default(0)
+  isActive               Boolean                 @default(true)
+  isListed               Boolean                 @default(false)
+  createdAt              Timestamptz(3)          @default(now())
+  availabilityRules      AvailabilityRule[]
+  availabilityExceptions AvailabilityException[]
+  bookings               Booking[]
+  blogs                  Blog[]
 }
 
 model User {
-  id          String      @id @default(uuid())
-  email       String      @unique
-  name        String
-  credits     Int
+  id                  String        @id @default(uuid())
+  googleSub           String        @unique
+  email               String
+  name                String
+  birthDate           Date?
+  birthTime           Time(0)?
+  birthPlace          String?
+  phone               String?
+  gender              Gender?
+  subscriptionCredits Int           @default(0)
+  createdAt           Timestamptz(3) @default(now())
+  bookings            Booking[]
+  payments            Payment[]
+  blogLikes           BlogLike[]
+  blogComments        BlogComment[]
 }
 
-model Blogs {
-  id          String      @id @default(uuid())
-  title       String   
-  Descr       String
-  Like        Int
-  Comment     String
-  astroId     String?
-  astro       Astro?      @relation(fields: [astroId], references: [id])
+model AvailabilityRule {
+  id           String     @id @default(uuid())
+  astrologerId String
+  weekday      Int
+  startTime    Time(0)
+  endTime      Time(0)
+  astrologer   Astrologer @relation(fields: [astrologerId], references: [id])
+}
+
+model AvailabilityException {
+  id           String                    @id @default(uuid())
+  astrologerId String
+  date         Date
+  kind         AvailabilityExceptionKind
+  startTime    Time(0)?
+  endTime      Time(0)?
+  astrologer   Astrologer                @relation(fields: [astrologerId], references: [id])
+}
+
+model Booking {
+  id                 String        @id @default(uuid())
+  userId             String
+  astrologerId       String
+  callType           CallType
+  callMode           CallMode
+  startsAt           Timestamptz(3)
+  endsAt             Timestamptz(3)
+  status             BookingStatus
+  holdExpiresAt      Timestamptz(3)?
+  pricePaise         Int
+  usedCredit         Boolean       @default(false)
+  userJoinedAt       Timestamptz(3)?
+  astrologerJoinedAt Timestamptz(3)?
+  createdAt          Timestamptz(3) @default(now())
+  user               User          @relation(fields: [userId], references: [id])
+  astrologer         Astrologer    @relation(fields: [astrologerId], references: [id])
+  payments           Payment[]
+}
+
+model Payment {
+  id                String         @id @default(uuid())
+  userId            String
+  bookingId         String?
+  purpose           PaymentPurpose
+  razorpayOrderId   String         @unique
+  razorpayPaymentId String?        @unique
+  amountPaise       Int
+  status            PaymentStatus
+  createdAt         Timestamptz(3) @default(now())
+  user              User           @relation(fields: [userId], references: [id])
+  booking           Booking?       @relation(fields: [bookingId], references: [id])
+}
+
+model WebhookEvent {
+  eventId    String   @id
+  receivedAt Timestamptz(3) @default(now())
+}
+
+model Settings {
+  id                       Int      @id @default(1)
+  normalPricePaise         Int      @default(0)
+  urgentPricePaise         Int      @default(30000)
+  subscriptionPricePaise   Int      @default(99900)
+  subscriptionCallsPerPack Int      @default(4)
+  normalDurationMin        Int      @default(15)
+  urgentDurationMin        Int      @default(15)
+  subscriptionDurationMin  Int      @default(15)
+  updatedAt                temporal.updatedAt()
+}
+
+model Blog {
+  id           String        @id @default(uuid())
+  astrologerId String
+  title        String
+  body         String
+  status       BlogStatus    @default(draft)
+  publishedAt  Timestamptz(3)?
+  createdAt    Timestamptz(3) @default(now())
+  updatedAt    temporal.updatedAt()
+  astrologer   Astrologer    @relation(fields: [astrologerId], references: [id])
+  likes        BlogLike[]
+  comments     BlogComment[]
+}
+
+model BlogLike {
+  blogId    String
+  userId    String
+  createdAt Timestamptz(3) @default(now())
+  blog      Blog     @relation(fields: [blogId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@id([blogId, userId])
+}
+
+model BlogComment {
+  id        String   @id @default(uuid())
+  blogId    String
+  userId    String
+  body      String
+  createdAt Timestamptz(3) @default(now())
+  blog      Blog     @relation(fields: [blogId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model Session {
+  id        String      @id @default(uuid())
+  role      SessionRole
+  subjectId String
+  expiresAt Timestamptz(3)
+  createdAt Timestamptz(3) @default(now())
 }

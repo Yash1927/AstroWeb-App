@@ -1,0 +1,1773 @@
+[
+  {
+    "id": "extension.btree_gist",
+    "label": "Enable extension \"btree_gist\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "Check whether btree_gist still needs to be enabled",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'btree_gist') AS ok"
+      }
+    ],
+    "execute": [
+      {
+        "description": "Enable btree_gist",
+        "sql": "CREATE EXTENSION IF NOT EXISTS btree_gist"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "Verify btree_gist is enabled",
+        "sql": "SELECT EXISTS (SELECT 1 FROM pg_extension WHERE extname = 'btree_gist') AS ok"
+      }
+    ]
+  },
+  {
+    "id": "dropTable.Blogs",
+    "label": "Drop table \"Blogs\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Blogs"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Blogs\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blogs\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop table \"Blogs\"",
+        "sql": "DROP TABLE \"public\".\"Blogs\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Blogs\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blogs\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropTable.Astro",
+    "label": "Drop table \"Astro\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Astro"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Astro\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Astro\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop table \"Astro\"",
+        "sql": "DROP TABLE \"public\".\"Astro\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Astro\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Astro\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "dropTable.User",
+    "label": "Drop table \"User\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "User"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"User\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"User\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "drop table \"User\"",
+        "sql": "DROP TABLE \"public\".\"User\""
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"User\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"User\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Astrologer",
+    "label": "Create table \"Astrologer\"",
+    "summary": "Creates table \"Astrologer\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Astrologer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Astrologer\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Astrologer\"",
+        "sql": "CREATE TABLE \"public\".\"Astrologer\" (\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"displayName\" text NOT NULL,\n  \"email\" text NOT NULL,\n  \"experienceYears\" int4 DEFAULT 0 NOT NULL,\n  \"expertise\" text[] DEFAULT '{}' NOT NULL,\n  \"id\" text NOT NULL,\n  \"isActive\" bool DEFAULT true NOT NULL,\n  \"isListed\" bool DEFAULT false NOT NULL,\n  \"languages\" text[] DEFAULT '{}' NOT NULL,\n  \"mustChangePassword\" bool DEFAULT true NOT NULL,\n  \"passwordHash\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Astrologer_expertise_elem_not_null_0a98fe9c\" CHECK (array_position(\"expertise\", NULL) IS NULL),\n  CONSTRAINT \"Astrologer_languages_elem_not_null_d4aa0a00\" CHECK (array_position(\"languages\", NULL) IS NULL)\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Astrologer\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.AvailabilityException",
+    "label": "Create table \"AvailabilityException\"",
+    "summary": "Creates table \"AvailabilityException\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "AvailabilityException"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"AvailabilityException\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityException\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"AvailabilityException\"",
+        "sql": "CREATE TABLE \"public\".\"AvailabilityException\" (\n  \"astrologerId\" text NOT NULL,\n  \"date\" date NOT NULL,\n  \"endTime\" time(0),\n  \"id\" text NOT NULL,\n  \"kind\" text NOT NULL,\n  \"startTime\" time(0),\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"AvailabilityException_kind_check_f80667a4\" CHECK (\"kind\" IN ('blocked', 'extra'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"AvailabilityException\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityException\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.AvailabilityRule",
+    "label": "Create table \"AvailabilityRule\"",
+    "summary": "Creates table \"AvailabilityRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "AvailabilityRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"AvailabilityRule\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityRule\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"AvailabilityRule\"",
+        "sql": "CREATE TABLE \"public\".\"AvailabilityRule\" (\n  \"astrologerId\" text NOT NULL,\n  \"endTime\" time(0) NOT NULL,\n  \"id\" text NOT NULL,\n  \"startTime\" time(0) NOT NULL,\n  \"weekday\" int4 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"AvailabilityRule\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityRule\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Blog",
+    "label": "Create table \"Blog\"",
+    "summary": "Creates table \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Blog\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Blog\"",
+        "sql": "CREATE TABLE \"public\".\"Blog\" (\n  \"astrologerId\" text NOT NULL,\n  \"body\" text NOT NULL,\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"publishedAt\" timestamptz(3),\n  \"status\" text DEFAULT 'draft' NOT NULL,\n  \"title\" text NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Blog_status_check_e888e82e\" CHECK (\"status\" IN ('draft', 'published'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Blog\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.BlogComment",
+    "label": "Create table \"BlogComment\"",
+    "summary": "Creates table \"BlogComment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "BlogComment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"BlogComment\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogComment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"BlogComment\"",
+        "sql": "CREATE TABLE \"public\".\"BlogComment\" (\n  \"blogId\" text NOT NULL,\n  \"body\" text NOT NULL,\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"BlogComment\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogComment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.BlogLike",
+    "label": "Create table \"BlogLike\"",
+    "summary": "Creates table \"BlogLike\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "BlogLike"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"BlogLike\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogLike\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"BlogLike\"",
+        "sql": "CREATE TABLE \"public\".\"BlogLike\" (\n  \"blogId\" text NOT NULL,\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"blogId\", \"userId\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"BlogLike\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogLike\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Booking",
+    "label": "Create table \"Booking\"",
+    "summary": "Creates table \"Booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Booking\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Booking\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Booking\"",
+        "sql": "CREATE TABLE \"public\".\"Booking\" (\n  \"astrologerId\" text NOT NULL,\n  \"astrologerJoinedAt\" timestamptz(3),\n  \"callMode\" text NOT NULL,\n  \"callType\" text NOT NULL,\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"endsAt\" timestamptz(3) NOT NULL,\n  \"holdExpiresAt\" timestamptz(3),\n  \"id\" text NOT NULL,\n  \"pricePaise\" int4 NOT NULL,\n  \"startsAt\" timestamptz(3) NOT NULL,\n  \"status\" text NOT NULL,\n  \"usedCredit\" bool DEFAULT false NOT NULL,\n  \"userId\" text NOT NULL,\n  \"userJoinedAt\" timestamptz(3),\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Booking_callMode_check_a73543f2\" CHECK (\"callMode\" IN ('in_app', 'phone')),\n  CONSTRAINT \"Booking_callType_check_b6916e36\" CHECK (\"callType\" IN ('normal', 'urgent', 'subscription')),\n  CONSTRAINT \"Booking_status_check_7dcd0cb1\" CHECK (\"status\" IN ('pending_payment', 'confirmed', 'completed', 'missed', 'expired'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Booking\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Booking\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "constraint.Booking_no_overlap",
+    "label": "Prevent overlapping active bookings",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres"
+    },
+    "precheck": [
+      {
+        "description": "Check whether Booking_no_overlap still needs to be added",
+        "sql": "SELECT NOT EXISTS (\n              SELECT 1\n              FROM pg_constraint\n              WHERE conname = 'Booking_no_overlap'\n                AND conrelid = '\"public\".\"Booking\"'::regclass\n            ) AS ok"
+      }
+    ],
+    "execute": [
+      {
+        "description": "Add Booking_no_overlap",
+        "sql": "ALTER TABLE \"Booking\" ADD CONSTRAINT \"Booking_no_overlap\"\n              EXCLUDE USING gist (\"astrologerId\" WITH =, tstzrange(\"startsAt\", \"endsAt\") WITH &&)\n              WHERE (status IN ('pending_payment', 'confirmed'))"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "Verify Booking_no_overlap exists",
+        "sql": "SELECT EXISTS (\n              SELECT 1\n              FROM pg_constraint\n              WHERE conname = 'Booking_no_overlap'\n                AND conrelid = '\"public\".\"Booking\"'::regclass\n            ) AS ok"
+      }
+    ]
+  },
+  {
+    "id": "table.Owner",
+    "label": "Create table \"Owner\"",
+    "summary": "Creates table \"Owner\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Owner"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Owner\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Owner\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Owner\"",
+        "sql": "CREATE TABLE \"public\".\"Owner\" (\n  \"email\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"passwordHash\" text NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Owner\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Owner\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Payment",
+    "label": "Create table \"Payment\"",
+    "summary": "Creates table \"Payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Payment\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Payment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Payment\"",
+        "sql": "CREATE TABLE \"public\".\"Payment\" (\n  \"amountPaise\" int4 NOT NULL,\n  \"bookingId\" text,\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"id\" text NOT NULL,\n  \"purpose\" text NOT NULL,\n  \"razorpayOrderId\" text NOT NULL,\n  \"razorpayPaymentId\" text,\n  \"status\" text NOT NULL,\n  \"userId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Payment_purpose_check_e6409c14\" CHECK (\"purpose\" IN ('normal_call', 'urgent_call', 'subscription_pack')),\n  CONSTRAINT \"Payment_status_check_348270cb\" CHECK (\"status\" IN ('created', 'paid', 'failed', 'refunded'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Payment\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Payment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Session",
+    "label": "Create table \"Session\"",
+    "summary": "Creates table \"Session\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Session"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Session\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Session\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Session\"",
+        "sql": "CREATE TABLE \"public\".\"Session\" (\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"expiresAt\" timestamptz(3) NOT NULL,\n  \"id\" text NOT NULL,\n  \"role\" text NOT NULL,\n  \"subjectId\" text NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"Session_role_check_d574a543\" CHECK (\"role\" IN ('user', 'astrologer', 'owner'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Session\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Session\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.Settings",
+    "label": "Create table \"Settings\"",
+    "summary": "Creates table \"Settings\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "Settings"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"Settings\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Settings\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"Settings\"",
+        "sql": "CREATE TABLE \"public\".\"Settings\" (\n  \"id\" int4 DEFAULT 1 NOT NULL,\n  \"normalDurationMin\" int4 DEFAULT 15 NOT NULL,\n  \"normalPricePaise\" int4 DEFAULT 0 NOT NULL,\n  \"subscriptionCallsPerPack\" int4 DEFAULT 4 NOT NULL,\n  \"subscriptionDurationMin\" int4 DEFAULT 15 NOT NULL,\n  \"subscriptionPricePaise\" int4 DEFAULT 99900 NOT NULL,\n  \"updatedAt\" timestamptz NOT NULL,\n  \"urgentDurationMin\" int4 DEFAULT 15 NOT NULL,\n  \"urgentPricePaise\" int4 DEFAULT 30000 NOT NULL,\n  PRIMARY KEY (\"id\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"Settings\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Settings\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.WebhookEvent",
+    "label": "Create table \"WebhookEvent\"",
+    "summary": "Creates table \"WebhookEvent\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "WebhookEvent"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"WebhookEvent\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"WebhookEvent\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"WebhookEvent\"",
+        "sql": "CREATE TABLE \"public\".\"WebhookEvent\" (\n  \"eventId\" text NOT NULL,\n  \"receivedAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  PRIMARY KEY (\"eventId\")\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"WebhookEvent\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"WebhookEvent\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "table.User",
+    "label": "Create table \"User\"",
+    "summary": "Creates table \"User\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "User"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"User\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"User\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"User\"",
+        "sql": "CREATE TABLE \"public\".\"User\" (\n  \"birthDate\" date,\n  \"birthPlace\" text,\n  \"birthTime\" time(0),\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"email\" text NOT NULL,\n  \"gender\" text,\n  \"googleSub\" text NOT NULL,\n  \"id\" text NOT NULL,\n  \"name\" text NOT NULL,\n  \"phone\" text,\n  \"subscriptionCredits\" int4 DEFAULT 0 NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"User_gender_check_f90b1c49\" CHECK (\"gender\" IN ('male', 'female', 'other'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"User\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"User\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Astrologer.Astrologer_email_key",
+    "label": "Add unique constraint on \"Astrologer\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Astrologer_email_key",
+        "table": "Astrologer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Astrologer_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Astrologer_email_key",
+          "public",
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Astrologer_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"Astrologer\" ADD CONSTRAINT \"Astrologer_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Astrologer_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Astrologer_email_key",
+          "public",
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Owner.Owner_email_key",
+    "label": "Add unique constraint on \"Owner\" (email)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Owner_email_key",
+        "table": "Owner"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Owner_email_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Owner_email_key",
+          "public",
+          "\"public\".\"Owner\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Owner_email_key\"",
+        "sql": "ALTER TABLE \"public\".\"Owner\" ADD CONSTRAINT \"Owner_email_key\" UNIQUE (\"email\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Owner_email_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Owner_email_key",
+          "public",
+          "\"public\".\"Owner\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Payment.Payment_razorpayOrderId_key",
+    "label": "Add unique constraint on \"Payment\" (razorpayOrderId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Payment_razorpayOrderId_key",
+        "table": "Payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Payment_razorpayOrderId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_razorpayOrderId_key",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Payment_razorpayOrderId_key\"",
+        "sql": "ALTER TABLE \"public\".\"Payment\" ADD CONSTRAINT \"Payment_razorpayOrderId_key\" UNIQUE (\"razorpayOrderId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Payment_razorpayOrderId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_razorpayOrderId_key",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.Payment.Payment_razorpayPaymentId_key",
+    "label": "Add unique constraint on \"Payment\" (razorpayPaymentId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Payment_razorpayPaymentId_key",
+        "table": "Payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Payment_razorpayPaymentId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_razorpayPaymentId_key",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Payment_razorpayPaymentId_key\"",
+        "sql": "ALTER TABLE \"public\".\"Payment\" ADD CONSTRAINT \"Payment_razorpayPaymentId_key\" UNIQUE (\"razorpayPaymentId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Payment_razorpayPaymentId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_razorpayPaymentId_key",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.User.User_googleSub_key",
+    "label": "Add unique constraint on \"User\" (googleSub)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "User_googleSub_key",
+        "table": "User"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"User_googleSub_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "User_googleSub_key",
+          "public",
+          "\"public\".\"User\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"User_googleSub_key\"",
+        "sql": "ALTER TABLE \"public\".\"User\" ADD CONSTRAINT \"User_googleSub_key\" UNIQUE (\"googleSub\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"User_googleSub_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "User_googleSub_key",
+          "public",
+          "\"public\".\"User\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AvailabilityException.AvailabilityException_astrologerId_idx_e78e3c7e",
+    "label": "Create index \"AvailabilityException_astrologerId_idx_e78e3c7e\" on \"AvailabilityException\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AvailabilityException_astrologerId_idx_e78e3c7e",
+        "table": "AvailabilityException"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AvailabilityException_astrologerId_idx_e78e3c7e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityException_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AvailabilityException_astrologerId_idx_e78e3c7e\"",
+        "sql": "CREATE INDEX \"AvailabilityException_astrologerId_idx_e78e3c7e\" ON \"public\".\"AvailabilityException\" (\"astrologerId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AvailabilityException_astrologerId_idx_e78e3c7e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityException_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.AvailabilityRule.AvailabilityRule_astrologerId_idx_e78e3c7e",
+    "label": "Create index \"AvailabilityRule_astrologerId_idx_e78e3c7e\" on \"AvailabilityRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "AvailabilityRule_astrologerId_idx_e78e3c7e",
+        "table": "AvailabilityRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"AvailabilityRule_astrologerId_idx_e78e3c7e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityRule_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"AvailabilityRule_astrologerId_idx_e78e3c7e\"",
+        "sql": "CREATE INDEX \"AvailabilityRule_astrologerId_idx_e78e3c7e\" ON \"public\".\"AvailabilityRule\" (\"astrologerId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"AvailabilityRule_astrologerId_idx_e78e3c7e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"AvailabilityRule_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Blog.Blog_astrologerId_idx_e78e3c7e",
+    "label": "Create index \"Blog_astrologerId_idx_e78e3c7e\" on \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Blog_astrologerId_idx_e78e3c7e",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Blog_astrologerId_idx_e78e3c7e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blog_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Blog_astrologerId_idx_e78e3c7e\"",
+        "sql": "CREATE INDEX \"Blog_astrologerId_idx_e78e3c7e\" ON \"public\".\"Blog\" (\"astrologerId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Blog_astrologerId_idx_e78e3c7e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blog_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.BlogComment.BlogComment_blogId_idx_47542c9e",
+    "label": "Create index \"BlogComment_blogId_idx_47542c9e\" on \"BlogComment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "BlogComment_blogId_idx_47542c9e",
+        "table": "BlogComment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"BlogComment_blogId_idx_47542c9e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogComment_blogId_idx_47542c9e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"BlogComment_blogId_idx_47542c9e\"",
+        "sql": "CREATE INDEX \"BlogComment_blogId_idx_47542c9e\" ON \"public\".\"BlogComment\" (\"blogId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"BlogComment_blogId_idx_47542c9e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogComment_blogId_idx_47542c9e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.BlogComment.BlogComment_userId_idx_a489d58a",
+    "label": "Create index \"BlogComment_userId_idx_a489d58a\" on \"BlogComment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "BlogComment_userId_idx_a489d58a",
+        "table": "BlogComment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"BlogComment_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogComment_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"BlogComment_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"BlogComment_userId_idx_a489d58a\" ON \"public\".\"BlogComment\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"BlogComment_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogComment_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.BlogLike.BlogLike_blogId_idx_47542c9e",
+    "label": "Create index \"BlogLike_blogId_idx_47542c9e\" on \"BlogLike\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "BlogLike_blogId_idx_47542c9e",
+        "table": "BlogLike"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"BlogLike_blogId_idx_47542c9e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogLike_blogId_idx_47542c9e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"BlogLike_blogId_idx_47542c9e\"",
+        "sql": "CREATE INDEX \"BlogLike_blogId_idx_47542c9e\" ON \"public\".\"BlogLike\" (\"blogId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"BlogLike_blogId_idx_47542c9e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogLike_blogId_idx_47542c9e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.BlogLike.BlogLike_userId_idx_a489d58a",
+    "label": "Create index \"BlogLike_userId_idx_a489d58a\" on \"BlogLike\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "BlogLike_userId_idx_a489d58a",
+        "table": "BlogLike"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"BlogLike_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogLike_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"BlogLike_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"BlogLike_userId_idx_a489d58a\" ON \"public\".\"BlogLike\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"BlogLike_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"BlogLike_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Booking.Booking_astrologerId_idx_e78e3c7e",
+    "label": "Create index \"Booking_astrologerId_idx_e78e3c7e\" on \"Booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Booking_astrologerId_idx_e78e3c7e",
+        "table": "Booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Booking_astrologerId_idx_e78e3c7e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Booking_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Booking_astrologerId_idx_e78e3c7e\"",
+        "sql": "CREATE INDEX \"Booking_astrologerId_idx_e78e3c7e\" ON \"public\".\"Booking\" (\"astrologerId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Booking_astrologerId_idx_e78e3c7e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Booking_astrologerId_idx_e78e3c7e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Booking.Booking_userId_idx_a489d58a",
+    "label": "Create index \"Booking_userId_idx_a489d58a\" on \"Booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Booking_userId_idx_a489d58a",
+        "table": "Booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Booking_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Booking_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Booking_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Booking_userId_idx_a489d58a\" ON \"public\".\"Booking\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Booking_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Booking_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Payment.Payment_bookingId_idx_17848f4a",
+    "label": "Create index \"Payment_bookingId_idx_17848f4a\" on \"Payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Payment_bookingId_idx_17848f4a",
+        "table": "Payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Payment_bookingId_idx_17848f4a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Payment_bookingId_idx_17848f4a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Payment_bookingId_idx_17848f4a\"",
+        "sql": "CREATE INDEX \"Payment_bookingId_idx_17848f4a\" ON \"public\".\"Payment\" (\"bookingId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Payment_bookingId_idx_17848f4a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Payment_bookingId_idx_17848f4a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Payment.Payment_userId_idx_a489d58a",
+    "label": "Create index \"Payment_userId_idx_a489d58a\" on \"Payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Payment_userId_idx_a489d58a",
+        "table": "Payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Payment_userId_idx_a489d58a\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Payment_userId_idx_a489d58a\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Payment_userId_idx_a489d58a\"",
+        "sql": "CREATE INDEX \"Payment_userId_idx_a489d58a\" ON \"public\".\"Payment\" (\"userId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Payment_userId_idx_a489d58a\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Payment_userId_idx_a489d58a\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.AvailabilityException.AvailabilityException_astrologerId_fkey",
+    "label": "Add foreign key \"AvailabilityException_astrologerId_fkey\" on \"AvailabilityException\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "AvailabilityException_astrologerId_fkey",
+        "table": "AvailabilityException"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"AvailabilityException_astrologerId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AvailabilityException_astrologerId_fkey",
+          "public",
+          "\"public\".\"AvailabilityException\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"AvailabilityException_astrologerId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"AvailabilityException\"\nADD CONSTRAINT \"AvailabilityException_astrologerId_fkey\"\nFOREIGN KEY (\"astrologerId\")\nREFERENCES \"public\".\"Astrologer\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"AvailabilityException_astrologerId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AvailabilityException_astrologerId_fkey",
+          "public",
+          "\"public\".\"AvailabilityException\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.AvailabilityRule.AvailabilityRule_astrologerId_fkey",
+    "label": "Add foreign key \"AvailabilityRule_astrologerId_fkey\" on \"AvailabilityRule\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "AvailabilityRule_astrologerId_fkey",
+        "table": "AvailabilityRule"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"AvailabilityRule_astrologerId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AvailabilityRule_astrologerId_fkey",
+          "public",
+          "\"public\".\"AvailabilityRule\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"AvailabilityRule_astrologerId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"AvailabilityRule\"\nADD CONSTRAINT \"AvailabilityRule_astrologerId_fkey\"\nFOREIGN KEY (\"astrologerId\")\nREFERENCES \"public\".\"Astrologer\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"AvailabilityRule_astrologerId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "AvailabilityRule_astrologerId_fkey",
+          "public",
+          "\"public\".\"AvailabilityRule\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Blog.Blog_astrologerId_fkey",
+    "label": "Add foreign key \"Blog_astrologerId_fkey\" on \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Blog_astrologerId_fkey",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Blog_astrologerId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Blog_astrologerId_fkey",
+          "public",
+          "\"public\".\"Blog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Blog_astrologerId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Blog\"\nADD CONSTRAINT \"Blog_astrologerId_fkey\"\nFOREIGN KEY (\"astrologerId\")\nREFERENCES \"public\".\"Astrologer\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Blog_astrologerId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Blog_astrologerId_fkey",
+          "public",
+          "\"public\".\"Blog\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.BlogComment.BlogComment_blogId_fkey",
+    "label": "Add foreign key \"BlogComment_blogId_fkey\" on \"BlogComment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "BlogComment_blogId_fkey",
+        "table": "BlogComment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"BlogComment_blogId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogComment_blogId_fkey",
+          "public",
+          "\"public\".\"BlogComment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"BlogComment_blogId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"BlogComment\"\nADD CONSTRAINT \"BlogComment_blogId_fkey\"\nFOREIGN KEY (\"blogId\")\nREFERENCES \"public\".\"Blog\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"BlogComment_blogId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogComment_blogId_fkey",
+          "public",
+          "\"public\".\"BlogComment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.BlogComment.BlogComment_userId_fkey",
+    "label": "Add foreign key \"BlogComment_userId_fkey\" on \"BlogComment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "BlogComment_userId_fkey",
+        "table": "BlogComment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"BlogComment_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogComment_userId_fkey",
+          "public",
+          "\"public\".\"BlogComment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"BlogComment_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"BlogComment\"\nADD CONSTRAINT \"BlogComment_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"BlogComment_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogComment_userId_fkey",
+          "public",
+          "\"public\".\"BlogComment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.BlogLike.BlogLike_blogId_fkey",
+    "label": "Add foreign key \"BlogLike_blogId_fkey\" on \"BlogLike\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "BlogLike_blogId_fkey",
+        "table": "BlogLike"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"BlogLike_blogId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogLike_blogId_fkey",
+          "public",
+          "\"public\".\"BlogLike\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"BlogLike_blogId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"BlogLike\"\nADD CONSTRAINT \"BlogLike_blogId_fkey\"\nFOREIGN KEY (\"blogId\")\nREFERENCES \"public\".\"Blog\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"BlogLike_blogId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogLike_blogId_fkey",
+          "public",
+          "\"public\".\"BlogLike\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.BlogLike.BlogLike_userId_fkey",
+    "label": "Add foreign key \"BlogLike_userId_fkey\" on \"BlogLike\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "BlogLike_userId_fkey",
+        "table": "BlogLike"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"BlogLike_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogLike_userId_fkey",
+          "public",
+          "\"public\".\"BlogLike\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"BlogLike_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"BlogLike\"\nADD CONSTRAINT \"BlogLike_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"BlogLike_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "BlogLike_userId_fkey",
+          "public",
+          "\"public\".\"BlogLike\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Booking.Booking_userId_fkey",
+    "label": "Add foreign key \"Booking_userId_fkey\" on \"Booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Booking_userId_fkey",
+        "table": "Booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Booking_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Booking_userId_fkey",
+          "public",
+          "\"public\".\"Booking\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Booking_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Booking\"\nADD CONSTRAINT \"Booking_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Booking_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Booking_userId_fkey",
+          "public",
+          "\"public\".\"Booking\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Booking.Booking_astrologerId_fkey",
+    "label": "Add foreign key \"Booking_astrologerId_fkey\" on \"Booking\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Booking_astrologerId_fkey",
+        "table": "Booking"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Booking_astrologerId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Booking_astrologerId_fkey",
+          "public",
+          "\"public\".\"Booking\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Booking_astrologerId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Booking\"\nADD CONSTRAINT \"Booking_astrologerId_fkey\"\nFOREIGN KEY (\"astrologerId\")\nREFERENCES \"public\".\"Astrologer\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Booking_astrologerId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Booking_astrologerId_fkey",
+          "public",
+          "\"public\".\"Booking\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Payment.Payment_userId_fkey",
+    "label": "Add foreign key \"Payment_userId_fkey\" on \"Payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Payment_userId_fkey",
+        "table": "Payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Payment_userId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_userId_fkey",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Payment_userId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Payment\"\nADD CONSTRAINT \"Payment_userId_fkey\"\nFOREIGN KEY (\"userId\")\nREFERENCES \"public\".\"User\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Payment_userId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_userId_fkey",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Payment.Payment_bookingId_fkey",
+    "label": "Add foreign key \"Payment_bookingId_fkey\" on \"Payment\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Payment_bookingId_fkey",
+        "table": "Payment"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Payment_bookingId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_bookingId_fkey",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Payment_bookingId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Payment\"\nADD CONSTRAINT \"Payment_bookingId_fkey\"\nFOREIGN KEY (\"bookingId\")\nREFERENCES \"public\".\"Booking\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Payment_bookingId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Payment_bookingId_fkey",
+          "public",
+          "\"public\".\"Payment\""
+        ]
+      }
+    ]
+  }
+]

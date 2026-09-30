@@ -10,7 +10,7 @@ Run backend tests from `backend/` with `npm test`. Step 1 configures Vitest with
 
 | Test file | What it covers | Step |
 |---|---|---|
-| No test files yet | Step 1 requires no automated feature tests | 1 |
+| `backend/src/prisma/seed.test.ts` | Owner seed input validation and Argon2id hashing | 2 |
 
 ## Manual checks
 
@@ -19,6 +19,7 @@ Results of each step's "Try it out" list in [BUILD_PROMPTS.md](../BUILD_PROMPTS.
 | Step | Date | Result | Notes |
 |---|---|---|---|
 | 1 | 2026-09-30 | Pass | Backend type-check and Vitest command passed. Frontend lint and production build passed. Local runtime checks covered `/api/health`, the Vite proxy and allowed-origin CORS. Exact 360px emulation found no horizontal overflow, confirmed 48px active targets, tab navigation with `fade-up`, overlay controls and reduced motion. The production bundle contains no design-page route or code. |
+| 2 | 2026-09-30 | Partial | Contract emission, migration self-emission, migration integrity check, seed validation failure, backend type-check/tests and frontend lint/build passed. Applying and verifying Neon, running the seed twice, checking the endpoints against the migrated database and testing the overlap constraint remain pending until the required environment values are configured. |
 
 ## Devices
 

@@ -3,6 +3,7 @@ import cors from "cors";
 import express from "express";
 import astroRouter from "./routes/Astro";
 import blogsRouter from "./routes/Blogs";
+import publicRouter from "./routes/Public";
 import userRouter from "./routes/User";
 
 const app = express();
@@ -24,6 +25,7 @@ app.get("/api/health", (_request, response) => {
   response.json({ ok: true });
 });
 
+app.use("/api", publicRouter);
 app.use("/api", userRouter);
 app.use("/api", astroRouter);
 app.use("/api", blogsRouter);

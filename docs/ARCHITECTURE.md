@@ -6,12 +6,14 @@ Last updated: 2026-09-30
 
 ## Current state
 
-Step 1 provides a runnable development foundation (README §1, §3 and §10).
+Step 2 adds the complete database contract, migration package, seed command and public database reads (README §4 and §11). The generated migration is ready but has not been applied to Neon because the required direct connection and owner seed values are not configured locally.
 
 - `frontend/` is a React single-page app with a four-tab user shell, route placeholders and shared components. `frontend/src/design.css` is the only app stylesheet.
-- `backend/` is an Express server listening on `PORT` or 3000. HTTP routes are mounted at `/api`; only the public health endpoint has a real handler so far.
+- `backend/` is an Express server listening on `PORT` or 3000. HTTP routes are mounted at `/api`; process health, database health and public call settings are implemented.
+- `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
+- Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
-- The early Prisma schema and WebSocket stubs still exist but were not changed in Step 1.
+- The existing WebSocket stubs remain unchanged until Step 10.
 
 ## Overview
 
@@ -21,13 +23,17 @@ flowchart LR
     React[React app shell]
     Vite[Vite development server]
     Express[Express at localhost:3000]
-    Routes[Empty user, astrologer and blog routers]
+    Public[Public health and settings routes]
+    Prisma[Prisma 8 runtime]
+    Neon[(Neon Postgres)]
 
     Browser --> React
     Browser -->|/api and /ws| Vite
     Vite -->|development proxy| Express
     Express -->|GET /api/health| Browser
-    Express --> Routes
+    Express --> Public
+    Public --> Prisma
+    Prisma -->|pooled DATABASE_URL| Neon
 ```
 
 Production hosting is not built yet. README §1 requires the frontend, API and WebSocket endpoint to use one HTTPS domain.
@@ -37,8 +43,10 @@ Production hosting is not built yet. README §1 requires the frontend, API and W
 ```text
 backend/
   index.ts                  Express setup, health route and server listener
-  routes/                   Mounted route modules; handlers come in later steps
-  src/prisma/               Early Prisma contract and database client
+  routes/Public.ts          Public database health and settings handlers
+  routes/                   Other mounted route modules; handlers come in later steps
+  src/prisma/               Contract, generated artifacts, runtime client and seed
+  migrations/               Prisma 8 migration graph, snapshots and compiled operations
   src/realtime/             Existing stubs reserved for Step 10
 frontend/
   src/App.tsx               Route map, placeholders and user app shell
@@ -64,15 +72,17 @@ docs/
 | `dotenv` | Load backend environment variables | Boilerplate; applied at server entry in 1 |
 | `tsx` | Watch and run backend TypeScript in development | 1 |
 | TypeScript | Backend type-checking and frontend compilation | Direct backend dependency added in 1 |
-| Vitest | Backend test runner; Step 1 has no test files | 1 |
-| Prisma 8 packages | Early database client and contract tooling | Boilerplate; schema rebuild is Step 2 |
+| Vitest | Backend tests, including seed validation and hash checks | 1 |
+| Prisma 8 packages | Contract emission, migration tooling and PostgreSQL runtime | Boilerplate; upgraded and completed in 2 |
+| `argon2` | Argon2id hash for the seeded owner password | 2 |
+| `temporal-polyfill` | Temporal values for Prisma 8 on Node.js 24 | 2 |
 | `ws` | Existing WebSocket stubs | Boilerplate; implementation is Step 10 |
 
 ## External services
 
 | Service | Used for | Env vars | Added in step |
 |---|---|---|---|
-| None connected yet | Step 1 uses only local frontend and backend processes | — | — |
+| Neon Postgres | Application data, settings and owner seed | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; migration apply pending |
 
 ## Main flows
 
@@ -81,6 +91,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | Flow | Built in steps | Section |
 |---|---|---|
 | Development request routing | 1 | [Overview](#overview) |
+| Public database health and settings | 2 | [Overview](#overview) |
 | Owner and astrologer login | 3, 4 | — |
 | User sign-in with Google | 6 | — |
 | Time slots and booking holds | 7, 8 | — |
