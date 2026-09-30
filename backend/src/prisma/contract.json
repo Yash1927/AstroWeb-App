@@ -299,6 +299,16 @@
                   "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
+              },
+              "profileSavedAt": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
               }
             },
             "relations": {
@@ -397,6 +407,9 @@
                 },
                 "passwordHash": {
                   "column": "passwordHash"
+                },
+                "profileSavedAt": {
+                  "column": "profileSavedAt"
                 }
               },
               "namespaceId": "public",
@@ -1848,6 +1861,14 @@
                   "codecId": "pg/text@1",
                   "nativeType": "text",
                   "nullable": false
+                },
+                "profileSavedAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "nativeType": "timestamptz",
+                  "nullable": true,
+                  "typeParams": {
+                    "precision": 3
+                  }
                 }
               },
               "foreignKeys": [],
@@ -3038,7 +3059,7 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "ead2cfe23b889616882ccec88684ddc2e6ee78a685c46c72ea4b98dc8ee305e4"
+    "storageHash": "4d9b1a553102fb288aa80876cedfcba7c9e01fa9bb25f532514de9524c22d9d7"
   },
   "execution": {
     "executionHash": "2dccff6fb0b3a9dc532c7cd7c81fb9d00563db4fa599fedd5703d417cb075a2d",

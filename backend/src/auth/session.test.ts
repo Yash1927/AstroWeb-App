@@ -37,4 +37,10 @@ describe("owner session cookies", () => {
     const names = Object.values(sessionConfigs).map((config) => config.cookieName);
     expect(new Set(names).size).toBe(3);
   });
+
+  it("sends user and astrologer cookies to shared API and WebSocket paths", () => {
+    expect(sessionCookieOptions("user").path).toBe("/");
+    expect(sessionCookieOptions("astrologer").path).toBe("/");
+    expect(sessionCookieOptions("owner").path).toBe("/api/owner");
+  });
 });

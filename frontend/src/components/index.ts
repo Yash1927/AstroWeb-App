@@ -1,4 +1,6 @@
 export { Avatar } from './Avatar'
+export { AstrologerCard } from './AstrologerCard'
+export type { AstrologerCardProfile } from './AstrologerCard'
 export { BottomSheet } from './BottomSheet'
 export { Button } from './Button'
 export { Card } from './Card'

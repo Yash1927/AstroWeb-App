@@ -9,6 +9,7 @@ export type AstrologerProfile = {
   isListed: boolean
   languages: string[]
   mustChangePassword: boolean
+  profileSavedAt: string | null
 }
 
 export type OwnerSettings = {

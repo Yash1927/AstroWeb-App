@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { CSSProperties } from 'react'
 import {
   Avatar,
+  AstrologerCard,
   BottomSheet,
   Button,
   Card,
@@ -76,11 +77,16 @@ export default function DesignPage() {
       <section className="design-section" aria-labelledby="cards-title">
         <h2 id="cards-title">Cards and status</h2>
         <div className="design-grid">
-          <Card interactive>
-            <h3>Astrologer card</h3>
-            <p>A shared card with a gentle desktop hover.</p>
-            <StatusBadge status="upcoming" />
-          </Card>
+          <AstrologerCard
+            onCall={() => undefined}
+            profile={{
+              id: 'design-anita',
+              displayName: 'Anita Sharma',
+              expertise: ['Vedic', 'Tarot'],
+              languages: ['Hindi', 'English'],
+              experienceYears: 8,
+            }}
+          />
           <Card>
             <h3>Booking states</h3>
             <div className="cluster">

@@ -74,3 +74,4 @@ export class LoginRateLimiter {
 }
 
 export const ownerLoginRateLimiter = new LoginRateLimiter();
+export const astrologerLoginRateLimiter = new LoginRateLimiter();

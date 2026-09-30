@@ -1,6 +1,8 @@
 import cors from "cors";
 import express from "express";
 import astroRouter from "./routes/Astro";
+import astrologerRouter from "./routes/Astrologer";
+import astrologerAuthRouter from "./routes/AstrologerAuth";
 import blogsRouter from "./routes/Blogs";
 import ownerRouter from "./routes/Owner";
 import ownerAuthRouter from "./routes/OwnerAuth";
@@ -23,7 +25,9 @@ export function createApp() {
   });
 
   app.use("/api/auth/owner", ownerAuthRouter);
+  app.use("/api/auth/astrologer", astrologerAuthRouter);
   app.use("/api/owner", ownerRouter);
+  app.use("/api/astrologer", astrologerRouter);
   app.use("/api", publicRouter);
   app.use("/api", userRouter);
   app.use("/api", astroRouter);

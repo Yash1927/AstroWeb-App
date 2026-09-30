@@ -24,6 +24,7 @@ const profile: AstrologerProfile = {
   isActive: true,
   isListed: true,
   mustChangePassword: true,
+  profileSavedAt: null,
   createdAt: "2026-09-30T09:00:00Z",
 };
 

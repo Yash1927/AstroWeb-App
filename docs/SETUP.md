@@ -2,13 +2,13 @@
 
 How to install and run the project as it is now. The planned setup is in README §13.
 
-Last updated: 2026-09-30
+Last updated: 2026-10-01
 
 ## Requirements
 
 - Node.js 24 and npm
 - Windows 11 (the dev machine), with PowerShell or VS Code terminals
-- A Neon Postgres project for Step 2 database commands
+- A Neon Postgres project for database commands
 
 ## Install
 
@@ -68,6 +68,7 @@ npm install
 4. Open `http://localhost:5173`. Vite forwards `/api` and `/ws` to `http://localhost:3000`.
 5. Open `http://localhost:5173/api/health` to verify the proxy and backend. It should show `{"ok":true}`.
 6. Open `http://localhost:5173/owner` and log in with the seeded owner credentials. The browser must go through the Vite origin so its `/api/owner` cookie and requests share one origin.
+7. Use the owner panel to create an astrologer, then open `http://localhost:5173/astrologer` in a separate browser profile. Sign in with the temporary credentials and replace the password before editing the profile.
 
 The backend denies cross-origin access when `APP_ORIGIN` is missing. Requests through the Vite proxy remain same-origin.
 
@@ -84,7 +85,7 @@ npm run seed
 npm run db:verify
 ```
 
-The second seed run should report that neither row was created. The migration package is `20260930T0841_database_schema`. It was generated with `npm run migration:plan -- --name database_schema` and checked with `npm run migration:check`.
+The second seed run should report that neither row was created. Applied migration packages are `20260930T0841_database_schema` and `20260930T1814_astrologer_profile_saved_at`. The Step 4 package was generated with `npm run migration:plan -- --name astrologer_profile_saved_at`, applied with `npm run db:migrate`, and checked with `npm run migration:check` and `npm run db:verify`.
 
 ## Testing on a phone (HTTPS tunnel)
 
@@ -102,6 +103,7 @@ _Write in Step 16:_ building and starting the app, production env vars, HTTPS an
 | A direct cross-origin request has no CORS permission | Set `APP_ORIGIN` to the exact frontend origin, without a trailing slash, and restart the backend. |
 | Migration commands cannot connect | Set `DIRECT_DATABASE_URL` to Neon's direct connection string, not the pooled `-pooler` hostname. |
 | The seed rejects its environment | Set a valid `OWNER_EMAIL` and an `OWNER_PASSWORD` of at least 10 characters. |
-| Owner login always returns 503 | Check `DATABASE_URL` and `SESSION_SECRET`; the session secret must contain at least 32 characters. |
-| The sixth owner login attempt returns 429 during development | Wait for the 15-minute window, or restart the backend process to clear the process-local development limiter. |
+| Owner or astrologer login always returns 503 | Check `DATABASE_URL` and `SESSION_SECRET`; the session secret must contain at least 32 characters. |
+| The sixth owner or astrologer login attempt returns 429 during development | Wait for the 15-minute window, or restart the backend process to clear the process-local development limiter. |
+| An astrologer sees “Set a new password” after an owner reset | This is expected. Enter a new password of at least 10 characters before returning to the panel. |
 | Prisma reports `RUNTIME.TEMPORAL_UNAVAILABLE` | Run `npm install`; `temporal-polyfill` must be installed and is loaded by `src/prisma/db.ts`. |

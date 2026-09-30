@@ -76,5 +76,19 @@ Use this format:
 - **Date:** 2026-09-30
 - **Status:** Accepted (owner's instruction)
 - **Context:** The `Astrologer.isListed` schema default is false, while README §8.2 says a saved profile appears on Home immediately. Step 3 explicitly requires owner-created accounts to start with `isListed = true`.
-- **Decision:** The owner create route sets `isListed = true`. Step 4 will add the saved-profile marker, and the public Home query in Step 5 will require all three conditions: active, listed and profile saved.
+- **Decision:** The owner create route sets `isListed = true`. Step 4 adds the saved-profile marker, and the public Home query in Step 5 will require all three conditions: active, listed and profile saved.
 - **Consequences:** Creating an account expresses the owner's intent to list it, but no unfinished profile can appear publicly. Deactivation sets `isListed = false`; reactivation does not relist the account without another owner action.
+
+## D-009: User and astrologer cookies use the root path
+- **Date:** 2026-09-30
+- **Status:** Accepted (owner's instruction)
+- **Context:** Later user and astrologer features use shared routes such as `/api/me` and `/api/bookings`, and authenticated call setup uses `/ws`. Cookies scoped to `/api/user` or `/api/astrologer` would not be sent to those paths.
+- **Decision:** Scope the separate user and astrologer cookies to `/`. Keep the owner cookie scoped to `/api/owner` because every protected owner endpoint stays under that prefix.
+- **Consequences:** Shared API routes and the WebSocket upgrade can receive the appropriate future cookie. Role-specific cookie names and server-side role checks still isolate the three account types.
+
+## D-010: Profile tag storage limits
+- **Date:** 2026-09-30
+- **Status:** Accepted
+- **Context:** README §8.2 allows free-form expertise and language tags but does not set storage limits or say the lists are required.
+- **Decision:** Accept zero through 20 entries in each list, trim each entry, remove case-insensitive duplicates, and limit one entry to 40 characters.
+- **Consequences:** Empty lists remain valid, custom labels are supported, and request sizes stay bounded. The UI explains how to add tags and suggests Vedic, Tarot and Numerology for expertise.

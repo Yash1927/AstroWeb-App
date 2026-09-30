@@ -21,12 +21,12 @@ const twelveHoursMs = 12 * 60 * 60 * 1_000;
 export const sessionConfigs: Record<SessionRole, SessionConfig> = {
   user: {
     cookieName: "astrowebapp_user_session",
-    cookiePath: "/api/user",
+    cookiePath: "/",
     lifetimeMs: 30 * 24 * 60 * 60 * 1_000,
   },
   astrologer: {
     cookieName: "astrowebapp_astrologer_session",
-    cookiePath: "/api/astrologer",
+    cookiePath: "/",
     lifetimeMs: twelveHoursMs,
   },
   owner: {

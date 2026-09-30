@@ -2,11 +2,11 @@
 
 Neon Postgres, accessed through Prisma 8. The source contract is `backend/src/prisma/contract.prisma`, and the product model is README §11.
 
-Last updated: 2026-09-30
+Last updated: 2026-10-01
 
 ## Current state
 
-The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Prisma reports that the database marker and live schema match the emitted contract.
+The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Prisma reports that the database marker and live schema match the emitted contract.
 
 The running app and seed use pooled `DATABASE_URL`. Migration commands use direct `DIRECT_DATABASE_URL`. Money columns are whole paise. Instants are PostgreSQL `timestamptz`; local calendar dates and availability clock times use `date` and `time`.
 
@@ -28,7 +28,7 @@ The Step 2 seed creates the one owner row. Step 3 reads its hash for owner login
 |---|---|---|---|
 | `id` | text | No | UUID |
 | `email` | text | No | Unique |
-| `passwordHash` | text | No | Step 3 owner actions create/reset an Argon2id temporary hash; astrologer login is built in Step 4 |
+| `passwordHash` | text | No | Owner actions create/reset an Argon2id temporary hash; Step 4 astrologer password replacement stores a new Argon2id hash |
 | `mustChangePassword` | boolean | No | `true` |
 | `displayName` | text | No | — |
 | `expertise` | text[] | No | Empty array; null array elements are rejected |
@@ -36,11 +36,12 @@ The Step 2 seed creates the one owner row. Step 3 reads its hash for owner login
 | `experienceYears` | integer | No | `0` |
 | `isActive` | boolean | No | `true` |
 | `isListed` | boolean | No | `false` |
+| `profileSavedAt` | timestamptz(3) | Yes | Set once by the first successful profile save |
 | `createdAt` | timestamptz(3) | No | Current time |
 
 Relations: availability rules, availability exceptions, bookings and blogs.
 
-Step 3 owner creates override the database's `isListed = false` default with `true` and leave `mustChangePassword = true`. The saved-profile condition added in Step 4 will still keep unfinished accounts off Home. Deactivation sets both `isActive = false` and `isListed = false`; reactivation changes only `isActive`.
+Owner creates override the database's `isListed = false` default with `true` and leave `mustChangePassword = true`. Step 4 records `profileSavedAt` without changing an owner's listing choice; Step 5's public query will require active, listed and saved. Deactivation sets both `isActive = false` and `isListed = false`; reactivation changes only `isActive`.
 
 ### `User`
 
@@ -180,7 +181,7 @@ The composite key makes `(blogId, userId)` unique.
 | `expiresAt` | timestamptz(3) | No | Revocation and expiry boundary |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-Step 3 stores a random UUID as the session id and sends a signed form of that id in the role-specific cookie. Resolution verifies the signature, expected role and `expiresAt`. Logout and expired-session cleanup delete the row. Owner rows expire 12 hours after login.
+The session manager stores a random UUID as the session id and sends a signed form of that id in the role-specific cookie. Resolution verifies the signature, expected role and `expiresAt`. Logout and expired-session cleanup delete the row. Owner and astrologer rows expire 12 hours after login. Astrologer password replacement, owner password reset and owner deactivation delete all sessions for that astrologer.
 
 ## Rules the database enforces
 
@@ -202,8 +203,9 @@ Step 3 stores a random UUID as the session id and sends a signed form of that id
 |---|---|---|---|---|
 | `20260926T0607_add_blog_relation` | Boilerplate: creates `Astro`, `User` and `Blogs` | Before Step 1 | 2026-09-26 | Existing baseline |
 | `20260930T0841_database_schema` | Replaces the boilerplate with the complete contract, extension and overlap constraint | 2 | 2026-09-30 | Applied |
+| `20260930T1814_astrologer_profile_saved_at` | Adds nullable `Astrologer.profileSavedAt` | 4 | 2026-09-30 | Applied |
 
-The second migration was generated and self-emitted with Prisma 8. `npm run migration:check` reports that the package and its compiled `ops.json` are valid.
+The application migrations were generated and self-emitted with Prisma 8. `npm run migration:check` reports that the packages and compiled operations are valid. `npm run migration:status` and `npm run db:verify` confirm the Step 4 migration is applied and Neon matches contract hash `4d9b1a55…`.
 
 ## Seed data
 

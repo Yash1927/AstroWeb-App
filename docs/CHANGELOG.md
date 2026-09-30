@@ -14,6 +14,16 @@ Every change to the project, newest first, with one entry per task. Use this for
 
 ---
 
+## 2026-10-01: Step 4, astrologer login and profile
+- **Added:** astrologer login/logout, a 12-hour server session, forced temporary-password replacement, protected own-profile endpoints, the `/astrologer` panel, tag editing, unsaved phone-width preview, and the reusable `AstrologerCard`
+- **Changed:** user and astrologer cookie paths now use `/`; owner deactivation and password reset revoke that astrologer's sessions immediately; the owner full-profile view shows profile fields and first-save state
+- **Files:** `backend/routes/Astrologer*.ts`, `backend/src/astrologer/`, `backend/src/auth/`, `backend/src/owner/owner-service.ts`, `frontend/src/screens/AstrologerPage.tsx`, `frontend/src/components/AstrologerCard.tsx`, `frontend/src/api/astrologer.ts`, `frontend/src/design.css`
+- **Database:** added and applied `20260930T1814_astrologer_profile_saved_at`, which adds nullable `Astrologer.profileSavedAt`; Prisma verifies that Neon matches the new contract
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/04-astrologer-login-profile.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and 28 tests, frontend TypeScript/lint/build and 2 tests, migration checks, migration status and live Neon schema verification pass. Availability, bookings, blogs and the public Home query remain later steps.
+
 ## 2026-09-30: Owner overlay and form fixes
 - **Fixed:** Dialog and BottomSheet focus now moves to the close button only when an overlay opens; Escape always calls the latest close callback; Dialog, BottomSheet and Toast render through `document.body` portals; settings validation identifies and links each invalid field; the add-astrologer form clears whenever it closes or reopens
 - **Added:** a jsdom regression that types a multi-word name into a controlled Dialog input and verifies that focus stays in the input and the dialog stays open

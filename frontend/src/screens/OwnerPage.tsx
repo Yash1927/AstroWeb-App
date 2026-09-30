@@ -699,6 +699,7 @@ export default function OwnerPage() {
               <div><dt>Expertise</dt><dd>{selected.expertise.length ? selected.expertise.join(', ') : 'Not added yet'}</dd></div>
               <div><dt>Languages</dt><dd>{selected.languages.length ? selected.languages.join(', ') : 'Not added yet'}</dd></div>
               <div><dt>Experience</dt><dd>{selected.experienceYears} years</dd></div>
+              <div><dt>Profile saved</dt><dd>{selected.profileSavedAt ? formatCreatedAt(selected.profileSavedAt) : 'Not saved yet'}</dd></div>
               <div><dt>Account</dt><dd>{selected.isActive ? 'Active' : 'Inactive'}</dd></div>
               <div><dt>Home</dt><dd>{selected.isListed ? 'Shown' : 'Hidden'}</dd></div>
             </dl>

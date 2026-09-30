@@ -71,6 +71,7 @@ model Astrologer {
   experienceYears       Int                     @default(0)
   isActive               Boolean                 @default(true)
   isListed               Boolean                 @default(false)
+  profileSavedAt         Timestamptz(3)?
   createdAt              Timestamptz(3)          @default(now())
   availabilityRules      AvailabilityRule[]
   availabilityExceptions AvailabilityException[]

@@ -7,6 +7,7 @@ import {
   Routes,
 } from 'react-router-dom'
 import OwnerPage from './screens/OwnerPage'
+import AstrologerPage from './screens/AstrologerPage'
 
 const DesignPage = import.meta.env.DEV
   ? lazy(() => import('./screens/DesignPage'))
@@ -108,17 +109,6 @@ function LaterStep({ title }: { title: string }) {
   )
 }
 
-function PanelPlaceholder({ title }: { title: string }) {
-  return (
-    <main className="standalone-page screen">
-      <section className="card">
-        <h1>{title}</h1>
-        <p>Coming in a later step.</p>
-      </section>
-    </main>
-  )
-}
-
 function NotFound() {
   return (
     <main className="standalone-page screen">
@@ -189,7 +179,7 @@ function App() {
           <Route key={path} path={path} element={<LaterStep title={title} />} />
         ))}
       </Route>
-      <Route path="astrologer" element={<PanelPlaceholder title="Astrologer panel" />} />
+      <Route path="astrologer" element={<AstrologerPage />} />
       <Route path="owner" element={<OwnerPage />} />
       {DesignPage ? (
         <Route

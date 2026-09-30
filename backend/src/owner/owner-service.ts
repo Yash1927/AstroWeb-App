@@ -17,6 +17,7 @@ export type AstrologerProfile = {
   isListed: boolean;
   languages: string[];
   mustChangePassword: boolean;
+  profileSavedAt: string | null;
 };
 
 export type OwnerSettings = {
@@ -66,12 +67,14 @@ function toProfile(astrologer: {
   isListed: boolean;
   languages: readonly string[];
   mustChangePassword: boolean;
+  profileSavedAt: { toString(): string } | null;
 }): AstrologerProfile {
   return {
     ...astrologer,
     createdAt: astrologer.createdAt.toString(),
     expertise: [...astrologer.expertise],
     languages: [...astrologer.languages],
+    profileSavedAt: astrologer.profileSavedAt?.toString() ?? null,
   };
 }
 
@@ -85,6 +88,7 @@ const profileFields = [
   "isActive",
   "isListed",
   "mustChangePassword",
+  "profileSavedAt",
   "createdAt",
 ] as const;
 
@@ -164,20 +168,44 @@ export class DatabaseOwnerService implements OwnerService {
   }
 
   async setAstrologerActive(id: string, isActive: boolean) {
-    await this.getAstrologer(id);
-    await db.orm.public.Astrologer.where({ id }).update(
-      isActive ? { isActive: true } : { isActive: false, isListed: false },
-    );
+    if (isActive) {
+      await this.getAstrologer(id);
+      await db.orm.public.Astrologer.where({ id }).update({ isActive: true });
+      return this.getAstrologer(id);
+    }
+
+    await db.transaction(async (transaction) => {
+      const astrologer = await transaction.orm.public.Astrologer.select("id").first({ id });
+      if (!astrologer) throw new OwnerNotFoundError("Astrologer not found.");
+
+      await transaction.orm.public.Astrologer.where({ id }).update({
+        isActive: false,
+        isListed: false,
+      });
+      await transaction.orm.public.Session.where({
+        role: "astrologer",
+        subjectId: id,
+      }).delete();
+    });
+
     return this.getAstrologer(id);
   }
 
   async resetAstrologerPassword(id: string, temporaryPassword: string) {
-    await this.getAstrologer(id);
     const passwordHash = await hashOwnerPassword(temporaryPassword);
 
-    await db.orm.public.Astrologer.where({ id }).update({
-      passwordHash,
-      mustChangePassword: true,
+    await db.transaction(async (transaction) => {
+      const astrologer = await transaction.orm.public.Astrologer.select("id").first({ id });
+      if (!astrologer) throw new OwnerNotFoundError("Astrologer not found.");
+
+      await transaction.orm.public.Astrologer.where({ id }).update({
+        passwordHash,
+        mustChangePassword: true,
+      });
+      await transaction.orm.public.Session.where({
+        role: "astrologer",
+        subjectId: id,
+      }).delete();
     });
   }
 

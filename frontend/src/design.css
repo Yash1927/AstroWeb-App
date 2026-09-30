@@ -812,6 +812,122 @@ svg {
   overflow-wrap: anywhere;
 }
 
+.astrologer-page {
+  width: min(100%, 48rem);
+  min-height: 100vh;
+  min-height: 100svh;
+  margin-inline: auto;
+  padding: var(--space-6) var(--space-4) var(--space-12);
+}
+
+.astrologer-login-card {
+  width: min(100%, 28rem);
+}
+
+.astrologer-section-nav,
+.astrologer-form-actions,
+.tag-list,
+.tag-input-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.astrologer-section-nav,
+.astrologer-section {
+  margin-block-start: var(--space-8);
+}
+
+.astrologer-profile-form {
+  display: grid;
+  gap: var(--space-6);
+}
+
+.astrologer-form-actions .button {
+  flex: 1 1 10rem;
+}
+
+.tag-list {
+  padding: 0;
+}
+
+.tag {
+  display: inline-flex;
+  min-height: var(--tap-min);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+  color: var(--color-text);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tag-input-row {
+  align-items: stretch;
+}
+
+.tag-input-row .input {
+  min-width: 0;
+  flex: 1 1 12rem;
+}
+
+.astrologer-card {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.astrologer-card__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.astrologer-card__header h3,
+.astrologer-card__experience {
+  margin-block-end: 0;
+}
+
+.astrologer-card__experience {
+  color: var(--color-text-muted);
+}
+
+.astrologer-card__details {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.astrologer-card__details div {
+  display: grid;
+  grid-template-columns: minmax(5rem, 0.35fr) 1fr;
+  gap: var(--space-3);
+}
+
+.astrologer-card__details dt {
+  font-weight: 700;
+}
+
+.astrologer-card__details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.astrologer-card__call {
+  width: 100%;
+}
+
+.astrologer-preview-frame {
+  width: min(100%, 22.5rem);
+  margin-inline: auto;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-lg);
+  background: var(--color-bg);
+}
+
 @media (min-width: 48rem) {
   .owner-page {
     padding: var(--space-8) var(--space-8) var(--space-12);
@@ -819,6 +935,10 @@ svg {
 
   .owner-form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .astrologer-page {
+    padding: var(--space-8) var(--space-8) var(--space-12);
   }
 }
 
