@@ -42,7 +42,9 @@ Last updated: 2026-10-01
 | Dialog | `frontend/src/components/Dialog.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Owner forms, astrologer preview and design page |
 | Toast | `frontend/src/components/Toast.tsx` | Body portal; success or error; live region; closes after four seconds | Panel action feedback; design page |
 | Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Home cards, panel authentication/data loading and design page |
-| StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Design page |
+| StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Booking cards and design page |
+| BookingLists | `frontend/src/components/BookingLists.tsx` | User/astrologer views, Upcoming/Past sections, live Join states and participant details | History and astrologer Bookings |
+| BookingListSkeleton | `frontend/src/components/BookingListSkeleton.tsx` | Card-shaped title, avatar and fact placeholders | History, astrologer Bookings and call placeholders |
 | GoogleSignInButton / UserSignIn | `frontend/src/components/GoogleSignInButton.tsx`, `UserSignIn.tsx` | GIS standard “Continue with Google” button in redirect mode plus a calm sign-in card | Home booking flow, History and Settings |
 | PhoneNumberField | `frontend/src/components/PhoneNumberField.tsx` | Fixed `+91` prefix, 10-digit local input, linked hint/error and canonical value output | First booking, phone-only booking step and Settings |
 | UserDetailsForm | `frontend/src/components/UserDetailsForm.tsx` | Name, date, local time with 12-hour reading, place, optional fixed-prefix phone, gender, field errors and privacy line | First booking and Settings |
@@ -77,13 +79,14 @@ Last updated: 2026-10-01
 | Screen | Route | States (loading, empty, error, …) | Built in step |
 |---|---|---|---|
 | Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary/error/submitting/success states | 5–8 |
-| History | `/history` | Session loading/error, signed-out Google screen, signed-in Step 9 placeholder | 6 |
+| History | `/history` | Booking skeleton/error, signed-out Google screen, Upcoming/Past Normal cards, empty sections and live Join states | 6, 9 |
 | Blogs | `/blogs` | Placeholder | 1 |
 | Blog post | `/blogs/:id` | Later-step placeholder | 1 |
 | Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, policy links, save toast and logout | 6 |
-| Call room | `/call/:bookingId` | Later-step placeholder | 1 |
+| Call room | `/call/:bookingId` | Protected loading/error/sign-in states, before-start waiting time and after-start Step 10 placeholder | 9 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
-| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile edit/preview/save, availability load/error/edit/validation/save; Bookings and Blogs placeholders | 4, 7 |
+| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile and availability workflows, private Upcoming/Past bookings; Blogs placeholder | 4, 7, 9 |
+| Astrologer call | `/astrologer/call/:bookingId` | Protected login/loading/error states, before-start waiting time and after-start Step 10 placeholder | 9 |
 | Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management and pricing/settings | 3 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
 | Not found | Any unmatched path | Link back to Home | 1 |
@@ -94,7 +97,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 
 | Situation | Text | Where |
 |---|---|---|
-| Later feature route or panel section | “Coming in a later step.” | Call, blog post, policies, Bookings and astrologer Blogs |
+| Later feature route or panel section | “Coming in a later step.” | Blog post, policies and astrologer Blogs |
 | Unknown route | “This page does not exist.” | Not-found screen |
 | Design success toast | “Your changes were saved.” | Development design page |
 | Owner login error | “The email or password is incorrect.” | Owner login |
@@ -116,6 +119,9 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Availability validation summary | “Please fix the highlighted hours above.” | Astrologer Availability save action |
 | Empty birth date | “Enter your date of birth.” | First booking details and Settings |
 | Settings save | “Saved” | Settings toast |
+| Empty booking section | “No upcoming calls.” / “No past calls yet.” | History and astrologer Bookings |
+| Call before start | “Please wait. Your call will start at {time}.” | User and astrologer call placeholders |
+| Call from start | “Coming in the next step” | User and astrologer call placeholders |
 
 ## Accessibility
 
@@ -139,5 +145,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 - User sign-in, details and Settings use the existing mobile-first card/input system. Google’s rendered button is capped to the available width, and Settings uses one flexible column at the 360px baseline.
 - Date chips scroll horizontally without widening the BottomSheet and reveal part of the next date on phones. Time chips wrap to about three per row at 360px. Empty dates remain visible but disabled, and selection uses the golden control background rather than golden text.
 - The booking summary uses a semantic description list for astrologer, call type, IST date/time, duration and price. Submission errors are announced in an alert without closing the sheet. The upcoming-Normal limit instead uses a softly highlighted polite status, removes the repeat confirmation action and offers a full-size History link. The success checkmark has an accessible name and its History action uses the same shared link-button treatment.
+- History and astrologer booking cards use semantic headings and description lists, 40px labelled avatars, visible status text, and full-width 48px Join actions. The shared card is one flexible column at 360px, wraps its header, and allows every detail value to break safely.
+- Join now reuses the reduced-motion-aware soft-glow animation. A scheduled clock update switches button/status state and moves the card between sections without requiring focus movement or a page refresh.
 - Date exceptions stay in the existing one-column phone layout and use overlap-safe responsive grid columns at desktop widths.
 - `prefers-reduced-motion: reduce` changes all animations and transitions to one 1ms iteration.

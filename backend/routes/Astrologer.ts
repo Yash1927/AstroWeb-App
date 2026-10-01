@@ -1,6 +1,11 @@
 import { Router, type Response } from "express";
 import { requireAstrologer } from "../src/auth/require-astrologer";
 import {
+  bookingHistoryService,
+  type BookingHistoryService,
+} from "../src/booking-history/booking-history-service";
+import { bookingHistoryParamsSchema } from "../src/booking-history/booking-history-schemas";
+import {
   clearSessionCookieOptions,
   sessionConfigs,
   sessionCookieOptions,
@@ -27,6 +32,7 @@ import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
 type Dependencies = {
   astrologers: AstrologerService;
   availability: AvailabilityService;
+  bookings: BookingHistoryService;
   sessions: SessionManager;
 };
 
@@ -44,7 +50,7 @@ function respondWithAstrologerError(error: unknown, response: Response) {
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
-export function createAstrologerRouter({ astrologers, availability, sessions }: Dependencies) {
+export function createAstrologerRouter({ astrologers, availability, bookings, sessions }: Dependencies) {
   const router = Router();
   router.use(requireAstrologer(sessions, astrologers));
 
@@ -99,6 +105,25 @@ export function createAstrologerRouter({ astrologers, availability, sessions }: 
         sessionCookieOptions("astrologer"),
       );
       response.json({ ok: true });
+    } catch (error) {
+      respondWithAstrologerError(error, response);
+    }
+  });
+
+  router.use(async (_request, response, next) => {
+    try {
+      const state = await astrologers.getSessionState(
+        response.locals.astrologerSession.subjectId,
+      );
+      if (!state) {
+        response.status(401).json({ error: "Please log in to continue." });
+        return;
+      }
+      if (state.mustChangePassword) {
+        response.status(409).json({ error: "Set a new password before continuing." });
+        return;
+      }
+      next();
     } catch (error) {
       respondWithAstrologerError(error, response);
     }
@@ -170,11 +195,47 @@ export function createAstrologerRouter({ astrologers, availability, sessions }: 
     }
   });
 
+  router.get("/bookings", async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+
+    try {
+      response.json(await bookings.listAstrologerBookings(
+        response.locals.astrologerSession.subjectId,
+      ));
+    } catch {
+      response.status(503).json({ error: "Bookings are unavailable. Please try again." });
+    }
+  });
+
+  router.get("/bookings/:bookingId", async (request, response) => {
+    const params = parseOrRespond(bookingHistoryParamsSchema, request.params, response);
+    if (!params) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+
+    try {
+      const booking = await bookings.getAstrologerBooking(
+        response.locals.astrologerSession.subjectId,
+        params.bookingId,
+      );
+      if (!booking) {
+        response.status(404).json({ error: "Booking not found." });
+        return;
+      }
+      response.json({ booking });
+    } catch {
+      response.status(503).json({ error: "The booking is unavailable. Please try again." });
+    }
+  });
+
   return router;
 }
 
 export default createAstrologerRouter({
   astrologers: astrologerService,
   availability: availabilityService,
+  bookings: bookingHistoryService,
   sessions: sessionManager,
 });

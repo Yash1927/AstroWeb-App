@@ -14,6 +14,7 @@ import {
 } from '../api/astrologer'
 import {
   AstrologerCard,
+  AstrologerBookings,
   AvailabilityEditor,
   Button,
   Card,
@@ -438,6 +439,16 @@ export default function AstrologerPage() {
             </div>
           </div>
           <AvailabilityEditor onSignedOut={handleSessionEnded} />
+        </section>
+      ) : section === 'bookings' ? (
+        <section aria-labelledby="bookings-heading" className="astrologer-section">
+          <div className="owner-section__heading">
+            <div>
+              <h2 id="bookings-heading">Bookings</h2>
+              <p className="screen__intro">Your upcoming and past Normal calls.</p>
+            </div>
+          </div>
+          <AstrologerBookings onSignedOut={handleSessionEnded} />
         </section>
       ) : (
         <section className="astrologer-section">

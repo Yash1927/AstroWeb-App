@@ -16,7 +16,7 @@ Run backend tests from `backend/` with `npm test`, and frontend component tests 
 | `backend/routes/owner.test.ts` | Credential-error parity, login cookie, owner guard, logout deletion, every astrologer action and settings validation | 3 |
 | `frontend/src/components/Dialog.test.tsx` | Types a multi-word controlled value while `onClose` changes identity; focus stays in the input and the dialog remains open | Step 3 fix |
 | `frontend/src/components/Avatar.test.tsx` | Ignores a numeric-leading word when deriving initials (`sumit 007` becomes `S`) | Step 6 review fix |
-| `backend/routes/astrologer.test.ts` | Credential parity, sixth-attempt blocking, cookie attributes, role/active guard, password gate and rotation, logout, own-record scoping, profile validation and own-availability validation/replacement | 4, 7 |
+| `backend/routes/astrologer.test.ts` | Credential parity, session/security behavior, profile and availability scoping, plus own-booking list/detail access and user-email omission | 4, 7, 9 |
 | `frontend/src/components/AstrologerCard.test.tsx` | Home-card fields, supplied Call action and omission of empty expertise/language rows | 4; Step 6 review fix |
 | `backend/routes/astrologers.test.ts` | Public card response whitelist, strict input, generic service errors and validated 14-day slot endpoint input | 5, 7 |
 | `backend/src/public/public-astrologer-service.test.ts` | Five-field database selection, active/listed/saved eligibility filters and display-name ordering | 5 |
@@ -24,9 +24,9 @@ Run backend tests from `backend/` with `npm test`, and frontend component tests 
 | `backend/routes/user-auth.test.ts` | Google double-submit CSRF, rejected identity, 30-day cookie, user/session creation, continuation and open-redirect protection | 6 |
 | `backend/src/user/google-identity.test.ts` | Verified-email and stable-subject requirements on Google claims | 6 |
 | `backend/src/user/user-service.test.ts` | Existing-user lookup by Google subject, verified-email refresh and first-time account creation | 6 |
-| `backend/routes/user.test.ts` | User role/live-account guard, session-subject scoping, details validation and logout | 6 |
+| `backend/routes/user.test.ts` | User role/live-account guard, session-subject scoping, details validation/logout, and rejection of another user's booking id | 6, 9 |
 | `frontend/src/components/GoogleSignInButton.test.tsx` | GIS redirect mode, callback URI, Continue wording and continuation state | 6 |
-| `frontend/src/screens/HistoryPage.test.tsx` | Signed-out History Google gate | 6 |
+| `frontend/src/screens/HistoryPage.test.tsx` | Signed-out Google gate and own-booking section request/empty states | 6, 9 |
 | `frontend/src/screens/SettingsPage.test.tsx` | Signed-out gate, read-only email, fixed-prefix phone normalization, details persistence request, Saved toast and logout | 6 |
 | `frontend/src/components/UserDetailsForm.test.tsx` | Distinct empty/future birth-date wording and fixed-prefix phone display/normalization | Step 6 review fix |
 | `backend/src/availability/availability-schemas.test.ts` | End-after-start, weekly overlap and whole-date exception validation | 7 |
@@ -35,6 +35,10 @@ Run backend tests from `backend/` with `npm test`, and frontend component tests 
 | `frontend/src/components/AvailabilityEditor.test.tsx` | Field-level time error, first-invalid focus/scroll, save summary, repeatable weekly ranges, whole-date exception and replacement save payload | 7; browser review fix |
 | `backend/src/booking/booking-service.test.ts` | Complete-detail and phone gates, settings-owned price/duration, exact-slot/eligibility recheck, zero-price confirmation and modes, paid deferral, Normal limit, transaction order, and real Prisma `SqlQueryError.sqlState` mapping directly and through `cause` | 8; Step 8 browser review fix |
 | `backend/routes/bookings.test.ts` | User auth, strict booking input, friendly status mapping and two concurrent same-slot HTTP requests with exactly one `201` and one `409`; the constraint loser throws Prisma's installed `SqlQueryError` class with `sqlState = "23P01"` | 8; Step 8 browser review fix |
+| `backend/src/booking-history/booking-history-service.test.ts` | Upcoming/Past ordering, join-timestamp Completed/Missed derivation, booked-user detail shaping and email omission | 9 |
+| `backend/src/dev/make-booking-helpers.test.ts` | Development booking command arguments, negative Past offset and production refusal | 9 |
+| `frontend/src/components/BookingLists.test.tsx` | Join/Join now/Missed transitions without refresh, Past movement, soft glow, astrologer-visible details and no email label | 9 |
+| `frontend/src/screens/CallPlaceholderPage.test.tsx` | Exact before-start IST waiting text and after-start deferred-room text | 9 |
 
 ### Prisma 8 overlap error verification
 
@@ -57,6 +61,7 @@ Results of each step's "Try it out" list in [BUILD_PROMPTS.md](../BUILD_PROMPTS.
 | 6 | 2026-10-01 | Reported review issues fixed; real Google flow needed | The delayed Step 6 review fixes now use local 10-digit phone entry with a fixed `+91` prefix, specific empty-birth-date wording, letter-only avatar words and omitted empty card rows. Automated regressions pass; the browser cases and real Google redirect still need a manual retest. |
 | 7 | 2026-10-01 | Reported browser issues fixed; live retest needed | The owner found horizontally hidden time chips, distant availability errors and overlapping desktop exceptions. The fixes wrap times, cue date scrolling, focus/scroll the first invalid field and use overlap-safe exception columns. Automated regressions pass; the 360px and desktop browser cases need a manual retest. |
 | 8 | 2026-10-01 | Reported browser issues fixed; live retest needed | The owner reported an unverified Prisma exclusion shape, a red/repeatable Normal-limit state and a roughly 2–3 second slot check. The mapper now uses the documented and installed Prisma `sqlState` shape, the limit is a calm History notice, and the four independent slot reads start in parallel. Backend type-check and all 67 tests pass; frontend lint, all 19 tests and the production build pass. A two-browser Neon race, rendered notice and post-change timing remain manual. |
+| 9 | 2026-10-01 | Automated pass; live time-boundary flow needed | Backend type-check and all 75 tests pass. Frontend TypeScript, lint, all 24 tests and production build pass. Tests prove session-subject booking scoping, cross-record 404s, no astrologer-visible user email, ordering/status rules, exact call-placeholder wording and automatic Join transitions. A real user/astrologer session, the development helper and a rendered 360px time-boundary flow remain manual. |
 
 ## Devices
 

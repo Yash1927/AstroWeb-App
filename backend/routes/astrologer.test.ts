@@ -3,6 +3,10 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginRateLimiter } from "../src/auth/login-rate-limit";
 import type { ResolvedSession, SessionManager } from "../src/auth/session";
+import type {
+  AstrologerBookingCard,
+  BookingHistoryService,
+} from "../src/booking-history/booking-history-service";
 import type { AvailabilityService } from "../src/availability/availability-service";
 import {
   AstrologerPasswordStateError,
@@ -13,6 +17,8 @@ import { createAstrologerRouter } from "./Astrologer";
 import { createAstrologerAuthRouter } from "./AstrologerAuth";
 
 const astrologerId = "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0";
+const ownBookingId = "4090cd52-cb14-4167-834d-ee7024fd9bda";
+const otherBookingId = "1711caca-06f0-4b99-b0da-51de56be7799";
 const astrologerSession: ResolvedSession = {
   id: "session-id",
   role: "astrologer",
@@ -58,11 +64,52 @@ function fakeAvailability(): AvailabilityService {
   };
 }
 
+function ownBooking(): AstrologerBookingCard {
+  return {
+    id: ownBookingId,
+    callType: "normal",
+    startsAt: "2026-10-02T04:30:00Z",
+    endsAt: "2026-10-02T04:45:00Z",
+    durationMin: 15,
+    pricePaise: 0,
+    usedCredit: false,
+    status: "upcoming",
+    endedStatus: "missed",
+    user: {
+      id: "1d0f2227-690e-49e4-bd96-06440f358424",
+      name: "Maya Shah",
+      birthDate: "1991-08-17",
+      birthTime: "05:30",
+      birthPlace: "Jaipur",
+      gender: "female",
+      phone: "+919876543210",
+    },
+  };
+}
+
+function fakeBookings(): BookingHistoryService {
+  return {
+    listAstrologerBookings: vi.fn(async (requestedAstrologerId) => (
+      requestedAstrologerId === astrologerId
+        ? { upcoming: [ownBooking()], past: [] }
+        : { upcoming: [], past: [] }
+    )),
+    getAstrologerBooking: vi.fn(async (requestedAstrologerId, bookingId) => (
+      requestedAstrologerId === astrologerId && bookingId === ownBookingId
+        ? ownBooking()
+        : null
+    )),
+    listUserBookings: vi.fn(async () => ({ upcoming: [], past: [] })),
+    getUserBooking: vi.fn(async () => null),
+  };
+}
+
 function testApp(
   astrologers = fakeAstrologers(),
   sessions = fakeSessions(),
   limiter = new LoginRateLimiter(),
   availability = fakeAvailability(),
+  bookings = fakeBookings(),
 ) {
   const app = express();
   app.use(express.json());
@@ -70,8 +117,11 @@ function testApp(
     "/api/auth/astrologer",
     createAstrologerAuthRouter({ astrologers, rateLimiter: limiter, sessions }),
   );
-  app.use("/api/astrologer", createAstrologerRouter({ astrologers, availability, sessions }));
-  return { app, astrologers, availability, sessions };
+  app.use(
+    "/api/astrologer",
+    createAstrologerRouter({ astrologers, availability, bookings, sessions }),
+  );
+  return { app, astrologers, availability, bookings, sessions };
 }
 
 describe("astrologer authentication", () => {
@@ -194,6 +244,31 @@ describe("protected astrologer routes", () => {
     expect(response.body.error).toBe("Set a new password before continuing.");
   });
 
+  it("keeps availability and bookings behind the temporary-password gate", async () => {
+    const astrologers = fakeAstrologers();
+    astrologers.getSessionState = vi.fn(async () => ({
+      id: astrologerId,
+      mustChangePassword: true,
+    }));
+    const availability = fakeAvailability();
+    const bookings = fakeBookings();
+    const { app } = testApp(
+      astrologers,
+      fakeSessions(),
+      new LoginRateLimiter(),
+      availability,
+      bookings,
+    );
+
+    const availabilityResponse = await request(app).get("/api/astrologer/availability");
+    const bookingsResponse = await request(app).get("/api/astrologer/bookings");
+
+    expect(availabilityResponse.status).toBe(409);
+    expect(bookingsResponse.status).toBe(409);
+    expect(availability.getAvailability).not.toHaveBeenCalled();
+    expect(bookings.listAstrologerBookings).not.toHaveBeenCalled();
+  });
+
   it("validates and saves only the signed-in astrologer's profile", async () => {
     const { app, astrologers } = testApp();
     const invalid = await request(app).put("/api/astrologer/profile").send({
@@ -246,5 +321,26 @@ describe("protected astrologer routes", () => {
     expect(valid.status).toBe(200);
     expect(availability.getAvailability).toHaveBeenCalledWith(astrologerId);
     expect(availability.saveAvailability).toHaveBeenCalledWith(astrologerId, validBody);
+  });
+
+  it("does not expose another astrologer's booking or any user email", async () => {
+    const bookings = fakeBookings();
+    const { app } = testApp(
+      fakeAstrologers(),
+      fakeSessions(),
+      new LoginRateLimiter(),
+      fakeAvailability(),
+      bookings,
+    );
+
+    const list = await request(app).get("/api/astrologer/bookings");
+    const someoneElses = await request(app).get(`/api/astrologer/bookings/${otherBookingId}`);
+
+    expect(list.status).toBe(200);
+    expect(list.body.upcoming).toHaveLength(1);
+    expect(JSON.stringify(list.body)).not.toContain("email");
+    expect(someoneElses.status).toBe(404);
+    expect(bookings.listAstrologerBookings).toHaveBeenCalledWith(astrologerId);
+    expect(bookings.getAstrologerBooking).toHaveBeenCalledWith(astrologerId, otherBookingId);
   });
 });

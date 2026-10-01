@@ -45,7 +45,7 @@ Turn a selected free slot into a confirmed Normal booking. Recheck every server-
 
 1. Keep the README default Normal price at ₹0. Sign in as a user with complete details and choose an eligible astrologer, a Normal date and a free time.
 2. Check that the summary shows the astrologer, Normal, the IST date and time, duration and “Free”. Select **Confirm booking**.
-3. Check that the animated success message shows the same IST time and that **Go to History** opens `/history`. History still has its Step 9 placeholder.
+3. Check that the animated success message shows the same IST time and that **Go to History** opens `/history`, where the call appears under Upcoming.
 4. Try to start another upcoming Normal booking with the same user. The summary should show “You already have an upcoming Normal call. You can book another after it ends.” as a calm notice, with **Go to History** instead of **Confirm booking**.
 5. With two different signed-in users, load the same slot in two browsers and confirm it at nearly the same time. One should succeed; the other should see “Sorry, this time was just booked. Please pick another time.”
 6. In Neon, inspect the successful row: it should be `confirmed`, `normal`, `in_app`, `pricePaise = 0`, have UTC `startsAt`/`endsAt`, and have no hold expiry.
@@ -53,5 +53,5 @@ Turn a selected free slot into a confirmed Normal booking. Recheck every server-
 
 ## Follow-ups and known issues
 
-- History content, astrologer booking lists, payments and the call room remain later steps.
+- Payments remain later work. History and astrologer booking lists are built in Step 9; their Join links lead to protected placeholders until the Step 10 call room is built.
 - The simultaneous-request regression uses a deterministic repository for the race but throws Prisma 8's real installed `SqlQueryError` shape. The error shape was confirmed from Prisma's current transaction documentation and installed 8.0.0-rc.13 implementation without querying the main database. A two-browser check against Neon remains manual.

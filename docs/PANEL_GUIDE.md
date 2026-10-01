@@ -42,7 +42,7 @@ Public Home shows only the astrologer's initials, display name, expertise, langu
 4. Set how many calls belong in one subscription pack.
 5. Choose **Save changes**.
 
-The note “Changes apply to new bookings only.” means existing booking history will keep the amount originally charged once bookings are built.
+The note “Changes apply to new bookings only.” means existing booking history keeps the amount originally charged.
 
 Deleting blog comments arrives in Step 14. Payment refunds are handled in the Razorpay dashboard after payments are built.
 
@@ -79,4 +79,11 @@ A whole-day block must be the only exception for that date. Other changes on one
 
 On a wider screen, date-exception controls wrap into as many rows as they need. The date, change type and times remain fully readable and never overlap.
 
-**Bookings** and **Blogs** still say “Coming in a later step.” Bookings arrive in Step 9, and writing/publishing blogs in Step 14.
+### Review bookings
+
+1. Open **Bookings** to see Upcoming calls soonest first and Past calls newest first.
+2. Each Normal call shows the user's name, birth date, birth time, birth place, gender and phone number when one was saved. The user's email is never shown.
+3. Before the start, choose **Join** to see the waiting time. From the start until the end, choose the glowing **Join now** button. The audio room itself arrives in Step 10.
+4. After the end there is no Join button. The call is Completed only after both people have joined; otherwise it is Missed.
+
+The cards change as the start and end times pass without reloading the page. **Blogs** still says “Coming in a later step” until Step 14.

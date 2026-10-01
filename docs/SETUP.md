@@ -48,6 +48,7 @@ npm install
 | What | Folder | Command |
 |---|---|---|
 | Backend dev server | `backend/` | `npm run dev` |
+| Create a development Normal booking | `backend/` | `npm run dev:make-booking -- --user USER_EMAIL --astrologer ASTROLOGER_EMAIL --starts-in MINUTES --duration MINUTES` |
 | Backend type check | `backend/` | `npm run typecheck` |
 | Backend tests | `backend/` | `npm test` |
 | Frontend dev server | `frontend/` | `npm run dev` |
@@ -61,6 +62,8 @@ npm install
 | Apply pending migrations | `backend/` | `npm run db:migrate` |
 | Verify Neon against the contract | `backend/` | `npm run db:verify` |
 | Seed owner and settings | `backend/` | `npm run seed` |
+
+`dev:make-booking` looks up an existing user and astrologer by email, creates one confirmed free Normal call at the requested minute offset, and uses the supplied positive duration. A negative offset is allowed for testing Past cards. The command refuses to run when `NODE_ENV=production`; it can still be rejected by the database overlap constraint.
 
 ## Running locally
 

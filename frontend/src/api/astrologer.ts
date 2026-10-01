@@ -1,3 +1,5 @@
+import type { AstrologerBooking, BookingSections } from './booking-history'
+
 export type AstrologerOwnProfile = {
   displayName: string
   email: string
@@ -107,4 +109,12 @@ export const astrologerApi = {
         { method: 'PUT', body: JSON.stringify(availability) },
       )
     ).availability,
+  getBookings: () => astrologerRequest<BookingSections<AstrologerBooking>>(
+    '/api/astrologer/bookings',
+  ),
+  getBooking: async (bookingId: string) => (
+    await astrologerRequest<{ booking: AstrologerBooking }>(
+      `/api/astrologer/bookings/${bookingId}`,
+    )
+  ).booking,
 }

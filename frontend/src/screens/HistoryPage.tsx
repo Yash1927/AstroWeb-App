@@ -1,19 +1,30 @@
 import { useCallback, useEffect, useState } from 'react'
+import type { BookingSections, UserBooking } from '../api/booking-history'
 import { userApi, UserApiError } from '../api/user'
-import { Button, Card, Skeleton, UserSignIn } from '../components'
+import {
+  BookingLists,
+  BookingListSkeleton,
+  Button,
+  Card,
+  UserSignIn,
+} from '../components'
 
-type HistoryState = 'loading' | 'signed-out' | 'signed-in' | 'error'
+type HistoryState = 'loading' | 'signed-out' | 'ready' | 'error'
 
 export default function HistoryPage() {
   const [state, setState] = useState<HistoryState>('loading')
+  const [bookings, setBookings] = useState<BookingSections<UserBooking>>({
+    upcoming: [],
+    past: [],
+  })
   const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     setState('loading')
     setError('')
     try {
-      await userApi.getMe()
-      setState('signed-in')
+      setBookings(await userApi.getBookings())
+      setState('ready')
     } catch (loadError) {
       if (loadError instanceof UserApiError && loadError.status === 401) {
         setState('signed-out')
@@ -26,9 +37,11 @@ export default function HistoryPage() {
 
   useEffect(() => {
     let active = true
-    void userApi.getMe()
-      .then(() => {
-        if (active) setState('signed-in')
+    void userApi.getBookings()
+      .then((loaded) => {
+        if (!active) return
+        setBookings(loaded)
+        setState('ready')
       })
       .catch((loadError: unknown) => {
         if (!active) return
@@ -46,10 +59,7 @@ export default function HistoryPage() {
     <section className="screen user-screen">
       <h1>History</h1>
       {state === 'loading' ? (
-        <Card className="stack" aria-busy="true">
-          <Skeleton label="Loading History" variant="title" />
-          <Skeleton label="Loading History" />
-        </Card>
+        <BookingListSkeleton />
       ) : state === 'signed-out' ? (
         <UserSignIn
           description="Sign in to see your upcoming and past calls."
@@ -61,9 +71,7 @@ export default function HistoryPage() {
           <Button onClick={() => void load()} variant="secondary">Try again</Button>
         </Card>
       ) : (
-        <Card>
-          <p>Your upcoming and past calls will appear here in Step 9.</p>
-        </Card>
+        <BookingLists audience="user" bookings={bookings} />
       )}
     </section>
   )

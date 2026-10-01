@@ -1090,6 +1090,120 @@ svg {
   margin-inline: auto;
 }
 
+.booking-sections,
+.booking-list,
+.booking-card,
+.booking-card__facts,
+.booking-card__user-details {
+  display: grid;
+}
+
+.booking-sections {
+  gap: var(--space-8);
+}
+
+.booking-sections > section > h2 {
+  margin-block-end: var(--space-4);
+}
+
+.booking-list,
+.booking-card {
+  gap: var(--space-4);
+}
+
+.booking-card__header,
+.booking-card__person {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.booking-card__header {
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.booking-card__person {
+  min-width: 0;
+}
+
+.booking-card__person > div {
+  min-width: 0;
+}
+
+.booking-card__person h3,
+.booking-card__person p {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.booking-card__person p,
+.booking-empty {
+  color: var(--color-text-muted);
+}
+
+.booking-card__facts,
+.booking-card__user-details {
+  margin: 0;
+  gap: var(--space-2);
+}
+
+.booking-card__facts > div,
+.booking-card__user-details > div {
+  display: grid;
+  grid-template-columns: minmax(6rem, 0.7fr) minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.booking-card__facts > div:last-child,
+.booking-card__user-details > div:last-child {
+  border-bottom: 0;
+}
+
+.booking-card__facts dt,
+.booking-card__user-details dt {
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.booking-card__facts dd,
+.booking-card__user-details dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+}
+
+.booking-card__user-details {
+  padding: var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+}
+
+.booking-card__action {
+  width: 100%;
+}
+
+.booking-card--skeleton .booking-card__person > div {
+  display: grid;
+  flex: 1;
+  gap: var(--space-2);
+}
+
+.booking-empty {
+  margin: 0;
+  padding: var(--space-4);
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-md);
+  text-align: center;
+}
+
+.call-placeholder {
+  width: min(100%, 32rem);
+  text-align: center;
+}
+
 .user-sign-in {
   display: grid;
   justify-items: center;

@@ -2,11 +2,17 @@ import express from "express";
 import request from "supertest";
 import { describe, expect, it, vi } from "vitest";
 import type { ResolvedSession, SessionManager } from "../src/auth/session";
+import type {
+  BookingHistoryService,
+  UserBookingCard,
+} from "../src/booking-history/booking-history-service";
 import type { UserDetails, UserService } from "../src/user/user-service";
 import { createUserRouter } from "./User";
 
 const userId = "30f7af37-09f6-47d3-b24a-508d718f17c1";
 const otherUserId = "27368532-c560-458d-aed6-73a7eb260cfe";
+const ownBookingId = "ca0c20ac-70d3-4218-b7d1-95bb4e269fab";
+const otherBookingId = "e267b980-0fd1-4df1-894e-535d1a1458bc";
 const session: ResolvedSession = { id: "session-id", role: "user", subjectId: userId };
 const user: UserDetails = {
   id: userId,
@@ -38,11 +44,41 @@ function fakeUsers(): UserService {
   };
 }
 
-function testApp(users = fakeUsers(), sessions = fakeSessions()) {
+function ownBooking(): UserBookingCard {
+  return {
+    id: ownBookingId,
+    astrologer: { id: "fd0059ad-79e4-435f-b5bf-7e11ef5cfd55", displayName: "Anika Rao" },
+    callType: "normal",
+    startsAt: "2026-10-02T04:30:00Z",
+    endsAt: "2026-10-02T04:45:00Z",
+    durationMin: 15,
+    pricePaise: 0,
+    usedCredit: false,
+    status: "upcoming",
+    endedStatus: "missed",
+  };
+}
+
+function fakeBookings(): BookingHistoryService {
+  return {
+    listUserBookings: vi.fn(async () => ({ upcoming: [ownBooking()], past: [] })),
+    getUserBooking: vi.fn(async (requestedUserId, bookingId) => (
+      requestedUserId === userId && bookingId === ownBookingId ? ownBooking() : null
+    )),
+    listAstrologerBookings: vi.fn(async () => ({ upcoming: [], past: [] })),
+    getAstrologerBooking: vi.fn(async () => null),
+  };
+}
+
+function testApp(
+  users = fakeUsers(),
+  sessions = fakeSessions(),
+  bookings = fakeBookings(),
+) {
   const app = express();
   app.use(express.json());
-  app.use("/api", createUserRouter({ sessions, users }));
-  return { app, sessions, users };
+  app.use("/api", createUserRouter({ bookings, sessions, users }));
+  return { app, bookings, sessions, users };
 }
 
 describe("self-only user details", () => {
@@ -102,6 +138,20 @@ describe("self-only user details", () => {
     expect(response.status).toBe(204);
     expect(sessions.destroy).toHaveBeenCalledWith("user", expect.any(String));
     expect(response.headers["set-cookie"]?.[0]).toContain("Path=/");
+  });
+
+  it("does not let user A read user B's booking", async () => {
+    const bookings = fakeBookings();
+    const { app } = testApp(fakeUsers(), fakeSessions(), bookings);
+
+    const own = await request(app).get(`/api/me/bookings/${ownBookingId}`);
+    const someoneElses = await request(app).get(`/api/me/bookings/${otherBookingId}`);
+
+    expect(own.status).toBe(200);
+    expect(someoneElses.status).toBe(404);
+    expect(bookings.getUserBooking).toHaveBeenNthCalledWith(1, userId, ownBookingId);
+    expect(bookings.getUserBooking).toHaveBeenNthCalledWith(2, userId, otherBookingId);
+    expect(bookings.getUserBooking).not.toHaveBeenCalledWith(otherUserId, expect.anything());
   });
 });
 

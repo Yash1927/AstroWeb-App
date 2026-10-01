@@ -6,10 +6,10 @@ Last updated: 2026-10-01
 
 ## Current state
 
-Step 8 adds authenticated, transactional creation of free Normal bookings and completes the Home flow through summary and success (README §4, §6.1–§6.4 and §11). The current contract and overlap constraint remain applied on Neon; this step needs no migration.
+Step 9 adds subject-scoped Normal booking history for users and astrologers, shared time-aware cards and protected call-room placeholders (README §2, §5.3, §7.1, §8.4 and §12). The current contract and overlap constraint remain applied on Neon; this step needs no migration.
 
-- `frontend/` is a React single-page app with public Home through zero-price booking success, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
-- `backend/` separates `app.ts` from the `index.ts` listener so routers can be tested without opening a port. HTTP routes are mounted at `/api`; public data/slots, all three role sessions, user self-service, zero-price booking creation, owner management and astrologer authentication/profile/availability APIs are implemented.
+- `frontend/` is a React single-page app with public Home through zero-price booking success, private user History, protected call placeholders, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `backend/` separates `app.ts` from the `index.ts` listener so routers can be tested without opening a port. HTTP routes are mounted at `/api`; public data/slots, all three role sessions, user self-service/history, zero-price booking creation, owner management and astrologer authentication/profile/availability/booking APIs are implemented.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
@@ -80,16 +80,18 @@ backend/
   routes/Public.ts          Public database health and settings handlers
   routes/Astrologers.ts     Public privacy-limited Home-card handler
   routes/UserAuth.ts        Google redirect callback and user-session creation
-  routes/User.ts            Protected self-only user details and logout
+  routes/User.ts            Protected self-only user details, booking history and logout
   routes/Bookings.ts        Protected zero-price booking creation
   routes/OwnerAuth.ts       Owner credential login
   routes/Owner.ts           Protected owner account and settings handlers
   routes/AstrologerAuth.ts  Astrologer credential login
-  routes/Astrologer.ts      Protected astrologer session, profile and availability handlers
+  routes/Astrologer.ts      Protected astrologer session, profile, availability and booking handlers
   src/availability/         Availability validation/storage and the shared slot engine
   src/astrologer/           Astrologer validation and database service
   src/auth/                 Session cookies, role guards and login throttling
   src/booking/              Booking input validation and transactional service
+  src/booking-history/      Subject-scoped booking reads and response shaping
+  src/dev/                  Production-blocked development data helper
   src/http/                 Shared Zod response helper
   src/owner/                Owner validation schemas and database service
   src/public/               Public Home-card database service
@@ -104,13 +106,15 @@ frontend/
   src/api/public.ts         Typed public card and settings client
   src/api/user.ts           Typed user account/details/logout client
   src/api/bookings.ts       Typed booking-creation client
+  src/api/booking-history.ts Shared booking-card response types
   src/components/           Shared UI components
   src/components/AvailabilityEditor.tsx Protected weekly and exception editor
   src/screens/DesignPage.tsx Development-only component and motion gallery
   src/screens/OwnerPage.tsx  Owner login and management interface
-  src/screens/AstrologerPage.tsx Astrologer login and profile interface
+  src/screens/AstrologerPage.tsx Astrologer login, profile, availability and bookings interface
   src/screens/HomePage.tsx   Public Home list and call-type picker
-  src/screens/HistoryPage.tsx User-session gate and Step 9 signed-in placeholder
+  src/screens/HistoryPage.tsx Private user booking history
+  src/screens/CallPlaceholderPage.tsx Protected pre-Step-10 call routes
   src/screens/SettingsPage.tsx User profile, editable details, policies and logout
   src/user-details.ts       Shared browser-side detail validation and form shaping
   src/design.css             Tokens, base styles, components and animation
@@ -147,7 +151,7 @@ docs/
 
 | Service | Used for | Env vars | Added in step |
 |---|---|---|---|
-| Neon Postgres | Application data, settings, owner seed, profiles, availability, bookings, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–8 |
+| Neon Postgres | Application data, settings, owner seed, profiles, availability, bookings, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–9 |
 | Google Identity Services | Redirect-mode user identity and verified Google account claims | `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` | 6 |
 
 ## Main flows
@@ -162,6 +166,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | User sign-in with Google and own details | 6 | [User sign-in and details flow](#user-sign-in-and-details-flow) |
 | Availability and time slots | 7 | [Availability and slot flow](#availability-and-slot-flow) |
 | Zero-price booking creation | 8 | [Booking creation flow](#booking-creation-flow) |
+| Private booking history | 9 | [Booking history flow](#booking-history-flow) |
 | In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | — |
 | Payments (Razorpay orders, verification, webhooks, refunds) | 12, 13 | — |
 | Blogs | 14 | — |
@@ -226,6 +231,31 @@ The service derives user id from the session and derives price, duration, call m
 
 Every zero-price call type is confirmed immediately. Normal is always `in_app`; the phone call types are always `phone`. A positive settings price is rejected before the transaction with the Step 8 deferred-payment message. Inside the transaction, only elapsed holds for the selected astrologer are expired, the one-upcoming-Normal rule is checked and the new row is inserted. Prisma 8 normalizes PostgreSQL error `23P01` from `Booking_no_overlap` to `SqlQueryError.sqlState`; the mapper checks that property directly and through a transaction `cause` before returning the specified same-slot `409` response.
 
+## Booking history flow
+
+```mermaid
+flowchart LR
+    UserHistory[User History]
+    AstroBookings[Astrologer Bookings]
+    UserGuard[User session guard]
+    AstroGuard[Astrologer session guard]
+    HistoryService[Booking history service]
+    Bookings[(Booking)]
+    People[(User and Astrologer)]
+    CallRoutes[Protected call placeholders]
+
+    UserHistory --> UserGuard --> HistoryService
+    AstroBookings --> AstroGuard --> HistoryService
+    HistoryService --> Bookings
+    HistoryService --> People
+    UserHistory --> CallRoutes
+    AstroBookings --> CallRoutes
+```
+
+List and detail reads receive the authenticated subject id from the route guard. The repository includes that id in the Booking predicate, so a caller cannot select another account through a path or query value. User responses join only the astrologer's id and display name. Astrologer responses select the booked user's permitted details and do not select email.
+
+The server splits Normal calls by their current end time and derives Completed only when both join timestamps exist. The browser keeps the UTC start/end and ended result, schedules updates at the next boundary, re-splits Upcoming/Past, and changes Join to Join now without polling or a page refresh. Direct user and astrologer call routes reload one subject-scoped booking before showing the Step 9 placeholder.
+
 ## User sign-in and details flow
 
 ```mermaid
@@ -277,7 +307,7 @@ sequenceDiagram
     OwnerAPI-->>Browser: clear owner cookie
 ```
 
-Astrologer login follows the same session-manager flow through `POST /api/auth/astrologer/login`. `requireAstrologer` also checks that the session subject is the active astrologer record. A temporary-password account can reach session, logout and password-replacement actions; the service rejects profile reads and saves until `mustChangePassword` is false.
+Astrologer login follows the same session-manager flow through `POST /api/auth/astrologer/login`. `requireAstrologer` also checks that the session subject is the active astrologer record. A temporary-password account can reach session, logout and password-replacement actions; a router gate rejects profile, availability and booking access until `mustChangePassword` is false.
 
 Replacing a temporary password deletes all of that astrologer's sessions inside the password-update transaction, then creates one fresh session for the current browser. Owner deactivation and password reset also delete every session for that astrologer in the same transaction as the account change.
 

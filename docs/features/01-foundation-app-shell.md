@@ -56,7 +56,6 @@ Replace the starter frontend with the AstroWebApp shell and shared design system
 
 ## Follow-ups and known issues
 
-- The route modules are deliberately empty. Later steps add validated, authorised handlers.
 - The existing `backend/src/realtime/` stubs are unchanged and remain for Step 10.
-- Policy routes and the call room are route placeholders only. Their content arrives in Steps 10 and 15.
+- Policy routes are placeholders until Step 15. The user and astrologer call routes now load an owned booking and show Step 9 waiting/deferred text; real call behavior arrives in Step 10.
 - The backend's production dependency audit reports no vulnerabilities. The full audit reports 13 issues in development dependencies; these are recorded in `docs/PROGRESS.md` for the planned dependency upgrade before launch.

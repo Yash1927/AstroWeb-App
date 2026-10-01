@@ -16,6 +16,16 @@ Last updated: 2026-10-01
 
 ---
 
+## 2026-10-01: Step 9, History and astrologer bookings
+- **Added:** private user and astrologer booking-list/detail APIs, user History, the astrologer Bookings section, shared time-aware Normal-call cards, protected user/astrologer call placeholders, and the production-blocked `dev:make-booking` helper
+- **Changed:** Normal calls now move from Join to glowing Join now and then Completed or Missed without a refresh; the astrologer panel shows only the booked user's permitted details and never their email; the temporary-password gate now protects profile, availability and booking APIs
+- **Files:** `backend/src/booking-history/`, `backend/src/dev/`, `backend/routes/User.ts`, `backend/routes/Astrologer.ts`, `backend/package.json`, `frontend/src/api/`, `frontend/src/components/BookingLists.tsx`, `frontend/src/components/AstrologerBookings.tsx`, `frontend/src/screens/HistoryPage.tsx`, `frontend/src/screens/CallPlaceholderPage.tsx`, `frontend/src/design.css`, and related tests
+- **Database:** none; Step 9 reads the existing booking/account tables and the opt-in development command creates one confirmed Normal row
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/01-foundation-app-shell.md`, `docs/features/04-astrologer-login-profile.md`, `docs/features/08-booking-free-normal-calls.md`, `docs/features/09-history-and-astrologer-bookings.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 75 tests pass; frontend TypeScript, lint, all 24 tests and the production build pass. The real call room remains Step 10 and phone-call cards remain Step 12
+
 ## 2026-10-01: Step 8 browser review fixes
 - **Fixed:** Prisma 8 exclusion failures are now recognized by their real `SqlQueryError.sqlState = "23P01"` shape, including when nested under a transaction `cause`, so `Booking_no_overlap` returns the specified `409` instead of a generic `503`
 - **Changed:** the one-upcoming-Normal message is a calm notice with **Go to History** replacing **Confirm booking**; after astrologer eligibility passes, the slot service now loads Settings, weekly hours, exceptions and blocking bookings in parallel

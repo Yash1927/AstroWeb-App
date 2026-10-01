@@ -1,6 +1,11 @@
 import { Router, type Response } from "express";
 import { requireUser } from "../src/auth/require-user";
 import {
+  bookingHistoryService,
+  type BookingHistoryService,
+} from "../src/booking-history/booking-history-service";
+import { bookingHistoryParamsSchema } from "../src/booking-history/booking-history-schemas";
+import {
   clearSessionCookieOptions,
   sessionConfigs,
   sessionManager,
@@ -15,6 +20,7 @@ import {
 } from "../src/user/user-service";
 
 type Dependencies = {
+  bookings: BookingHistoryService;
   sessions: SessionManager;
   users: UserService;
 };
@@ -27,7 +33,7 @@ function respondWithUserError(error: unknown, response: Response) {
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
-export function createUserRouter({ sessions, users }: Dependencies) {
+export function createUserRouter({ bookings, sessions, users }: Dependencies) {
   const router = Router();
   const userGuard = requireUser(sessions, users);
 
@@ -58,6 +64,39 @@ export function createUserRouter({ sessions, users }: Dependencies) {
     }
   });
 
+  router.get("/me/bookings", userGuard, async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+
+    try {
+      response.json(await bookings.listUserBookings(response.locals.userSession.subjectId));
+    } catch {
+      response.status(503).json({ error: "Bookings are unavailable. Please try again." });
+    }
+  });
+
+  router.get("/me/bookings/:bookingId", userGuard, async (request, response) => {
+    const params = parseOrRespond(bookingHistoryParamsSchema, request.params, response);
+    if (!params) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+
+    try {
+      const booking = await bookings.getUserBooking(
+        response.locals.userSession.subjectId,
+        params.bookingId,
+      );
+      if (!booking) {
+        response.status(404).json({ error: "Booking not found." });
+        return;
+      }
+      response.json({ booking });
+    } catch {
+      response.status(503).json({ error: "The booking is unavailable. Please try again." });
+    }
+  });
+
   router.post("/auth/logout", userGuard, async (request, response) => {
     if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
     if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
@@ -78,4 +117,8 @@ export function createUserRouter({ sessions, users }: Dependencies) {
   return router;
 }
 
-export default createUserRouter({ sessions: sessionManager, users: userService });
+export default createUserRouter({
+  bookings: bookingHistoryService,
+  sessions: sessionManager,
+  users: userService,
+});

@@ -25,6 +25,8 @@ Last updated: 2026-10-01
 | POST | `/api/auth/google` | Public Google redirect | Verifies a Google credential and creates a user session | 6 |
 | GET | `/api/me` | User | Returns the signed-in user's own account and details | 6 |
 | PUT | `/api/me` | User | Replaces the signed-in user's own editable details | 6 |
+| GET | `/api/me/bookings` | User | Returns the signed-in user's own Normal bookings as Upcoming and Past | 9 |
+| GET | `/api/me/bookings/:bookingId` | User | Returns one owned Normal booking for protected call-room navigation | 9 |
 | POST | `/api/auth/logout` | User | Deletes the current user session and clears its cookie | 6 |
 | POST | `/api/auth/owner/login` | Public | Verifies owner credentials and creates an owner session | 3 |
 | POST | `/api/auth/astrologer/login` | Public | Verifies an active astrologer and creates an astrologer session | 4 |
@@ -46,6 +48,8 @@ Last updated: 2026-10-01
 | PUT | `/api/astrologer/profile` | Astrologer | Saves only the signed-in astrologer's profile | 4 |
 | GET | `/api/astrologer/availability` | Astrologer | Returns only the signed-in astrologer's hours and exceptions | 7 |
 | PUT | `/api/astrologer/availability` | Astrologer | Atomically replaces only the signed-in astrologer's availability | 7 |
+| GET | `/api/astrologer/bookings` | Astrologer | Returns only that astrologer's Normal bookings and booked-user details | 9 |
+| GET | `/api/astrologer/bookings/:bookingId` | Astrologer | Returns one booking owned by that astrologer for protected call-room navigation | 9 |
 
 ### GET /api/health
 
@@ -76,6 +80,19 @@ Both routes resolve the record id only from the valid user session. They do not 
 | `PUT /api/me` | Name 2–60 chars; non-future `YYYY-MM-DD` birth date; `HH:mm` local birth time; birth place 1–100 chars; optional null or `+91` mobile; `male`, `female` or `other` gender | `{user}` after replacing those editable fields |
 
 The email, Google subject and credits cannot be changed through `PUT`. Birth time is stored as the local clock time entered, without timezone conversion. `POST /api/auth/logout` deletes the current Session row, clears the root-path user cookie and returns `204`.
+
+### User booking history
+
+Both endpoints resolve the user only from the valid session. They accept no user id, body or query. The detail endpoint accepts one UUID booking id and returns the same `404 Booking not found` response when the row is missing or belongs to someone else.
+
+| Endpoint | Success response |
+|---|---|
+| `GET /api/me/bookings` | `{upcoming,past}`; Upcoming is soonest first and Past is newest first |
+| `GET /api/me/bookings/:bookingId` | `{booking}` for one owned Normal call |
+
+Each item contains the booking id, Normal call type, UTC start/end, duration, stored price, credit flag, current status, eventual ended status, and only the astrologer's id/display name. Status is Upcoming until the end; after the end it is Completed only when both participant join timestamps exist, otherwise Missed. The browser keeps applying that same rule at the time boundaries without fetching again.
+
+Step 9 returns confirmed/completed/missed Normal bookings only. Urgent and Subscription phone-call history is added in Step 12.
 
 ### GET /api/health/db
 
@@ -178,7 +195,7 @@ All responses omit password hashes.
 | `POST /api/astrologer/logout` | Empty body and query | `204`; deletes the Session row and clears the cookie |
 | `PUT /api/astrologer/password` | `{newPassword}` with 10–256 characters | `{"ok":true}`; hashes the password with Argon2id, deletes all old astrologer sessions and sets one fresh cookie |
 
-The role guard resolves only an astrologer session and then checks the matching account is still active. Profile access also requires `mustChangePassword = false`.
+The role guard resolves only an astrologer session and then checks the matching account is still active. A router-level password gate requires `mustChangePassword = false` before profile, availability or booking access; session, logout and password replacement stay available while the gate is active.
 
 ### Own profile endpoints
 
@@ -203,6 +220,12 @@ Weekly entries contain integer `weekday` from `0` (Sunday) through `6` (Saturday
 Exception entries contain `YYYY-MM-DD` `date`, `kind` (`blocked` or `extra`) and nullable start/end times. A whole-date block has both times null. Partial blocks and all extra hours require both times. Every end must be after its start, timed entries on one date cannot overlap, and a whole-date block must be the only exception for that date. Requests are bounded to 70 weekly and 100 exception rows.
 
 Saving deletes and recreates only this astrologer's availability inside one transaction. It does not change bookings. `displacedBookingCount` counts confirmed, not-yet-ended bookings that no longer fit the saved hours so the panel can warn that they remain booked.
+
+### Own booking history
+
+`GET /api/astrologer/bookings` returns `{upcoming,past}` with the same time ordering and Normal-call status rules as user History. Every database read is filtered by the astrologer id from the valid session. Each item contains the booked user's id, name, birth date, local birth time, birth place, gender and optional phone number. The query does not select or return user email.
+
+`GET /api/astrologer/bookings/:bookingId` supports direct protected navigation to `/astrologer/call/:bookingId`. It accepts a UUID and returns `{booking}` only when the booking belongs to the signed-in astrologer; another astrologer's id returns the same `404 Booking not found` response as a missing row. Both endpoints reject extra body or query data. Phone-call bookings remain deferred to Step 12.
 
 ## WebSocket messages
 

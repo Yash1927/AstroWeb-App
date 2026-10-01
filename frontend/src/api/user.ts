@@ -1,3 +1,5 @@
+import type { BookingSections, UserBooking } from './booking-history'
+
 export type Gender = 'male' | 'female' | 'other'
 
 export type UserDetails = {
@@ -61,6 +63,10 @@ export const userApi = {
       body: JSON.stringify(details),
     })
   ).user,
+  getBookings: () => userRequest<BookingSections<UserBooking>>('/api/me/bookings'),
+  getBooking: async (bookingId: string) => (
+    await userRequest<{ booking: UserBooking }>(`/api/me/bookings/${bookingId}`)
+  ).booking,
   logout: () => userRequest<void>('/api/auth/logout', {
     method: 'POST',
     body: JSON.stringify({}),
