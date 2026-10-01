@@ -16,6 +16,26 @@ Last updated: 2026-10-01
 
 ---
 
+## 2026-10-01: Step 8 browser review fixes
+- **Fixed:** Prisma 8 exclusion failures are now recognized by their real `SqlQueryError.sqlState = "23P01"` shape, including when nested under a transaction `cause`, so `Booking_no_overlap` returns the specified `409` instead of a generic `503`
+- **Changed:** the one-upcoming-Normal message is a calm notice with **Go to History** replacing **Confirm booking**; after astrologer eligibility passes, the slot service now loads Settings, weekly hours, exceptions and blocking bookings in parallel
+- **Files:** `backend/src/booking/booking-service.ts`, `backend/src/booking/booking-service.test.ts`, `backend/routes/bookings.test.ts`, `backend/src/availability/slot-service.ts`, `backend/src/availability/slot-service-database.test.ts`, `frontend/src/screens/HomePage.tsx`, `frontend/src/screens/HomePage.test.tsx`, `frontend/src/design.css`
+- **Database:** none; no main or branch database was queried for the error-shape check
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/CHANGELOG.md`, `docs/features/08-booking-free-normal-calls.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/TESTING.md`, `docs/SECURITY.md`
+- **Notes:** Prisma's official transaction documentation and the installed `@prisma/orm-family-sql` 8.0.0-rc.13 export both identify `sqlState` as the database-code field; automated tests use that package's real `SqlQueryError` class. Backend type-check and all 67 tests pass; frontend lint, all 19 tests and the production build pass
+
+## 2026-10-01: Step 8, booking a free Normal call
+- **Added:** authenticated `POST /api/bookings`, settings-owned price and duration, exact-slot revalidation, transactional expired-hold cleanup, confirmed zero-price bookings, the one-upcoming-Normal limit, database-overlap conflict handling, the Home booking summary and animated success screen
+- **Changed:** choosing a Home time now continues to confirmation instead of the Step 8 placeholder; paid call types stop with the clear later-step message and do not create a booking
+- **Files:** `backend/routes/Bookings.ts`, `backend/src/booking/`, `backend/app.ts`, `frontend/src/api/bookings.ts`, `frontend/src/screens/HomePage.tsx`, `frontend/src/design.css`, and related backend/frontend tests
+- **Database:** none; Step 8 uses the existing `Booking`, `Settings` and `Booking_no_overlap` definitions
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/05-home-page.md`, `docs/features/06-google-login-details-settings.md`, `docs/features/07-availability-time-slots.md`, `docs/features/08-booking-free-normal-calls.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 65 tests pass; frontend lint, all 18 tests and the production build pass. History content, payments and the call room remain later steps
+
 ## 2026-10-01: Step 6 and 7 browser review fixes
 - **Fixed:** Home time chips now wrap to about three per row at 360px while the horizontal date strip reveals part of the next date; invalid availability saves focus and scroll to the first bad field, show a nearby summary, and date exceptions no longer overlap at desktop widths
 - **Changed:** phone fields show a fixed `+91` prefix, accept 10 local digits while ignoring spaces and dashes, and still send the canonical `+91XXXXXXXXXX` value; an empty birth date has its own error; avatar initials ignore non-letter-leading words; empty expertise and language rows are omitted from `AstrologerCard`

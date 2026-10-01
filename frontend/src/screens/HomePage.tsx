@@ -1,4 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
+import { Link } from 'react-router-dom'
+import {
+  bookingApi,
+  BookingApiError,
+  type CreatedBooking,
+} from '../api/bookings'
 import {
   publicApi,
   type AvailableSlot,
@@ -26,7 +32,9 @@ import {
 } from '../components'
 import { detailsDraftFrom } from '../user-details'
 
-type FlowStep = 'options' | 'checking' | 'sign-in' | 'details' | 'phone' | 'slots' | 'selected' | 'error'
+type FlowStep = 'options' | 'checking' | 'sign-in' | 'details' | 'phone' | 'slots' | 'summary' | 'success' | 'error'
+
+const UPCOMING_NORMAL_NOTICE = 'You already have an upcoming Normal call. You can book another after it ends.'
 
 function messageFrom(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
@@ -132,6 +140,29 @@ function formatTimeInIst(startsAt: string) {
   }).format(new Date(startsAt))
 }
 
+function formatDateInIst(startsAt: string) {
+  return new Intl.DateTimeFormat('en-IN', {
+    timeZone: 'Asia/Kolkata',
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+  }).format(new Date(startsAt))
+}
+
+function callTypeLabel(callType: CallType) {
+  return callType[0].toUpperCase() + callType.slice(1)
+}
+
+function priceFor(settings: PublicSettings, callType: CallType) {
+  return settings[`${callType}PricePaise`]
+}
+
+function displayPhone(phone: string) {
+  return /^\+91\d{10}$/.test(phone)
+    ? `${phone.slice(0, 3)} ${phone.slice(3, 8)} ${phone.slice(8)}`
+    : phone
+}
+
 export default function HomePage() {
   const [astrologers, setAstrologers] = useState<AstrologerCardProfile[] | null>(null)
   const [listError, setListError] = useState('')
@@ -150,6 +181,9 @@ export default function HomePage() {
   const [slotsLoading, setSlotsLoading] = useState(false)
   const [selectedDate, setSelectedDate] = useState('')
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
+  const [creatingBooking, setCreatingBooking] = useState(false)
+  const [createdBooking, setCreatedBooking] = useState<CreatedBooking | null>(null)
+  const [changingPhone, setChangingPhone] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const restoredFlow = useRef(false)
 
@@ -295,6 +329,8 @@ export default function HomePage() {
     setSlotResult(null)
     setSelectedDate('')
     setSelectedSlot(null)
+    setCreatedBooking(null)
+    setChangingPhone(false)
     setFlowStep('options')
   }
 
@@ -307,6 +343,8 @@ export default function HomePage() {
     setSlotResult(null)
     setSelectedDate('')
     setSelectedSlot(null)
+    setCreatedBooking(null)
+    setChangingPhone(false)
     setFlowStep('options')
   }
 
@@ -353,7 +391,12 @@ export default function HomePage() {
     try {
       const updated = await userApi.updateMe({ ...details, phone })
       setBookingUser(updated)
-      void loadSlots(selectedAstrologer.id, chosenCallType)
+      if (changingPhone && selectedSlot) {
+        setChangingPhone(false)
+        setFlowStep('summary')
+      } else {
+        void loadSlots(selectedAstrologer.id, chosenCallType)
+      }
     } catch (error) {
       setFlowError(messageFrom(error))
     } finally {
@@ -366,6 +409,33 @@ export default function HomePage() {
     [bookingUser],
   )
   const selectedDay = slotResult?.days.find((day) => day.date === selectedDate) ?? null
+  const selectedPrice = settings && chosenCallType
+    ? priceFor(settings, chosenCallType)
+    : null
+  const hasUpcomingNormalNotice = flowError === UPCOMING_NORMAL_NOTICE
+
+  const confirmBooking = async () => {
+    if (!selectedAstrologer || !chosenCallType || !selectedSlot) return
+    setCreatingBooking(true)
+    setFlowError('')
+    try {
+      const booking = await bookingApi.create({
+        astrologerId: selectedAstrologer.id,
+        callType: chosenCallType,
+        startsAt: selectedSlot.startsAt,
+      })
+      setCreatedBooking(booking)
+      setFlowStep('success')
+    } catch (error) {
+      if (error instanceof BookingApiError && error.status === 401) {
+        setFlowStep('sign-in')
+      } else {
+        setFlowError(messageFrom(error))
+      }
+    } finally {
+      setCreatingBooking(false)
+    }
+  }
 
   const sheetTitle = flowStep === 'options' && selectedAstrologer
     ? `Call ${selectedAstrologer.displayName}`
@@ -375,6 +445,10 @@ export default function HomePage() {
         ? 'Phone number'
         : flowStep === 'slots'
           ? 'Choose a time'
+          : flowStep === 'summary'
+            ? 'Booking summary'
+            : flowStep === 'success'
+              ? 'Call booked'
         : 'Continue booking'
 
   return (
@@ -519,7 +593,8 @@ export default function HomePage() {
                         key={slot.startsAt}
                         onClick={() => {
                           setSelectedSlot(slot)
-                          setFlowStep('selected')
+                          setFlowError('')
+                          setFlowStep('summary')
                         }}
                         type="button"
                       >
@@ -531,10 +606,72 @@ export default function HomePage() {
               </div>
             </div>
           )
-        ) : flowStep === 'selected' ? (
-          <Card compact>
-            <p>Confirming comes in the next step</p>
-          </Card>
+        ) : flowStep === 'summary'
+          && selectedAstrologer
+          && chosenCallType
+          && selectedSlot
+          && slotResult
+          && selectedPrice !== null ? (
+          <div className="booking-summary stack">
+            <Card compact>
+              <dl>
+                <div><dt>Astrologer</dt><dd>{selectedAstrologer.displayName}</dd></div>
+                <div><dt>Call type</dt><dd>{callTypeLabel(chosenCallType)}</dd></div>
+                <div><dt>Date</dt><dd>{formatDateInIst(selectedSlot.startsAt)}</dd></div>
+                <div><dt>Time</dt><dd>{formatTimeInIst(selectedSlot.startsAt)}</dd></div>
+                <div><dt>Duration</dt><dd>{slotResult.durationMin} min</dd></div>
+                <div><dt>Price</dt><dd>{selectedPrice === 0 ? 'Free' : formatRupees(selectedPrice)}</dd></div>
+              </dl>
+              {needsPhone(chosenCallType) && bookingUser?.phone ? (
+                <div className="booking-summary__phone">
+                  <p>
+                    {selectedAstrologer.displayName} will call you on{' '}
+                    {displayPhone(bookingUser.phone)} at {formatTimeInIst(selectedSlot.startsAt)}.
+                  </p>
+                  <Button
+                    onClick={() => {
+                      setChangingPhone(true)
+                      setPhone(bookingUser.phone ?? '')
+                      setFlowStep('phone')
+                    }}
+                    variant="text"
+                  >
+                    Change number
+                  </Button>
+                </div>
+              ) : null}
+            </Card>
+            {flowError ? (
+              hasUpcomingNormalNotice
+                ? <p className="booking-notice" role="status">{flowError}</p>
+                : <p className="field__error" role="alert">{flowError}</p>
+            ) : null}
+            {hasUpcomingNormalNotice ? (
+              <Link className="button button--primary" to="/history">Go to History</Link>
+            ) : (
+              <Button disabled={creatingBooking} onClick={() => void confirmBooking()}>
+                {creatingBooking
+                  ? 'Booking…'
+                  : selectedPrice === 0
+                    ? 'Confirm booking'
+                    : `Pay ${formatRupees(selectedPrice)}`}
+              </Button>
+            )}
+          </div>
+        ) : flowStep === 'success' && createdBooking ? (
+          <div className="booking-success">
+            <div className="success-mark">
+              <svg aria-label="Success" height="40" role="img" viewBox="0 0 40 40" width="40">
+                <path className="success-mark__path" d="m10 21 7 7 14-16" />
+              </svg>
+            </div>
+            <p>
+              {createdBooking.callType === 'normal'
+                ? `Your call is booked for ${formatDateInIst(createdBooking.startsAt)} at ${formatTimeInIst(createdBooking.startsAt)}. You can join from History.`
+                : `Booked! ${selectedAstrologer?.displayName ?? 'The astrologer'} will call you on ${displayPhone(bookingUser?.phone ?? '')} at ${formatTimeInIst(createdBooking.startsAt)} on ${formatDateInIst(createdBooking.startsAt)}. Please keep your phone nearby.`}
+            </p>
+            <Link className="button button--primary" to="/history">Go to History</Link>
+          </div>
         ) : flowStep === 'error' && chosenCallType ? (
           <div className="stack">
             <p className="field__error" role="alert">{flowError}</p>

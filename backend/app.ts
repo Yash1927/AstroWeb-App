@@ -5,6 +5,7 @@ import astrologerRouter from "./routes/Astrologer";
 import astrologerAuthRouter from "./routes/AstrologerAuth";
 import publicAstrologerRouter from "./routes/Astrologers";
 import blogsRouter from "./routes/Blogs";
+import bookingsRouter from "./routes/Bookings";
 import ownerRouter from "./routes/Owner";
 import ownerAuthRouter from "./routes/OwnerAuth";
 import publicRouter from "./routes/Public";
@@ -32,6 +33,7 @@ export function createApp() {
   app.use("/api/owner", ownerRouter);
   app.use("/api/astrologer", astrologerRouter);
   app.use("/api/astrologers", publicAstrologerRouter);
+  app.use("/api/bookings", bookingsRouter);
   app.use("/api", publicRouter);
   app.use("/api", userRouter);
   app.use("/api", astroRouter);

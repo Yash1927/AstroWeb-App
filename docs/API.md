@@ -8,7 +8,7 @@ Last updated: 2026-10-01
 
 - HTTP endpoints are mounted below `/api` (README §1).
 - Health, public settings, public astrologer cards and eligible astrologer slots need no session. Owner, astrologer and Google callback endpoints are public; protected endpoints run the matching role guard.
-- Current account, profile and public-card bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
+- Current account, profile, public-card and booking bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
 - Owner authentication uses `astrowebapp_owner_session` scoped to `/api/owner`. Astrologer and user authentication use separate cookies scoped to `/` so shared APIs and `/ws` receive them. All three are httpOnly, use SameSite=Lax and are Secure when `NODE_ENV=production`; the owner and astrologer last 12 hours and the user lasts 30 days.
 - Missing or invalid authentication returns `401`. Missing records return `404`; duplicate email, password-gate failures and invalid state transitions return `409`; database/service failures return a generic `503`.
 
@@ -21,6 +21,7 @@ Last updated: 2026-10-01
 | GET | `/api/settings/public` | Public | Returns only current prices, pack size and call durations | 2 |
 | GET | `/api/astrologers` | Public | Returns only eligible Home-card fields | 5 |
 | GET | `/api/astrologers/:id/slots?type=normal\|urgent\|subscription` | Public | Returns 14 days of current free slots | 7 |
+| POST | `/api/bookings` | User | Revalidates and creates one zero-price confirmed booking | 8 |
 | POST | `/api/auth/google` | Public Google redirect | Verifies a Google credential and creates a user session | 6 |
 | GET | `/api/me` | User | Returns the signed-in user's own account and details | 6 |
 | PUT | `/api/me` | User | Replaces the signed-in user's own editable details | 6 |
@@ -113,6 +114,16 @@ The email, Google subject and credits cannot be changed through `PUT`. Birth tim
 - **Free-time rules:** Weekly and extra windows are combined, blocks are subtracted, incomplete duration fragments and past starts are omitted, and confirmed bookings plus unexpired `pending_payment` holds remove overlapping intervals.
 - **Errors:** Malformed input returns `400`; missing/ineligible astrologers return `404`; settings/database failures return `503` with a generic message.
 - **Side effects:** None. Reading or choosing one of these times does not create or hold a booking.
+
+### POST /api/bookings
+
+- **Who:** A signed-in user whose account still exists. The user id always comes from the root-path user session cookie.
+- **Request:** JSON with exactly `astrologerId` (UUID), `callType` (`normal`, `urgent` or `subscription`) and `startsAt` (an absolute ISO timestamp). The route accepts no price, duration, mode, status, user id, parameters or query fields.
+- **Checks:** The user's required details must be complete, phone-call types require a saved phone, the astrologer must still be active/listed/profile-saved, and `startsAt` must exactly match a current slot from the shared 14-day slot service. Duration and price are reread from `Settings`.
+- **Zero price:** Any call type priced at zero is saved immediately as `confirmed`, with no payment hold. Normal is always `in_app`; Urgent and Subscription are `phone`. The response is `201` with `{booking}` containing id, astrologer id, call type/mode, UTC start/end, status, copied price and duration.
+- **Transaction:** Before inserting, the server changes elapsed `pending_payment` holds for that astrologer to `expired`, then checks the one-upcoming-Normal rule. PostgreSQL's `Booking_no_overlap` exclusion constraint decides a simultaneous conflict.
+- **Errors:** Malformed input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, a missing required phone, an unavailable/overlapping slot, a second upcoming Normal booking and a currently paid call type return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Other service failures return `503` with a generic message.
+- **Deferred work:** A price above zero returns `409` with `{"error":"Paid bookings come in a later step."}` and creates no booking. Payment holds arrive in Step 12.
 
 ## Owner authentication
 

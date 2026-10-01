@@ -15,7 +15,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 5 | Home page | Done | [05-home-page.md](features/05-home-page.md) | Public privacy-limited cards, responsive Home states and the settings-backed call-type picker are in place. |
 | 6 | Google login, details form, Settings | Done | [06-google-login-details-settings.md](features/06-google-login-details-settings.md) | Google redirect sign-in, user sessions/details and Settings underpin the current Home flow. |
 | 7 | Availability and time slots | Done | [07-availability-time-slots.md](features/07-availability-time-slots.md) | Weekly hours, date exceptions, the IST slot engine and Home date/time picker are in place. |
-| 8 | Booking free Normal calls | Not started | — | |
+| 8 | Booking free Normal calls | Done | [08-booking-free-normal-calls.md](features/08-booking-free-normal-calls.md) | Transactional zero-price booking creation, overlap handling and the Home summary/success flow are in place. |
 | 9 | History and astrologer bookings | Not started | — | |
 | 10 | In-app call, part 1 | Not started | — | |
 | 11 | In-app call, part 2 | Not started | — | |
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Step 8: Booking free Normal calls.
+Step 9: History and astrologer bookings.
 
 ## Known issues
 

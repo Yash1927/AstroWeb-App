@@ -52,6 +52,18 @@ const slots = {
   ],
 }
 
+const confirmedBooking = {
+  id: 'booking-1',
+  astrologerId: astrologer.id,
+  callType: 'normal',
+  callMode: 'in_app',
+  startsAt: '2026-10-02T04:30:00Z',
+  endsAt: '2026-10-02T04:45:00Z',
+  status: 'confirmed',
+  pricePaise: 0,
+  durationMin: 15,
+}
+
 function response(body: unknown, status = 200) {
   return {
     json: async () => body,
@@ -98,7 +110,7 @@ describe('HomePage', () => {
     }))
   })
 
-  it('collects missing details, shows slots and reaches the confirmation placeholder', async () => {
+  it('collects missing details, shows the summary and confirms a free Normal booking', async () => {
     const incompleteUser = {
       ...completeUser,
       birthDate: null,
@@ -111,6 +123,9 @@ describe('HomePage', () => {
       if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
       if (String(input) === '/api/settings/public') return response(settings)
       if (String(input) === '/api/astrologers/anika/slots?type=normal') return response(slots)
+      if (String(input) === '/api/bookings' && init?.method === 'POST') {
+        return response({ booking: confirmedBooking }, 201)
+      }
       if (String(input) === '/api/me' && init?.method === 'PUT') {
         return response({ user: completeUser })
       }
@@ -133,7 +148,23 @@ describe('HomePage', () => {
     const slotDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
     expect((within(slotDialog).getByRole('button', { name: /1 Oct/ }) as HTMLButtonElement).disabled).toBe(true)
     await user.click(within(slotDialog).getByRole('button', { name: /10:00 am/i }))
-    expect(await screen.findByText('Confirming comes in the next step')).toBeDefined()
+    const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
+    expect(within(summary).getByText('Anika Rao')).toBeDefined()
+    expect(within(summary).getByText('Normal')).toBeDefined()
+    expect(within(summary).getByText('15 min')).toBeDefined()
+    expect(within(summary).getByText('Free')).toBeDefined()
+    await user.click(within(summary).getByRole('button', { name: 'Confirm booking' }))
+
+    const success = await screen.findByRole('dialog', { name: 'Call booked' })
+    expect(within(success).getByRole('img', { name: 'Success' })).toBeDefined()
+    expect(within(success).getByText(/Your call is booked for Fri, 2 Oct at 10:00 am/i)).toBeDefined()
+    expect(within(success).getByRole('link', { name: 'Go to History' }).getAttribute('href')).toBe('/history')
+    const bookingRequest = fetchMock.mock.calls.find(([input]) => String(input) === '/api/bookings')
+    expect(JSON.parse(String(bookingRequest?.[1]?.body))).toEqual({
+      astrologerId: astrologer.id,
+      callType: 'normal',
+      startsAt: slots.days[1]!.slots[0]!.startsAt,
+    })
   })
 
   it('asks for one valid phone field for an Urgent call', async () => {
@@ -168,7 +199,69 @@ describe('HomePage', () => {
     expect(JSON.parse(String(updateRequest.body)).phone).toBe('+919876543210')
     const slotDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
     await user.click(within(slotDialog).getByRole('button', { name: /10:00 am/i }))
-    expect(await screen.findByText('Confirming comes in the next step')).toBeDefined()
+    const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
+    expect(within(summary).getByText(/Anika Rao will call you on \+91 98765 43210/i)).toBeDefined()
+    expect(within(summary).getByRole('button', { name: /Pay/ })).toBeDefined()
+  })
+
+  it('shows the friendly conflict when the chosen time was just booked', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
+      if (String(input) === '/api/settings/public') return response(settings)
+      if (String(input) === '/api/me') return response({ user: completeUser })
+      if (String(input) === '/api/astrologers/anika/slots?type=normal') return response(slots)
+      if (String(input) === '/api/bookings' && init?.method === 'POST') {
+        return response({
+          error: 'Sorry, this time was just booked. Please pick another time.',
+        }, 409)
+      }
+      throw new Error(`Unexpected request: ${String(input)}`)
+    }))
+    const user = userEvent.setup()
+    renderHome()
+
+    await user.click(await screen.findByRole('button', { name: 'Call' }))
+    await user.click(screen.getByRole('button', { name: /Normal/ }))
+    const slotsDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
+    await user.click(within(slotsDialog).getByRole('button', { name: /10:00 am/i }))
+    const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
+    await user.click(within(summary).getByRole('button', { name: 'Confirm booking' }))
+
+    expect((await within(summary).findByRole('alert')).textContent).toBe(
+      'Sorry, this time was just booked. Please pick another time.',
+    )
+  })
+
+  it('shows the upcoming Normal limit as a notice with a History action', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
+      if (String(input) === '/api/settings/public') return response(settings)
+      if (String(input) === '/api/me') return response({ user: completeUser })
+      if (String(input) === '/api/astrologers/anika/slots?type=normal') return response(slots)
+      if (String(input) === '/api/bookings' && init?.method === 'POST') {
+        return response({
+          error: 'You already have an upcoming Normal call. You can book another after it ends.',
+        }, 409)
+      }
+      throw new Error(`Unexpected request: ${String(input)}`)
+    }))
+    const user = userEvent.setup()
+    renderHome()
+
+    await user.click(await screen.findByRole('button', { name: 'Call' }))
+    await user.click(screen.getByRole('button', { name: /Normal/ }))
+    const slotsDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
+    await user.click(within(slotsDialog).getByRole('button', { name: /10:00 am/i }))
+    const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
+    await user.click(within(summary).getByRole('button', { name: 'Confirm booking' }))
+
+    const notice = await within(summary).findByRole('status')
+    expect(notice.textContent).toBe(
+      'You already have an upcoming Normal call. You can book another after it ends.',
+    )
+    expect(notice.classList.contains('field__error')).toBe(false)
+    expect(within(summary).queryByRole('button', { name: 'Confirm booking' })).toBeNull()
+    expect(within(summary).getByRole('link', { name: 'Go to History' }).getAttribute('href')).toBe('/history')
   })
 
   it('disables dates without slots and shows the specified empty-day message', async () => {

@@ -1354,6 +1354,66 @@ svg {
   gap: var(--space-4);
 }
 
+.booking-summary dl {
+  display: grid;
+  gap: var(--space-3);
+  margin: 0;
+}
+
+.booking-summary dl > div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-2) var(--space-4);
+  padding-block-end: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.booking-summary dl > div:last-child {
+  padding-block-end: 0;
+  border-bottom: 0;
+}
+
+.booking-summary dt {
+  color: var(--color-text-muted);
+}
+
+.booking-summary dd {
+  margin: 0;
+  font-weight: 700;
+  text-align: end;
+}
+
+.booking-summary__phone {
+  margin-block-start: var(--space-4);
+  padding-block-start: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.booking-summary__phone .button {
+  padding-inline: 0;
+}
+
+.booking-notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  color: var(--color-text);
+}
+
+.booking-success {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  text-align: center;
+}
+
+.booking-success p {
+  margin: 0;
+}
+
 .availability-day,
 .availability-exception {
   display: grid;

@@ -6,7 +6,7 @@ Last updated: 2026-10-01
 
 ## Current state
 
-The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Prisma reports that the database marker and live schema match the emitted contract.
+The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Step 8 begins inserting confirmed zero-price bookings through the existing contract and needs no schema change.
 
 The running app and seed use pooled `DATABASE_URL`. Migration commands use direct `DIRECT_DATABASE_URL`. Money columns are whole paise. Instants are PostgreSQL `timestamptz`; local calendar dates and availability clock times use `date` and `time`.
 
@@ -106,7 +106,9 @@ Step 7 uses null start/end only for a whole-date `blocked` exception. Partial bl
 
 Relations: one user, one astrologer and optional related payments.
 
-Step 7 reads confirmed intervals and `pending_payment` intervals whose `holdExpiresAt` is still in the future when calculating slots. It never inserts, updates or deletes a Booking. Expired holds do not remove a displayed slot; Step 8 will expire them transactionally before inserting a booking as required by README §6.3.
+Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` intervals as occupied. Step 8 rechecks an exact slot and then, in one transaction, changes the selected astrologer's elapsed `pending_payment` holds to `expired`, checks the user's one-upcoming-Normal limit and inserts the zero-price booking. The inserted row is immediately `confirmed`, has no hold expiry and copies the Settings price into whole paise. Normal uses `in_app`; zero-price Urgent or Subscription uses `phone`.
+
+`Booking_no_overlap` applies to both `pending_payment` and `confirmed` rows. If simultaneous inserts target the same astrologer and overlapping time, PostgreSQL accepts one and rejects the other with exclusion error `23P01`. Prisma 8 surfaces this on `SqlQueryError.sqlState`, directly or below a transaction `cause`; the API maps that shape to a friendly `409`.
 
 ### `Payment`
 
@@ -143,7 +145,7 @@ Step 7 reads confirmed intervals and `pending_payment` intervals whose `holdExpi
 | `subscriptionDurationMin` | integer | No | `15` |
 | `updatedAt` | timestamptz | No | Set on create and each non-empty ORM update |
 
-The server reads this row for the public settings endpoint and reads the matching duration on every Step 7 slot request. Booking and payment creation are built in later steps.
+The server reads this row for the public settings endpoint, Step 7 slot duration and Step 8 booking price/duration. The browser does not supply those booking values. Payment creation is built in later steps.
 
 ### `Blog`
 
@@ -213,7 +215,7 @@ The session manager stores a random UUID as the session id and sends a signed fo
 
 The application migrations were generated and self-emitted with Prisma 8. `npm run migration:check` reports that the packages and compiled operations are valid. `npm run migration:status` and `npm run db:verify` confirm the Step 4 migration is applied and Neon matches contract hash `4d9b1a55…`.
 
-Step 7 changes no contract or migration. It begins using the availability rows defined in Step 2 and reads active booking intervals for conflict filtering.
+Steps 7 and 8 change no contract or migration. Step 7 begins using availability rows and booking intervals for slot filtering. Step 8 writes confirmed zero-price rows and relies on the existing exclusion constraint for concurrent conflicts.
 
 ## Seed data
 

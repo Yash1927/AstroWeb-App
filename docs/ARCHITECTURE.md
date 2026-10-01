@@ -6,10 +6,10 @@ Last updated: 2026-10-01
 
 ## Current state
 
-Step 7 adds authenticated astrologer availability, one settings-backed IST slot engine, the public 14-day slots endpoint and Home date/time selection (README §4, §6.1–§6.3 and §8.3). The current contract remains applied and verified on Neon; this step needs no migration.
+Step 8 adds authenticated, transactional creation of free Normal bookings and completes the Home flow through summary and success (README §4, §6.1–§6.4 and §11). The current contract and overlap constraint remain applied on Neon; this step needs no migration.
 
-- `frontend/` is a React single-page app with public Home through time selection, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
-- `backend/` separates `app.ts` from the `index.ts` listener so routers can be tested without opening a port. HTTP routes are mounted at `/api`; public data/slots, all three role sessions, user self-service, owner management and astrologer authentication/profile/availability APIs are implemented.
+- `frontend/` is a React single-page app with public Home through zero-price booking success, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `backend/` separates `app.ts` from the `index.ts` listener so routers can be tested without opening a port. HTTP routes are mounted at `/api`; public data/slots, all three role sessions, user self-service, zero-price booking creation, owner management and astrologer authentication/profile/availability APIs are implemented.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
@@ -31,6 +31,7 @@ flowchart LR
     Google[Google Identity Services]
     UserAuth[Google callback]
     User[Protected user routes]
+    Booking[Protected booking route]
     Session[Session manager and role guards]
     Prisma[Prisma 8 runtime]
     Neon[(Neon Postgres)]
@@ -48,12 +49,14 @@ flowchart LR
     Google -->|credential form POST| UserAuth
     UserAuth --> Express
     Express --> User
+    Express --> Booking
     OwnerAuth --> Session
     Owner --> Session
     AstroAuth --> Session
     Astrologer --> Session
     UserAuth --> Session
     User --> Session
+    Booking --> Session
     Session --> Prisma
     OwnerAuth --> Prisma
     Owner --> Prisma
@@ -61,6 +64,7 @@ flowchart LR
     Astrologer --> Prisma
     UserAuth --> Prisma
     User --> Prisma
+    Booking --> Prisma
     Public --> Prisma
     Prisma -->|pooled DATABASE_URL| Neon
 ```
@@ -77,6 +81,7 @@ backend/
   routes/Astrologers.ts     Public privacy-limited Home-card handler
   routes/UserAuth.ts        Google redirect callback and user-session creation
   routes/User.ts            Protected self-only user details and logout
+  routes/Bookings.ts        Protected zero-price booking creation
   routes/OwnerAuth.ts       Owner credential login
   routes/Owner.ts           Protected owner account and settings handlers
   routes/AstrologerAuth.ts  Astrologer credential login
@@ -84,6 +89,7 @@ backend/
   src/availability/         Availability validation/storage and the shared slot engine
   src/astrologer/           Astrologer validation and database service
   src/auth/                 Session cookies, role guards and login throttling
+  src/booking/              Booking input validation and transactional service
   src/http/                 Shared Zod response helper
   src/owner/                Owner validation schemas and database service
   src/public/               Public Home-card database service
@@ -97,6 +103,7 @@ frontend/
   src/api/astrologer.ts     Typed astrologer API client
   src/api/public.ts         Typed public card and settings client
   src/api/user.ts           Typed user account/details/logout client
+  src/api/bookings.ts       Typed booking-creation client
   src/components/           Shared UI components
   src/components/AvailabilityEditor.tsx Protected weekly and exception editor
   src/screens/DesignPage.tsx Development-only component and motion gallery
@@ -140,7 +147,7 @@ docs/
 
 | Service | Used for | Env vars | Added in step |
 |---|---|---|---|
-| Neon Postgres | Application data, settings, owner seed, profiles, availability, booking conflict reads, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–7 |
+| Neon Postgres | Application data, settings, owner seed, profiles, availability, bookings, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–8 |
 | Google Identity Services | Redirect-mode user identity and verified Google account claims | `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` | 6 |
 
 ## Main flows
@@ -154,7 +161,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | Owner and astrologer login | 3, 4 | [Panel session flows](#panel-session-flows) |
 | User sign-in with Google and own details | 6 | [User sign-in and details flow](#user-sign-in-and-details-flow) |
 | Availability and time slots | 7 | [Availability and slot flow](#availability-and-slot-flow) |
-| Booking creation and holds | 8 | — |
+| Zero-price booking creation | 8 | [Booking creation flow](#booking-creation-flow) |
 | In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | — |
 | Payments (Razorpay orders, verification, webhooks, refunds) | 12, 13 | — |
 | Blogs | 14 | — |
@@ -164,7 +171,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 
 On mount, Home requests `GET /api/astrologers` and `GET /api/settings/public` independently. The card service filters `Astrologer` by `isActive = true`, `isListed = true` and non-null `profileSavedAt`, selects only card fields, and orders by display name. The route then rebuilds each response object from those public fields before serialization.
 
-Settings stay separate from card data. A settings failure leaves browsing intact and appears only inside the call-type sheet. Selecting a call type checks the user session, collects missing details and a phone number when required, loads 14 days of free slots, then stops after the user chooses a time.
+Settings stay separate from card data. A settings failure leaves browsing intact and appears only inside the call-type sheet. Selecting a call type checks the user session, collects missing details and a phone number when required, loads 14 days of free slots, then shows the chosen time in a summary. The browser sends only astrologer id, call type and UTC start to the protected booking endpoint.
 
 ## Availability and slot flow
 
@@ -190,7 +197,34 @@ flowchart LR
 
 The availability save replaces only the signed-in astrologer's rules and exceptions in one transaction. Weekly ranges form the base schedule; extra exception windows are merged in and blocked ranges are subtracted. The transaction reads confirmed future bookings only to count warnings and never changes a Booking row.
 
-The public service requires an active, listed, profile-saved astrologer, reads the current duration for the requested call type, and loads only exceptions and booking intervals that can affect the 14-date range. `calculateAvailableSlots` is clock-injected for deterministic tests. It interprets local availability in `Asia/Kolkata`, emits UTC instants, ignores expired holds and leaves today empty for Normal. Home displays those instants in IST and does not send a price or create a booking.
+The public service first requires an active, listed, profile-saved astrologer. It then starts its four independent reads—Settings durations, weekly hours, date exceptions and blocking bookings—together and waits for all of them. It loads only exceptions and booking intervals that can affect the 14-date range. `calculateAvailableSlots` is clock-injected for deterministic tests. It interprets local availability in `Asia/Kolkata`, emits UTC instants, ignores expired holds and leaves today empty for Normal. Home displays those instants in IST and never sends a price or duration.
+
+## Booking creation flow
+
+```mermaid
+sequenceDiagram
+    participant Home
+    participant API as POST /api/bookings
+    participant Guard as requireUser
+    participant Slots as Shared slot service
+    participant Tx as Booking transaction
+    participant Neon
+
+    Home->>API: astrologerId + callType + UTC startsAt
+    API->>Guard: resolve signed user and live account
+    API->>Neon: read own details and current Settings
+    API->>Slots: recheck eligible astrologer and exact slot
+    API->>Tx: begin zero-price confirmation
+    Tx->>Neon: expire selected astrologer's elapsed holds
+    Tx->>Neon: check user's upcoming Normal booking
+    Tx->>Neon: insert confirmed booking
+    Neon-->>Tx: enforce Booking_no_overlap
+    Tx-->>Home: 201 booking, or friendly 409 conflict
+```
+
+The service derives user id from the session and derives price, duration, call mode, end time and status on the server. Complete details are required; Urgent and Subscription also require the user's saved phone. It invokes the same slot service used by the picker so eligibility, the 14-day range, Normal-from-tomorrow and current booking conflicts are rechecked at confirmation time.
+
+Every zero-price call type is confirmed immediately. Normal is always `in_app`; the phone call types are always `phone`. A positive settings price is rejected before the transaction with the Step 8 deferred-payment message. Inside the transaction, only elapsed holds for the selected astrologer are expired, the one-upcoming-Normal rule is checked and the new row is inserted. Prisma 8 normalizes PostgreSQL error `23P01` from `Booking_no_overlap` to `SqlQueryError.sqlState`; the mapper checks that property directly and through a transaction `cause` before returning the specified same-slot `409` response.
 
 ## User sign-in and details flow
 
@@ -253,4 +287,4 @@ The login limiter is held in the backend process. It is correct for the current 
 
 ## Differences from the spec
 
-None in Step 7. Booking creation remains clearly labelled Step 8 work.
+None in Step 8. Paid booking holds, payment and subscription-credit use remain later-step work and are explicitly rejected without a write.

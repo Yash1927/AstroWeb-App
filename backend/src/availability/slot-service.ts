@@ -222,46 +222,47 @@ export class DatabaseSlotService implements SlotService {
       .first();
     if (!astrologer) throw new SlotAstrologerNotFoundError("Astrologer not found.");
 
-    const settings = await db.orm.public.Settings.select(
-      "normalDurationMin",
-      "urgentDurationMin",
-      "subscriptionDurationMin",
-    ).first({ id: 1 });
-    if (!settings) throw new Error("Settings are unavailable.");
-
-    const weeklyRows = await db.orm.public.AvailabilityRule.select(
-      "weekday",
-      "startTime",
-      "endTime",
-    ).where({ astrologerId: input.astrologerId }).all();
-    const exceptionRows = await db.orm.public.AvailabilityException.select(
-      "date",
-      "kind",
-      "startTime",
-      "endTime",
-    )
-      .where({ astrologerId: input.astrologerId })
-      .where((exception) => exception.date.gte(startDate))
-      .where((exception) => exception.date.lte(endDate))
-      .all();
-
     const rangeStart = startDate
       .toZonedDateTime({ timeZone: APP_TIME_ZONE, plainTime: Temporal.PlainTime.from("00:00") })
       .toInstant();
     const rangeEnd = endDate.add({ days: 1 })
       .toZonedDateTime({ timeZone: APP_TIME_ZONE, plainTime: Temporal.PlainTime.from("00:00") })
       .toInstant();
-    const bookingRows = await db.orm.public.Booking.select(
-      "startsAt",
-      "endsAt",
-      "status",
-      "holdExpiresAt",
-    )
-      .where({ astrologerId: input.astrologerId })
-      .where((booking) => booking.status.in(["confirmed", "pending_payment"]))
-      .where((booking) => booking.startsAt.lt(rangeEnd))
-      .where((booking) => booking.endsAt.gt(rangeStart))
-      .all();
+
+    const [settings, weeklyRows, exceptionRows, bookingRows] = await Promise.all([
+      db.orm.public.Settings.select(
+        "normalDurationMin",
+        "urgentDurationMin",
+        "subscriptionDurationMin",
+      ).first({ id: 1 }),
+      db.orm.public.AvailabilityRule.select(
+        "weekday",
+        "startTime",
+        "endTime",
+      ).where({ astrologerId: input.astrologerId }).all(),
+      db.orm.public.AvailabilityException.select(
+        "date",
+        "kind",
+        "startTime",
+        "endTime",
+      )
+        .where({ astrologerId: input.astrologerId })
+        .where((exception) => exception.date.gte(startDate))
+        .where((exception) => exception.date.lte(endDate))
+        .all(),
+      db.orm.public.Booking.select(
+        "startsAt",
+        "endsAt",
+        "status",
+        "holdExpiresAt",
+      )
+        .where({ astrologerId: input.astrologerId })
+        .where((booking) => booking.status.in(["confirmed", "pending_payment"]))
+        .where((booking) => booking.startsAt.lt(rangeEnd))
+        .where((booking) => booking.endsAt.gt(rangeStart))
+        .all(),
+    ]);
+    if (!settings) throw new Error("Settings are unavailable.");
 
     const durationField = `${input.callType}DurationMin` as const;
     const durationMin = settings[durationField];

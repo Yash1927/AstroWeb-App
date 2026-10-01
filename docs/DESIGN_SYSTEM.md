@@ -69,14 +69,14 @@ Last updated: 2026-10-01
 | `message-in` | 180ms | Chat-message example | Reduced to 1ms once |
 | `heart-pop` | 300ms | Like example | Reduced to 1ms once |
 | Toast in / out | 220ms / 180ms | Toast component | Reduced to 1ms once |
-| `check-draw` | 450ms after 300ms scale-in | Success example | Reduced to 1ms once |
+| `check-draw` | 450ms after 300ms scale-in | Booking success and design example | Reduced to 1ms once |
 | `soft-glow` | 2.4s loop | Live Join now example | Runs once for 1ms |
 
 ## Screens
 
 | Screen | Route | States (loading, empty, error, …) | Built in step |
 |---|---|---|---|
-| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips, time chips and confirmation placeholder | 5–7 |
+| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary/error/submitting/success states | 5–8 |
 | History | `/history` | Session loading/error, signed-out Google screen, signed-in Step 9 placeholder | 6 |
 | Blogs | `/blogs` | Placeholder | 1 |
 | Blog post | `/blogs/:id` | Later-step placeholder | 1 |
@@ -107,7 +107,11 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Empty Home list | “No astrologers are available right now. Please check again later.” | Home |
 | Private-details note | “Your details are private. Only the astrologer you book can see them.” | First booking details and Settings |
 | Empty slot date | “No free times on this day. Please try another day.” | Home slot picker |
-| Deferred confirmation | “Confirming comes in the next step” | Home after choosing a slot |
+| Free booking action | “Confirm booking” | Home booking summary |
+| Paid booking deferral | “Paid bookings come in a later step.” | Home booking summary error |
+| Same-slot conflict | “Sorry, this time was just booked. Please pick another time.” | Home booking summary error |
+| Normal booking limit | “You already have an upcoming Normal call. You can book another after it ends.” with **Go to History** | Home booking summary notice |
+| Normal booking success | “Your call is booked for {date} at {time}. You can join from History.” | Home booking success |
 | Availability scope | “Changes affect future free times only. Existing bookings stay booked.” | Astrologer Availability |
 | Availability validation summary | “Please fix the highlighted hours above.” | Astrologer Availability save action |
 | Empty birth date | “Enter your date of birth.” | First booking details and Settings |
@@ -134,5 +138,6 @@ Messages shown in the UI, so the same situation always uses the same words.
 - Home uses one card column by default, two from 42rem and three from 64rem. Card contents and call-option summaries wrap without fixed text heights.
 - User sign-in, details and Settings use the existing mobile-first card/input system. Google’s rendered button is capped to the available width, and Settings uses one flexible column at the 360px baseline.
 - Date chips scroll horizontally without widening the BottomSheet and reveal part of the next date on phones. Time chips wrap to about three per row at 360px. Empty dates remain visible but disabled, and selection uses the golden control background rather than golden text.
+- The booking summary uses a semantic description list for astrologer, call type, IST date/time, duration and price. Submission errors are announced in an alert without closing the sheet. The upcoming-Normal limit instead uses a softly highlighted polite status, removes the repeat confirmation action and offers a full-size History link. The success checkmark has an accessible name and its History action uses the same shared link-button treatment.
 - Date exceptions stay in the existing one-column phone layout and use overlap-safe responsive grid columns at desktop widths.
 - `prefers-reduced-motion: reduce` changes all animations and transitions to one 1ms iteration.

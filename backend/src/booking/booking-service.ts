@@ -1,0 +1,301 @@
+import { randomUUID } from "node:crypto";
+import "temporal-polyfill/global";
+import { db } from "../prisma/db";
+import {
+  APP_TIME_ZONE,
+  SlotAstrologerNotFoundError,
+  slotService,
+  type SlotService,
+} from "../availability/slot-service";
+import type { CreateBookingInput } from "./booking-schemas";
+
+type CallType = CreateBookingInput["callType"];
+type CallMode = "in_app" | "phone";
+
+type BookingUser = {
+  birthDate: unknown | null;
+  birthPlace: string | null;
+  birthTime: unknown | null;
+  gender: "male" | "female" | "other" | null;
+  id: string;
+  name: string;
+  phone: string | null;
+};
+
+type BookingSettings = {
+  normalDurationMin: number;
+  normalPricePaise: number;
+  subscriptionDurationMin: number;
+  subscriptionPricePaise: number;
+  urgentDurationMin: number;
+  urgentPricePaise: number;
+};
+
+export type BookingInsert = {
+  astrologerId: string;
+  callMode: CallMode;
+  callType: CallType;
+  endsAt: Temporal.Instant;
+  holdExpiresAt: null;
+  id: string;
+  pricePaise: number;
+  startsAt: Temporal.Instant;
+  status: "confirmed";
+  usedCredit: false;
+  userId: string;
+};
+
+export type CreatedBooking = {
+  astrologerId: string;
+  callMode: CallMode;
+  callType: CallType;
+  durationMin: 10 | 15 | 30;
+  endsAt: string;
+  id: string;
+  pricePaise: number;
+  startsAt: string;
+  status: "confirmed";
+};
+
+export interface BookingTransaction {
+  createBooking(input: BookingInsert): Promise<Omit<CreatedBooking, "durationMin">>;
+  expireElapsedHolds(astrologerId: string, now: Temporal.Instant): Promise<void>;
+  hasUpcomingNormal(userId: string, now: Temporal.Instant): Promise<boolean>;
+}
+
+export interface BookingRepository {
+  getSettings(): Promise<BookingSettings | null>;
+  getUser(userId: string): Promise<BookingUser | null>;
+  transaction<T>(work: (transaction: BookingTransaction) => Promise<T>): Promise<T>;
+}
+
+export interface BookingService {
+  createBooking(userId: string, input: CreateBookingInput): Promise<CreatedBooking>;
+}
+
+export class BookingUserDetailsIncompleteError extends Error {}
+export class BookingPhoneRequiredError extends Error {}
+export class BookingAstrologerNotFoundError extends Error {}
+export class BookingSlotUnavailableError extends Error {}
+export class BookingOverlapError extends Error {}
+export class BookingFreeNormalLimitError extends Error {}
+export class PaidBookingDeferredError extends Error {}
+
+function completeDetails(user: BookingUser) {
+  return user.name.trim().length >= 2
+    && user.name.trim().length <= 60
+    && user.birthDate !== null
+    && user.birthTime !== null
+    && Boolean(user.birthPlace?.trim())
+    && user.gender !== null;
+}
+
+function priceAndDuration(settings: BookingSettings, callType: CallType) {
+  const pricePaise = settings[`${callType}PricePaise`];
+  const durationMin = settings[`${callType}DurationMin`];
+  if (!Number.isInteger(pricePaise) || pricePaise < 0) {
+    throw new Error("The call price is invalid.");
+  }
+  if (durationMin !== 10 && durationMin !== 15 && durationMin !== 30) {
+    throw new Error("The call duration is invalid.");
+  }
+  return { pricePaise, durationMin };
+}
+
+function callModeFor(callType: CallType): CallMode {
+  return callType === "normal" ? "in_app" : "phone";
+}
+
+export function isBookingOverlapConstraintError(error: unknown) {
+  let current = error;
+  for (let depth = 0; depth < 5 && current && typeof current === "object"; depth += 1) {
+    const candidate = current as {
+      cause?: unknown;
+      code?: unknown;
+      constraint?: unknown;
+      sqlState?: unknown;
+    };
+    if (
+      candidate.sqlState === "23P01"
+      || candidate.code === "23P01"
+      || candidate.constraint === "Booking_no_overlap"
+    ) {
+      return true;
+    }
+    current = candidate.cause;
+  }
+  return false;
+}
+
+export class DatabaseBookingRepository implements BookingRepository {
+  async getUser(userId: string) {
+    return db.orm.public.User.select(
+      "id",
+      "name",
+      "birthDate",
+      "birthTime",
+      "birthPlace",
+      "phone",
+      "gender",
+    ).first({ id: userId });
+  }
+
+  async getSettings() {
+    return db.orm.public.Settings.select(
+      "normalPricePaise",
+      "urgentPricePaise",
+      "subscriptionPricePaise",
+      "normalDurationMin",
+      "urgentDurationMin",
+      "subscriptionDurationMin",
+    ).first({ id: 1 });
+  }
+
+  async transaction<T>(work: (transaction: BookingTransaction) => Promise<T>) {
+    return db.transaction(async (transaction) => work({
+      async expireElapsedHolds(astrologerId, now) {
+        await transaction.orm.public.Booking
+          .where({ astrologerId, status: "pending_payment" })
+          .where((booking) => booking.holdExpiresAt.lte(now))
+          .update({ status: "expired" });
+      },
+      async hasUpcomingNormal(userId, now) {
+        const bookings = await transaction.orm.public.Booking.select(
+          "status",
+          "holdExpiresAt",
+        )
+          .where({ userId, callType: "normal" })
+          .where((booking) => booking.status.in(["confirmed", "pending_payment"]))
+          .where((booking) => booking.endsAt.gt(now))
+          .all();
+
+        return bookings.some((booking) => booking.status === "confirmed"
+          || (
+            booking.status === "pending_payment"
+            && booking.holdExpiresAt !== null
+            && Temporal.Instant.compare(booking.holdExpiresAt, now) > 0
+          ));
+      },
+      async createBooking(input) {
+        const created = await transaction.orm.public.Booking.select(
+          "id",
+          "astrologerId",
+          "callType",
+          "callMode",
+          "startsAt",
+          "endsAt",
+          "status",
+          "pricePaise",
+        ).create(input);
+
+        return {
+          ...created,
+          startsAt: created.startsAt.toString(),
+          endsAt: created.endsAt.toString(),
+          status: created.status as "confirmed",
+        };
+      },
+    }));
+  }
+}
+
+export class DefaultBookingService implements BookingService {
+  constructor(
+    private readonly repository: BookingRepository,
+    private readonly slots: SlotService,
+    private readonly now: () => Temporal.Instant = () => Temporal.Now.instant(),
+  ) {}
+
+  async createBooking(userId: string, input: CreateBookingInput) {
+    const now = this.now();
+    const [user, settings] = await Promise.all([
+      this.repository.getUser(userId),
+      this.repository.getSettings(),
+    ]);
+    if (!user || !completeDetails(user)) {
+      throw new BookingUserDetailsIncompleteError(
+        "Complete your details before booking a call.",
+      );
+    }
+
+    const callMode = callModeFor(input.callType);
+    if (callMode === "phone" && !user.phone) {
+      throw new BookingPhoneRequiredError(
+        "Add your phone number before booking this call.",
+      );
+    }
+    if (!settings) throw new Error("Settings are unavailable.");
+    const { pricePaise, durationMin } = priceAndDuration(settings, input.callType);
+
+    const today = now.toZonedDateTimeISO(APP_TIME_ZONE).toPlainDate();
+    let available;
+    try {
+      available = await this.slots.getAvailableSlots({
+        astrologerId: input.astrologerId,
+        callType: input.callType,
+        startDate: today.toString(),
+        endDate: today.add({ days: 13 }).toString(),
+        now,
+      });
+    } catch (error) {
+      if (error instanceof SlotAstrologerNotFoundError) {
+        throw new BookingAstrologerNotFoundError("Astrologer not found.");
+      }
+      throw error;
+    }
+
+    const requestedStart = Temporal.Instant.from(input.startsAt);
+    const slot = available.days
+      .flatMap((day) => day.slots)
+      .find((candidate) => Temporal.Instant.compare(
+        Temporal.Instant.from(candidate.startsAt),
+        requestedStart,
+      ) === 0);
+    if (!slot || available.durationMin !== durationMin) {
+      throw new BookingSlotUnavailableError(
+        "Sorry, this time was just booked. Please pick another time.",
+      );
+    }
+    if (pricePaise > 0) {
+      throw new PaidBookingDeferredError("Paid bookings come in a later step.");
+    }
+
+    try {
+      return await this.repository.transaction(async (transaction) => {
+        await transaction.expireElapsedHolds(input.astrologerId, now);
+
+        if (input.callType === "normal" && await transaction.hasUpcomingNormal(userId, now)) {
+          throw new BookingFreeNormalLimitError(
+            "You already have an upcoming Normal call. You can book another after it ends.",
+          );
+        }
+
+        const created = await transaction.createBooking({
+          id: randomUUID(),
+          userId,
+          astrologerId: input.astrologerId,
+          callType: input.callType,
+          callMode,
+          startsAt: requestedStart,
+          endsAt: Temporal.Instant.from(slot.endsAt),
+          status: "confirmed",
+          holdExpiresAt: null,
+          pricePaise,
+          usedCredit: false,
+        });
+        return { ...created, durationMin };
+      });
+    } catch (error) {
+      if (error instanceof BookingFreeNormalLimitError) throw error;
+      if (isBookingOverlapConstraintError(error)) {
+        throw new BookingOverlapError(
+          "Sorry, this time was just booked. Please pick another time.",
+        );
+      }
+      throw error;
+    }
+  }
+}
+
+export const bookingRepository = new DatabaseBookingRepository();
+export const bookingService = new DefaultBookingService(bookingRepository, slotService);
