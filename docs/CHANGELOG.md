@@ -2,6 +2,8 @@
 
 Every change to the project, newest first, with one entry per task. Use this format:
 
+Last updated: 2026-10-01
+
 ```markdown
 ## YYYY-MM-DD: Step N, title (or a short description)
 - **Added / Changed / Fixed / Removed:** what changed, in plain words
@@ -13,6 +15,26 @@ Every change to the project, newest first, with one entry per task. Use this for
 ```
 
 ---
+
+## 2026-10-01: Step 6 and 7 browser review fixes
+- **Fixed:** Home time chips now wrap to about three per row at 360px while the horizontal date strip reveals part of the next date; invalid availability saves focus and scroll to the first bad field, show a nearby summary, and date exceptions no longer overlap at desktop widths
+- **Changed:** phone fields show a fixed `+91` prefix, accept 10 local digits while ignoring spaces and dashes, and still send the canonical `+91XXXXXXXXXX` value; an empty birth date has its own error; avatar initials ignore non-letter-leading words; empty expertise and language rows are omitted from `AstrologerCard`
+- **Files:** `frontend/src/components/AvailabilityEditor.tsx`, `frontend/src/components/PhoneNumberField.tsx`, `frontend/src/components/UserDetailsForm.tsx`, `frontend/src/components/Avatar.tsx`, `frontend/src/components/AstrologerCard.tsx`, `frontend/src/screens/HomePage.tsx`, `frontend/src/user-details.ts`, `frontend/src/design.css`, and related frontend tests
+- **Database:** none
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/CHANGELOG.md`, `docs/DESIGN_SYSTEM.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/features/06-google-login-details-settings.md`, `docs/features/07-availability-time-slots.md`
+- **Notes:** frontend lint, all 17 frontend tests and the production build pass; backend type-check and all 55 backend tests pass. Backend behavior and API shapes are unchanged; the server continues to validate and store canonical Indian phone numbers
+
+## 2026-10-01: Step 7, availability and time slots
+- **Added:** authenticated weekly hours and date-exception editing for astrologers, a settings-backed IST slot engine, public 14-day slot results, disabled empty date chips, time chips and the Step 8 confirmation placeholder
+- **Changed:** the Home flow now continues past sign-in, details and phone collection into real free-time selection; availability saves warn when confirmed bookings sit outside the new hours while keeping those bookings unchanged
+- **Files:** `backend/src/availability/`, `backend/routes/Astrologer.ts`, `backend/routes/Astrologers.ts`, `frontend/src/components/AvailabilityEditor.tsx`, `frontend/src/screens/AstrologerPage.tsx`, `frontend/src/screens/HomePage.tsx`, `frontend/src/api/astrologer.ts`, `frontend/src/api/public.ts`, `frontend/src/design.css`
+- **Database:** none; Step 7 uses the existing `AvailabilityRule`, `AvailabilityException`, `Booking` and `Settings` tables
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/05-home-page.md`, `docs/features/06-google-login-details-settings.md`, `docs/features/07-availability-time-slots.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 55 tests pass; frontend lint, all 12 tests and production build pass. Slot timestamps are emitted in UTC and rendered in IST. No booking row is created.
 
 ## 2026-10-01: Step 6, Google login, details form and Settings
 - **Added:** Google Identity Services redirect login, verified Google account creation, 30-day user sessions, self-only details endpoints, user logout, signed-out History and Settings gates, the shared details form, the complete Settings screen, and the Home flow through the Step 7 time-choice placeholder

@@ -32,4 +32,39 @@ describe('AstrologerCard', () => {
     await user.click(screen.getByRole('button', { name: 'Call' }))
     expect(onCall).toHaveBeenCalledOnce()
   })
+
+  it('omits an empty expertise or languages row', () => {
+    const { rerender } = render(
+      <AstrologerCard
+        onCall={vi.fn()}
+        profile={{
+          id: 'sumit',
+          displayName: 'Sumit',
+          expertise: [],
+          languages: ['Hindi'],
+          experienceYears: 3,
+        }}
+      />,
+    )
+
+    expect(screen.queryByText('Expertise')).toBeNull()
+    expect(screen.getByText('Languages')).toBeDefined()
+    expect(screen.queryByText('Not added yet')).toBeNull()
+
+    rerender(
+      <AstrologerCard
+        onCall={vi.fn()}
+        profile={{
+          id: 'sumit',
+          displayName: 'Sumit',
+          expertise: ['Vedic'],
+          languages: [],
+          experienceYears: 3,
+        }}
+      />,
+    )
+
+    expect(screen.getByText('Expertise')).toBeDefined()
+    expect(screen.queryByText('Languages')).toBeNull()
+  })
 })

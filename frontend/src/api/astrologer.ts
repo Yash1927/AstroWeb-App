@@ -13,6 +13,28 @@ export type AstrologerProfileInput = Pick<
   'displayName' | 'expertise' | 'experienceYears' | 'languages'
 >
 
+export type AvailabilityRule = {
+  endTime: string
+  startTime: string
+  weekday: number
+}
+
+export type AvailabilityException = {
+  date: string
+  endTime: string | null
+  kind: 'blocked' | 'extra'
+  startTime: string | null
+}
+
+export type AvailabilityInput = {
+  exceptions: AvailabilityException[]
+  weekly: AvailabilityRule[]
+}
+
+export type SavedAvailability = AvailabilityInput & {
+  displacedBookingCount: number
+}
+
 export class AstrologerApiError extends Error {
   status: number
 
@@ -72,4 +94,17 @@ export const astrologerApi = {
         { method: 'PUT', body: JSON.stringify(profile) },
       )
     ).profile,
+  getAvailability: async () =>
+    (
+      await astrologerRequest<{ availability: AvailabilityInput }>(
+        '/api/astrologer/availability',
+      )
+    ).availability,
+  saveAvailability: async (availability: AvailabilityInput) =>
+    (
+      await astrologerRequest<{ availability: SavedAvailability }>(
+        '/api/astrologer/availability',
+        { method: 'PUT', body: JSON.stringify(availability) },
+      )
+    ).availability,
 }

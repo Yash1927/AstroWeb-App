@@ -2,6 +2,8 @@
 
 Choices made while building, and why. Newest entries go last. This file also records the owner's answers to the README's open questions (README §16.2).
 
+Last updated: 2026-10-01
+
 Use this format:
 
 ```markdown
@@ -113,3 +115,17 @@ Use this format:
 - **Context:** The README identifies a user by Google `sub` and makes email read-only, but it does not say whether later Google claims overwrite a name the user edited in Settings.
 - **Decision:** Find by `googleSub`. On first sign-in, prefill the stored name from Google. On later sign-ins, refresh the verified Google email but keep the stored name, birth details, phone number and credits.
 - **Consequences:** Settings changes are not unexpectedly lost. The displayed read-only email follows the current verified Google claim.
+
+## D-014: Date blocks take precedence over added hours
+- **Date:** 2026-10-01
+- **Status:** Accepted
+- **Context:** README §8.3 says a date can block all or part of the weekly schedule or add extra hours, but it does not define precedence when those exception kinds meet.
+- **Decision:** Build a date's base windows from its weekly hours plus `extra` ranges, merge adjacent windows, then subtract `blocked` ranges. A whole-date block must be the date's only exception, and timed exceptions on one date cannot overlap each other.
+- **Consequences:** A block always removes time and can never accidentally reopen it. The editor and server reject ambiguous combinations, and the slot engine has one deterministic interpretation.
+
+## D-015: Avatar initials ignore non-letter-leading words
+- **Date:** 2026-10-01
+- **Status:** Accepted (owner's instruction)
+- **Context:** README §5.6 defines initials from the first and last space-separated words, but labels such as `007` are not useful initials.
+- **Decision:** Before choosing the first and last words, discard any word whose first Unicode character is not a letter. Continue to use `Intl.Segmenter` for the selected characters.
+- **Consequences:** `sumit 007` displays `S`, while Latin, Hindi and other letter-based names keep their existing initials behavior. A name with no letter-leading word displays `?`.

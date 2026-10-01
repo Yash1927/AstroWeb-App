@@ -11,6 +11,11 @@ import {
   astrologerProfileSchema,
   changeAstrologerPasswordSchema,
 } from "../src/astrologer/astrologer-schemas";
+import { availabilitySchema } from "../src/availability/availability-schemas";
+import {
+  availabilityService,
+  type AvailabilityService,
+} from "../src/availability/availability-service";
 import {
   AstrologerNotFoundError,
   AstrologerPasswordStateError,
@@ -21,6 +26,7 @@ import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
 
 type Dependencies = {
   astrologers: AstrologerService;
+  availability: AvailabilityService;
   sessions: SessionManager;
 };
 
@@ -38,7 +44,7 @@ function respondWithAstrologerError(error: unknown, response: Response) {
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
-export function createAstrologerRouter({ astrologers, sessions }: Dependencies) {
+export function createAstrologerRouter({ astrologers, availability, sessions }: Dependencies) {
   const router = Router();
   router.use(requireAstrologer(sessions, astrologers));
 
@@ -130,7 +136,45 @@ export function createAstrologerRouter({ astrologers, sessions }: Dependencies) 
     }
   });
 
+  router.get("/availability", async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+
+    try {
+      response.json({
+        availability: await availability.getAvailability(
+          response.locals.astrologerSession.subjectId,
+        ),
+      });
+    } catch (error) {
+      respondWithAstrologerError(error, response);
+    }
+  });
+
+  router.put("/availability", async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    const body = parseOrRespond(availabilitySchema, request.body, response);
+    if (!body) return;
+
+    try {
+      response.json({
+        availability: await availability.saveAvailability(
+          response.locals.astrologerSession.subjectId,
+          body,
+        ),
+      });
+    } catch (error) {
+      respondWithAstrologerError(error, response);
+    }
+  });
+
   return router;
 }
 
-export default createAstrologerRouter({ astrologers: astrologerService, sessions: sessionManager });
+export default createAstrologerRouter({
+  astrologers: astrologerService,
+  availability: availabilityService,
+  sessions: sessionManager,
+});

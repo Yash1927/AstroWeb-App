@@ -8,6 +8,7 @@ import {
   type UserDetailsFieldErrors,
 } from '../user-details'
 import { Button } from './Button'
+import { PhoneNumberField } from './PhoneNumberField'
 
 function formatTime(value: string) {
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return ''
@@ -116,20 +117,13 @@ export function UserDetailsForm({
         {errors.birthPlace ? <span className="field__error" id={`${formId}-birth-place-error`}>{errors.birthPlace}</span> : null}
       </label>
 
-      <label className="field">
-        <span className="field__label">Phone number <span className="field__hint">Optional for Normal calls</span></span>
-        <input
-          aria-describedby={errors.phone ? `${formId}-phone-error` : undefined}
-          aria-invalid={Boolean(errors.phone)}
-          className="input"
-          inputMode="tel"
-          maxLength={13}
-          onChange={(event) => update('phone', event.target.value)}
-          placeholder="+919876543210"
-          value={draft.phone}
-        />
-        {errors.phone ? <span className="field__error" id={`${formId}-phone-error`}>{errors.phone}</span> : null}
-      </label>
+      <PhoneNumberField
+        error={errors.phone}
+        errorId={`${formId}-phone-error`}
+        hint="Optional for Normal calls"
+        onChange={(value) => update('phone', value)}
+        value={draft.phone}
+      />
 
       <label className="field">
         <span className="field__label">Gender</span>

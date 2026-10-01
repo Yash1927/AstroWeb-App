@@ -3,6 +3,7 @@ import request from "supertest";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { LoginRateLimiter } from "../src/auth/login-rate-limit";
 import type { ResolvedSession, SessionManager } from "../src/auth/session";
+import type { AvailabilityService } from "../src/availability/availability-service";
 import {
   AstrologerPasswordStateError,
   type AstrologerOwnProfile,
@@ -47,10 +48,21 @@ function fakeSessions(resolved: ResolvedSession | null = astrologerSession): Ses
   };
 }
 
+function fakeAvailability(): AvailabilityService {
+  return {
+    getAvailability: vi.fn(async () => ({ weekly: [], exceptions: [] })),
+    saveAvailability: vi.fn(async (_id, input) => ({
+      ...input,
+      displacedBookingCount: 0,
+    })),
+  };
+}
+
 function testApp(
   astrologers = fakeAstrologers(),
   sessions = fakeSessions(),
   limiter = new LoginRateLimiter(),
+  availability = fakeAvailability(),
 ) {
   const app = express();
   app.use(express.json());
@@ -58,8 +70,8 @@ function testApp(
     "/api/auth/astrologer",
     createAstrologerAuthRouter({ astrologers, rateLimiter: limiter, sessions }),
   );
-  app.use("/api/astrologer", createAstrologerRouter({ astrologers, sessions }));
-  return { app, astrologers, sessions };
+  app.use("/api/astrologer", createAstrologerRouter({ astrologers, availability, sessions }));
+  return { app, astrologers, availability, sessions };
 }
 
 describe("astrologer authentication", () => {
@@ -205,5 +217,34 @@ describe("protected astrologer routes", () => {
       languages: ["Hindi", "English"],
       experienceYears: 8,
     });
+  });
+
+  it("reads and replaces only the signed-in astrologer's availability", async () => {
+    const availability = fakeAvailability();
+    const { app } = testApp(fakeAstrologers(), fakeSessions(), new LoginRateLimiter(), availability);
+    const read = await request(app).get("/api/astrologer/availability");
+    const invalid = await request(app).put("/api/astrologer/availability").send({
+      weekly: [
+        { weekday: 1, startTime: "09:00", endTime: "12:00" },
+        { weekday: 1, startTime: "11:00", endTime: "13:00" },
+      ],
+      exceptions: [],
+    });
+    const validBody = {
+      weekly: [{ weekday: 1, startTime: "09:00", endTime: "12:00" }],
+      exceptions: [{
+        date: "2026-10-05",
+        kind: "blocked" as const,
+        startTime: null,
+        endTime: null,
+      }],
+    };
+    const valid = await request(app).put("/api/astrologer/availability").send(validBody);
+
+    expect(read.status).toBe(200);
+    expect(invalid.status).toBe(400);
+    expect(valid.status).toBe(200);
+    expect(availability.getAvailability).toHaveBeenCalledWith(astrologerId);
+    expect(availability.saveAvailability).toHaveBeenCalledWith(astrologerId, validBody);
   });
 });

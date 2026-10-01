@@ -55,12 +55,16 @@ describe('SettingsPage', () => {
     const email = await screen.findByLabelText(/Email/) as HTMLInputElement
     expect(email.readOnly).toBe(true)
     const place = screen.getByLabelText('Place of birth')
+    const phone = screen.getByLabelText('Phone number')
     await user.clear(place)
     await user.type(place, 'Udaipur')
+    await user.type(phone, '98 765-43210')
     await user.click(screen.getByRole('button', { name: 'Save' }))
 
     expect(await screen.findByText('Saved')).toBeDefined()
     expect(fetchMock).toHaveBeenCalledWith('/api/me', expect.objectContaining({ method: 'PUT' }))
+    const updateRequest = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')?.[1] as RequestInit
+    expect(JSON.parse(String(updateRequest.body)).phone).toBe('+919876543210')
 
     await user.click(screen.getByRole('button', { name: 'Log out' }))
     expect(await screen.findByRole('heading', { name: 'Continue with Google' })).toBeDefined()

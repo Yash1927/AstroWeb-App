@@ -7,7 +7,7 @@ Last updated: 2026-10-01
 ## Conventions
 
 - HTTP endpoints are mounted below `/api` (README §1).
-- Health, public settings and public astrologer cards need no session. Owner, astrologer and Google callback endpoints are public; protected endpoints run the matching role guard.
+- Health, public settings, public astrologer cards and eligible astrologer slots need no session. Owner, astrologer and Google callback endpoints are public; protected endpoints run the matching role guard.
 - Current account, profile and public-card bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
 - Owner authentication uses `astrowebapp_owner_session` scoped to `/api/owner`. Astrologer and user authentication use separate cookies scoped to `/` so shared APIs and `/ws` receive them. All three are httpOnly, use SameSite=Lax and are Secure when `NODE_ENV=production`; the owner and astrologer last 12 hours and the user lasts 30 days.
 - Missing or invalid authentication returns `401`. Missing records return `404`; duplicate email, password-gate failures and invalid state transitions return `409`; database/service failures return a generic `503`.
@@ -20,6 +20,7 @@ Last updated: 2026-10-01
 | GET | `/api/health/db` | Public | Runs a small database query and reports whether Neon is reachable | 2 |
 | GET | `/api/settings/public` | Public | Returns only current prices, pack size and call durations | 2 |
 | GET | `/api/astrologers` | Public | Returns only eligible Home-card fields | 5 |
+| GET | `/api/astrologers/:id/slots?type=normal\|urgent\|subscription` | Public | Returns 14 days of current free slots | 7 |
 | POST | `/api/auth/google` | Public Google redirect | Verifies a Google credential and creates a user session | 6 |
 | GET | `/api/me` | User | Returns the signed-in user's own account and details | 6 |
 | PUT | `/api/me` | User | Replaces the signed-in user's own editable details | 6 |
@@ -42,6 +43,8 @@ Last updated: 2026-10-01
 | PUT | `/api/astrologer/password` | Astrologer | Replaces a temporary password and rotates all astrologer sessions | 4 |
 | GET | `/api/astrologer/profile` | Astrologer | Returns only the signed-in astrologer's profile | 4 |
 | PUT | `/api/astrologer/profile` | Astrologer | Saves only the signed-in astrologer's profile | 4 |
+| GET | `/api/astrologer/availability` | Astrologer | Returns only the signed-in astrologer's hours and exceptions | 7 |
+| PUT | `/api/astrologer/availability` | Astrologer | Atomically replaces only the signed-in astrologer's availability | 7 |
 
 ### GET /api/health
 
@@ -100,6 +103,17 @@ The email, Google subject and credits cannot be changed through `PUT`. Birth tim
 - **Errors:** Unexpected request input returns `400`. A database/service failure returns `503` with `{"error":"Astrologers are unavailable. Please try again."}`.
 - **Rate limit:** None yet.
 
+### GET /api/astrologers/:id/slots
+
+- **Who:** Public visitors and signed-in users. No cookie or login is required.
+- **Request:** UUID astrologer path id and exactly one `type` query with `normal`, `urgent` or `subscription`. No body or extra query fields.
+- **Eligibility:** The astrologer must be active, listed and profile-saved. An ineligible or missing record returns the same `404` response.
+- **Date range:** Fourteen IST calendar dates starting today. For Normal, today's day object is returned with no slots; Urgent and Subscription can contain future starts today.
+- **Response:** `{timeZone:"Asia/Kolkata",durationMin,days}`. Every day contains `date` (`YYYY-MM-DD`) and `slots`; each slot has UTC `startsAt` and `endsAt` timestamps. The duration comes from the current `Settings` row.
+- **Free-time rules:** Weekly and extra windows are combined, blocks are subtracted, incomplete duration fragments and past starts are omitted, and confirmed bookings plus unexpired `pending_payment` holds remove overlapping intervals.
+- **Errors:** Malformed input returns `400`; missing/ineligible astrologers return `404`; settings/database failures return `503` with a generic message.
+- **Side effects:** None. Reading or choosing one of these times does not create or hold a booking.
+
 ## Owner authentication
 
 ### POST /api/auth/owner/login
@@ -136,7 +150,7 @@ All responses omit password hashes.
 
 `GET /api/owner/settings` returns the same seven business values as the public settings route. `PUT /api/owner/settings` requires all seven values. Prices must be non-negative integer paise, pack size must be a positive integer, and each duration must be exactly 10, 15 or 30.
 
-## Astrologer authentication and profile
+## Astrologer authentication, profile and availability
 
 ### POST /api/auth/astrologer/login
 
@@ -163,6 +177,21 @@ The role guard resolves only an astrologer session and then checks the matching 
 | `PUT /api/astrologer/profile` | `displayName` 2–80 chars; zero to 20 expertise tags; zero to 20 language tags; each tag 1–40 chars; integer `experienceYears` 0–60 | `{profile}` after trimming and case-insensitive tag de-duplication |
 
 Both endpoints use the session subject id rather than accepting an astrologer id. The first successful save sets `profileSavedAt`; later saves keep that original time.
+
+### Own availability endpoints
+
+Both endpoints use the astrologer session subject id and require an active account whose temporary password has been replaced.
+
+| Endpoint | Valid request data | Success response |
+|---|---|---|
+| `GET /api/astrologer/availability` | No body, params or query | `{availability:{weekly,exceptions}}` |
+| `PUT /api/astrologer/availability` | `{weekly,exceptions}` with the shapes below | `{availability:{weekly,exceptions,displacedBookingCount}}` |
+
+Weekly entries contain integer `weekday` from `0` (Sunday) through `6` (Saturday), plus `HH:mm` `startTime` and `endTime`. A day with no entries is off; one day may have multiple non-overlapping ranges.
+
+Exception entries contain `YYYY-MM-DD` `date`, `kind` (`blocked` or `extra`) and nullable start/end times. A whole-date block has both times null. Partial blocks and all extra hours require both times. Every end must be after its start, timed entries on one date cannot overlap, and a whole-date block must be the only exception for that date. Requests are bounded to 70 weekly and 100 exception rows.
+
+Saving deletes and recreates only this astrologer's availability inside one transaction. It does not change bookings. `displacedBookingCount` counts confirmed, not-yet-ended bookings that no longer fit the saved hours so the panel can warn that they remain booked.
 
 ## WebSocket messages
 

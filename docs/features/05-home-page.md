@@ -39,7 +39,7 @@ Replace the Home placeholder with a public, privacy-limited astrologer list and 
 - `/` now shows an AstroWebApp header, three skeleton cards while loading, the specified empty text, a retry state, and the shared Step 4 `AstrologerCard` in a one/two/three-column responsive grid.
 - The first six cards use 40ms staggered `fade-up` delays; later cards do not animate individually. The shared reduced-motion rule collapses these animations.
 - **Call** opens the existing portaled BottomSheet for the selected astrologer. Normal, Urgent and Subscription show current Settings prices, duration, pack size where relevant, and the README call-mode description.
-- Step 6 replaced the temporary selection toast. Choosing an option now checks the user session, collects required details and stops before time slots; it still does not create a booking or payment.
+- Step 6 replaced the temporary selection toast, and Step 7 now continues through the real date/time picker. Choosing a time still does not create a booking or payment.
 - Astrologer cards and settings load independently. Browsing and opening Home never requires authentication.
 - No database, session, real-time, dependency or environment change was needed.
 
@@ -49,11 +49,11 @@ Replace the Home placeholder with a public, privacy-limited astrologer list and 
 2. Confirm only active, owner-shown astrologers who saved a profile appear. Hide, deactivate or create an unsaved account in `/owner`, refresh Home, and confirm it is absent.
 3. Confirm each card shows only initials, display name, expertise, languages, experience and **Call**. There is no email or profile link.
 4. Choose **Call** and compare all three prices, durations and subscription pack size with `/owner` pricing settings.
-5. Choose any call type and follow the current Step 6 sign-in/details flow. Confirm it stops at “Choosing a time comes in the next step” without creating a booking.
+5. Choose any call type and follow the current sign-in/details/date/time flow. Confirm it stops at “Confirming comes in the next step” without creating a booking.
 6. Temporarily make every saved profile hidden and confirm the exact empty message appears.
 7. Check at 360px that cards use one column. Check wider layouts for two and then three columns, the first-six stagger, keyboard focus and reduced motion.
 
 ## Follow-ups and known issues
 
 - Step 6 added user login and details while Home browsing remained public.
-- Step 7 adds availability and slots. Step 8 adds the real Normal booking flow; paid call paths arrive later.
+- Step 7 added availability and slots. Step 8 adds the real Normal booking flow; paid call paths arrive later.

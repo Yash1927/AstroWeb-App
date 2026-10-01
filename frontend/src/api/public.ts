@@ -10,6 +10,24 @@ export type PublicSettings = {
   urgentPricePaise: number
 }
 
+export type CallType = 'normal' | 'urgent' | 'subscription'
+
+export type AvailableSlot = {
+  endsAt: string
+  startsAt: string
+}
+
+export type SlotDay = {
+  date: string
+  slots: AvailableSlot[]
+}
+
+export type SlotResult = {
+  days: SlotDay[]
+  durationMin: 10 | 15 | 30
+  timeZone: 'Asia/Kolkata'
+}
+
 export class PublicApiError extends Error {
   status: number
 
@@ -38,4 +56,8 @@ export const publicApi = {
     (await publicRequest<{ astrologers: AstrologerCardProfile[] }>('/api/astrologers'))
       .astrologers,
   getSettings: () => publicRequest<PublicSettings>('/api/settings/public'),
+  getSlots: (astrologerId: string, callType: CallType) =>
+    publicRequest<SlotResult>(
+      `/api/astrologers/${encodeURIComponent(astrologerId)}/slots?type=${callType}`,
+    ),
 }

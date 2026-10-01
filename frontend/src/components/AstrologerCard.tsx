@@ -15,10 +15,6 @@ type AstrologerCardProps = {
   profile: AstrologerCardProfile
 }
 
-function listOrFallback(items: string[]) {
-  return items.length ? items.join(', ') : 'Not added yet'
-}
-
 export function AstrologerCard({ onCall, profile }: AstrologerCardProps) {
   return (
     <Card className="astrologer-card" interactive>
@@ -31,16 +27,22 @@ export function AstrologerCard({ onCall, profile }: AstrologerCardProps) {
           </p>
         </div>
       </div>
-      <dl className="astrologer-card__details">
-        <div>
-          <dt>Expertise</dt>
-          <dd>{listOrFallback(profile.expertise)}</dd>
-        </div>
-        <div>
-          <dt>Languages</dt>
-          <dd>{listOrFallback(profile.languages)}</dd>
-        </div>
-      </dl>
+      {profile.expertise.length || profile.languages.length ? (
+        <dl className="astrologer-card__details">
+          {profile.expertise.length ? (
+            <div>
+              <dt>Expertise</dt>
+              <dd>{profile.expertise.join(', ')}</dd>
+            </div>
+          ) : null}
+          {profile.languages.length ? (
+            <div>
+              <dt>Languages</dt>
+              <dd>{profile.languages.join(', ')}</dd>
+            </div>
+          ) : null}
+        </dl>
+      ) : null}
       <Button className="astrologer-card__call" onClick={onCall}>Call</Button>
     </Card>
   )

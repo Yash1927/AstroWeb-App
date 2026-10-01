@@ -5,9 +5,21 @@ import {
   type PublicAstrologerCard,
   type PublicAstrologerService,
 } from "../src/public/public-astrologer-service";
+import {
+  slotParamsSchema,
+  slotQuerySchema,
+} from "../src/availability/availability-schemas";
+import {
+  APP_TIME_ZONE,
+  SlotAstrologerNotFoundError,
+  slotService,
+  type SlotService,
+} from "../src/availability/slot-service";
 
 type Dependencies = {
   astrologers: PublicAstrologerService;
+  now?: () => Temporal.Instant;
+  slots: SlotService;
 };
 
 function publicFields(astrologer: PublicAstrologerCard): PublicAstrologerCard {
@@ -20,7 +32,7 @@ function publicFields(astrologer: PublicAstrologerCard): PublicAstrologerCard {
   };
 }
 
-export function createPublicAstrologerRouter({ astrologers }: Dependencies) {
+export function createPublicAstrologerRouter({ astrologers, now, slots }: Dependencies) {
   const router = Router();
 
   router.get("/", async (request, response) => {
@@ -38,7 +50,36 @@ export function createPublicAstrologerRouter({ astrologers }: Dependencies) {
     }
   });
 
+  router.get("/:id/slots", async (request, response) => {
+    const params = parseOrRespond(slotParamsSchema, request.params, response);
+    if (!params) return;
+    const query = parseOrRespond(slotQuerySchema, request.query, response);
+    if (!query) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+
+    try {
+      const current = (now ?? (() => Temporal.Now.instant()))();
+      const startDate = current.toZonedDateTimeISO(APP_TIME_ZONE).toPlainDate();
+      response.json(await slots.getAvailableSlots({
+        astrologerId: params.id,
+        callType: query.type,
+        startDate: startDate.toString(),
+        endDate: startDate.add({ days: 13 }).toString(),
+        now: current,
+      }));
+    } catch (error) {
+      if (error instanceof SlotAstrologerNotFoundError) {
+        response.status(404).json({ error: error.message });
+        return;
+      }
+      response.status(503).json({ error: "Times are unavailable. Please try again." });
+    }
+  });
+
   return router;
 }
 
-export default createPublicAstrologerRouter({ astrologers: publicAstrologerService });
+export default createPublicAstrologerRouter({
+  astrologers: publicAstrologerService,
+  slots: slotService,
+});

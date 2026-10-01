@@ -71,6 +71,8 @@ Relations: bookings, payments, blog likes and blog comments. Nullable onboarding
 | `startTime` | time(0) | No | Local availability clock time |
 | `endTime` | time(0) | No | Local availability clock time |
 
+Step 7 stores zero or more rows per weekday for each astrologer. Zero rows means the day is off. The protected replacement validates weekday `0`–`6`, end-after-start and non-overlap before deleting/recreating only the signed-in astrologer's rows in one transaction.
+
 ### `AvailabilityException`
 
 | Column | Type | Nullable | Default / notes |
@@ -81,6 +83,8 @@ Relations: bookings, payments, blog likes and blog comments. Nullable onboarding
 | `kind` | text enum | No | `blocked` or `extra` |
 | `startTime` | time(0) | Yes | Optional partial-day boundary |
 | `endTime` | time(0) | Yes | Optional partial-day boundary |
+
+Step 7 uses null start/end only for a whole-date `blocked` exception. Partial blocks and every `extra` exception have both local clock times. A whole-date block is the date's only exception; timed exceptions on one date cannot overlap. The slot engine adds extra windows before subtracting blocks.
 
 ### `Booking`
 
@@ -101,6 +105,8 @@ Relations: bookings, payments, blog likes and blog comments. Nullable onboarding
 | `createdAt` | timestamptz(3) | No | Current time |
 
 Relations: one user, one astrologer and optional related payments.
+
+Step 7 reads confirmed intervals and `pending_payment` intervals whose `holdExpiresAt` is still in the future when calculating slots. It never inserts, updates or deletes a Booking. Expired holds do not remove a displayed slot; Step 8 will expire them transactionally before inserting a booking as required by README §6.3.
 
 ### `Payment`
 
@@ -137,7 +143,7 @@ Relations: one user, one astrologer and optional related payments.
 | `subscriptionDurationMin` | integer | No | `15` |
 | `updatedAt` | timestamptz | No | Set on create and each non-empty ORM update |
 
-The server reads this row for the public settings endpoint. Booking and payment creation are built in later steps.
+The server reads this row for the public settings endpoint and reads the matching duration on every Step 7 slot request. Booking and payment creation are built in later steps.
 
 ### `Blog`
 
@@ -206,6 +212,8 @@ The session manager stores a random UUID as the session id and sends a signed fo
 | `20260930T1814_astrologer_profile_saved_at` | Adds nullable `Astrologer.profileSavedAt` | 4 | 2026-09-30 | Applied |
 
 The application migrations were generated and self-emitted with Prisma 8. `npm run migration:check` reports that the packages and compiled operations are valid. `npm run migration:status` and `npm run db:verify` confirm the Step 4 migration is applied and Neon matches contract hash `4d9b1a55…`.
+
+Step 7 changes no contract or migration. It begins using the availability rows defined in Step 2 and reads active booking intervals for conflict filtering.
 
 ## Seed data
 

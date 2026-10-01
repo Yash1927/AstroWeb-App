@@ -16,7 +16,7 @@ function firstGrapheme(value: string) {
 }
 
 function initialsFor(name: string) {
-  const words = name.trim().split(/\s+/u).filter(Boolean)
+  const words = name.trim().split(/\s+/u).filter((word) => /^\p{L}/u.test(word))
 
   if (words.length === 0) {
     return '?'

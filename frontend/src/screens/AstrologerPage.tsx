@@ -12,7 +12,15 @@ import {
   type AstrologerOwnProfile,
   type AstrologerProfileInput,
 } from '../api/astrologer'
-import { AstrologerCard, Button, Card, Dialog, Skeleton, Toast } from '../components'
+import {
+  AstrologerCard,
+  AvailabilityEditor,
+  Button,
+  Card,
+  Dialog,
+  Skeleton,
+  Toast,
+} from '../components'
 
 type AuthState = 'checking' | 'logged-out' | 'password' | 'logged-in'
 type AstrologerSection = 'profile' | 'availability' | 'bookings' | 'blogs'
@@ -144,6 +152,11 @@ export default function AstrologerPage() {
   const [profileBusy, setProfileBusy] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
+
+  const handleSessionEnded = useCallback(() => {
+    setAuthState('logged-out')
+    setProfile(null)
+  }, [])
 
   const loadProfile = useCallback(async () => {
     try {
@@ -415,6 +428,16 @@ export default function AstrologerPage() {
               </form>
             </Card>
           )}
+        </section>
+      ) : section === 'availability' ? (
+        <section aria-labelledby="availability-heading" className="astrologer-section">
+          <div className="owner-section__heading">
+            <div>
+              <h2 id="availability-heading">Availability</h2>
+              <p className="screen__intro">Set the IST hours users can choose.</p>
+            </div>
+          </div>
+          <AvailabilityEditor onSignedOut={handleSessionEnded} />
         </section>
       ) : (
         <section className="astrologer-section">

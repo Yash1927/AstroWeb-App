@@ -37,6 +37,21 @@ const completeUser = {
   detailsComplete: true,
 }
 
+const slots = {
+  durationMin: 15,
+  timeZone: 'Asia/Kolkata',
+  days: [
+    { date: '2026-10-01', slots: [] },
+    {
+      date: '2026-10-02',
+      slots: [{
+        startsAt: '2026-10-02T04:30:00Z',
+        endsAt: '2026-10-02T04:45:00Z',
+      }],
+    },
+  ],
+}
+
 function response(body: unknown, status = 200) {
   return {
     json: async () => body,
@@ -83,7 +98,7 @@ describe('HomePage', () => {
     }))
   })
 
-  it('collects missing details and reaches the time-choice placeholder for Normal', async () => {
+  it('collects missing details, shows slots and reaches the confirmation placeholder', async () => {
     const incompleteUser = {
       ...completeUser,
       birthDate: null,
@@ -95,6 +110,7 @@ describe('HomePage', () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
       if (String(input) === '/api/settings/public') return response(settings)
+      if (String(input) === '/api/astrologers/anika/slots?type=normal') return response(slots)
       if (String(input) === '/api/me' && init?.method === 'PUT') {
         return response({ user: completeUser })
       }
@@ -114,13 +130,17 @@ describe('HomePage', () => {
     await user.selectOptions(within(dialog).getByLabelText('Gender'), 'female')
     await user.click(within(dialog).getByRole('button', { name: 'Continue' }))
 
-    expect(await screen.findByText('Choosing a time comes in the next step')).toBeDefined()
+    const slotDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
+    expect((within(slotDialog).getByRole('button', { name: /1 Oct/ }) as HTMLButtonElement).disabled).toBe(true)
+    await user.click(within(slotDialog).getByRole('button', { name: /10:00 am/i }))
+    expect(await screen.findByText('Confirming comes in the next step')).toBeDefined()
   })
 
   it('asks for one valid phone field for an Urgent call', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
       if (String(input) === '/api/settings/public') return response(settings)
+      if (String(input) === '/api/astrologers/anika/slots?type=urgent') return response(slots)
       if (String(input) === '/api/me' && init?.method === 'PUT') {
         return response({ user: { ...completeUser, phone: '+919876543210' } })
       }
@@ -135,14 +155,43 @@ describe('HomePage', () => {
     await user.click(screen.getByRole('button', { name: /Urgent/ }))
     const dialog = await screen.findByRole('dialog', { name: 'Phone number' })
     const phoneInput = within(dialog).getByLabelText('Phone number')
+    expect(within(dialog).getByText('+91')).toBeDefined()
+    expect(phoneInput).toHaveProperty('placeholder', '10-digit mobile number')
     await user.type(phoneInput, '12345')
     await user.click(within(dialog).getByRole('button', { name: 'Continue' }))
-    expect(within(dialog).getByText('Enter +91 followed by a valid 10-digit mobile number.')).toBeDefined()
+    expect(within(dialog).getByText('Enter a valid 10-digit mobile number.')).toBeDefined()
 
     await user.clear(phoneInput)
-    await user.type(phoneInput, '+919876543210')
+    await user.type(phoneInput, '98 765-43210')
     await user.click(within(dialog).getByRole('button', { name: 'Continue' }))
-    expect(await screen.findByText('Choosing a time comes in the next step')).toBeDefined()
+    const updateRequest = fetchMock.mock.calls.find(([, init]) => init?.method === 'PUT')?.[1] as RequestInit
+    expect(JSON.parse(String(updateRequest.body)).phone).toBe('+919876543210')
+    const slotDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
+    await user.click(within(slotDialog).getByRole('button', { name: /10:00 am/i }))
+    expect(await screen.findByText('Confirming comes in the next step')).toBeDefined()
+  })
+
+  it('disables dates without slots and shows the specified empty-day message', async () => {
+    const emptySlots = {
+      ...slots,
+      days: [{ date: '2026-10-01', slots: [] }],
+    }
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
+      if (String(input) === '/api/settings/public') return response(settings)
+      if (String(input) === '/api/me') return response({ user: completeUser })
+      if (String(input) === '/api/astrologers/anika/slots?type=normal') return response(emptySlots)
+      throw new Error(`Unexpected request: ${String(input)}`)
+    }))
+    const user = userEvent.setup()
+    renderHome()
+
+    await user.click(await screen.findByRole('button', { name: 'Call' }))
+    await user.click(screen.getByRole('button', { name: /Normal/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Choose a time' })
+
+    expect((within(dialog).getByRole('button', { name: /1 Oct/ }) as HTMLButtonElement).disabled).toBe(true)
+    expect(within(dialog).getByText('No free times on this day. Please try another day.')).toBeDefined()
   })
 
   it('shows the specified empty state without requiring login', async () => {

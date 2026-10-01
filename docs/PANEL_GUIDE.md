@@ -67,4 +67,16 @@ Five failed attempts for the same email and internet address use the login allow
 5. Choose **Preview** to see the exact card used on Home. Preview uses the unsaved form values. Its **Call** button does nothing.
 6. Choose **Save profile**. The first save makes the profile eligible for Home immediately while the owner has it shown and the account is active.
 
-**Availability**, **Bookings** and **Blogs** currently say “Coming in a later step.” Weekly hours arrive in Step 7, bookings in Step 9, and writing/publishing blogs in Step 14.
+### Set availability
+
+1. Open **Availability**.
+2. For each weekday, leave **Day off** selected or turn it off to create working hours.
+3. Use **Add hours** when a day has a second working period. The ranges cannot overlap and each end must be after its start.
+4. Under **Date exceptions**, choose **Block whole day**, **Block part of day** or **Add extra hours** for a specific date.
+5. Choose **Save availability**. All clocks are IST. If hours are invalid, the page moves to the first highlighted field and repeats the instruction beside the Save button.
+
+A whole-day block must be the only exception for that date. Other changes on one date cannot overlap. Availability changes affect future free times only and never cancel existing bookings. If confirmed bookings fall outside the new hours, the save message says how many remain booked.
+
+On a wider screen, date-exception controls wrap into as many rows as they need. The date, change type and times remain fully readable and never overlap.
+
+**Bookings** and **Blogs** still say “Coming in a later step.” Bookings arrive in Step 9, and writing/publishing blogs in Step 14.

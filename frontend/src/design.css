@@ -316,6 +316,54 @@ svg {
   color: var(--color-text);
 }
 
+.input[aria-invalid="true"],
+.select[aria-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.phone-input {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  min-height: var(--tap-min);
+  overflow: hidden;
+  border: 2px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.phone-input:focus-within {
+  outline: 3px solid var(--color-link);
+  outline-offset: 2px;
+}
+
+.phone-input[data-invalid="true"] {
+  border-color: var(--color-danger);
+}
+
+.phone-input__prefix {
+  display: grid;
+  min-width: var(--tap-min);
+  place-items: center;
+  padding-inline: var(--space-3);
+  border-inline-end: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-weight: 700;
+}
+
+.phone-input__control {
+  width: 100%;
+  min-width: 0;
+  min-height: var(--tap-min);
+  padding: var(--space-3) var(--space-4);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+}
+
+.phone-input__control:focus-visible {
+  outline: 0;
+}
+
 .chip {
   display: inline-flex;
   min-height: var(--tap-min);
@@ -1296,6 +1344,154 @@ svg {
   stroke-linejoin: round;
   stroke-width: 3;
   animation: check-draw var(--dur-check) var(--ease-out) var(--dur-slow) forwards;
+}
+
+.availability-form,
+.availability-week,
+.availability-exceptions,
+.slot-picker {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.availability-day,
+.availability-exception {
+  display: grid;
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.availability-day:last-child,
+.availability-exception:last-child {
+  border-bottom: 0;
+}
+
+.availability-day__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.availability-day__heading h4 {
+  margin: 0;
+}
+
+.availability-day__off {
+  display: inline-flex;
+  min-height: var(--tap-min);
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+}
+
+.availability-day__off input {
+  width: 1.25rem;
+  height: 1.25rem;
+  accent-color: var(--color-link);
+}
+
+.availability-range {
+  display: grid;
+  gap: var(--space-3);
+  padding: var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+}
+
+.date-chip-list,
+.time-chip-list {
+  display: flex;
+  gap: var(--space-2);
+  padding-block: var(--space-1);
+}
+
+.date-chip-list {
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.time-chip-list {
+  flex-wrap: wrap;
+}
+
+.date-chip,
+.time-chip {
+  min-width: max-content;
+  min-height: var(--tap-min);
+  padding: var(--space-2) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.date-chip {
+  flex: 0 0 42%;
+}
+
+.time-chip {
+  flex: 0 1 calc(33.333% - var(--space-2));
+  min-width: 0;
+}
+
+.availability-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.availability-actions .field__error {
+  flex: 1 1 16rem;
+}
+
+.date-chip[aria-pressed="true"],
+.time-chip[aria-pressed="true"] {
+  border-color: var(--color-primary-hover);
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.date-chip:disabled,
+.time-chip:disabled {
+  border-color: var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text-muted);
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+@media (min-width: 42rem) {
+  .availability-range {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+    align-items: end;
+  }
+
+  .availability-exception {
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    align-items: end;
+  }
+
+  .availability-exception > .field,
+  .availability-exception .input,
+  .availability-exception .select {
+    min-width: 0;
+  }
+
+  .availability-exception > .button {
+    justify-self: start;
+  }
+
+  .date-chip {
+    flex-basis: auto;
+  }
 }
 
 .visually-hidden {

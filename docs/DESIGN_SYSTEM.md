@@ -36,17 +36,19 @@ Last updated: 2026-10-01
 |---|---|---|---|
 | Button | `frontend/src/components/Button.tsx` | Primary, secondary, text, disabled, optional soft glow | User screens, design page and both panels |
 | Card | `frontend/src/components/Card.tsx` | Default, compact, interactive hover | User screens, panels, placeholders and design page |
-| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour | Settings, astrologer cards, owner list/profile and design page |
-| AstrologerCard | `frontend/src/components/AstrologerCard.tsx` | 56px avatar, name, expertise, languages, experience, full-width Call action and desktop hover | Home, astrologer preview and design page |
+| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour; initials skip words that do not start with a letter | Settings, astrologer cards, owner list/profile and design page |
+| AstrologerCard | `frontend/src/components/AstrologerCard.tsx` | 56px avatar, name, non-empty expertise/language rows, experience, full-width Call action and desktop hover | Home, astrologer preview and design page |
 | BottomSheet | `frontend/src/components/BottomSheet.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Home call-type picker and design page |
 | Dialog | `frontend/src/components/Dialog.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Owner forms, astrologer preview and design page |
 | Toast | `frontend/src/components/Toast.tsx` | Body portal; success or error; live region; closes after four seconds | Panel action feedback; design page |
 | Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Home cards, panel authentication/data loading and design page |
 | StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Design page |
 | GoogleSignInButton / UserSignIn | `frontend/src/components/GoogleSignInButton.tsx`, `UserSignIn.tsx` | GIS standard “Continue with Google” button in redirect mode plus a calm sign-in card | Home booking flow, History and Settings |
-| UserDetailsForm | `frontend/src/components/UserDetailsForm.tsx` | Name, date, local time with 12-hour reading, place, optional phone, gender, field errors and privacy line | First booking and Settings |
+| PhoneNumberField | `frontend/src/components/PhoneNumberField.tsx` | Fixed `+91` prefix, 10-digit local input, linked hint/error and canonical value output | First booking, phone-only booking step and Settings |
+| UserDetailsForm | `frontend/src/components/UserDetailsForm.tsx` | Name, date, local time with 12-hour reading, place, optional fixed-prefix phone, gender, field errors and privacy line | First booking and Settings |
+| AvailabilityEditor | `frontend/src/components/AvailabilityEditor.tsx` | Seven day/day-off groups, repeatable time ranges, responsive date exceptions, field errors, first-error focus and save warning | Astrologer Availability |
 | Inputs, selects and tags | `frontend/src/design.css` | Label, hint, linked error, input, read-only input, rupee input, select, tag editor and removable tags | User forms, panel forms and design page |
-| Chips | `frontend/src/design.css` | Default and selected | Panel section navigation and design page |
+| Chips | `frontend/src/design.css` | Default, selected, horizontal date/time and disabled-empty states | Panel navigation, Home slot picker and design page |
 | Bottom tab bar | `frontend/src/App.tsx` | Home, History, Blogs and Settings; gold active tab | User app shell and design preview |
 | Call control | `frontend/src/design.css` | Pressed and icon cross-fade states | Design page; call room comes later |
 
@@ -74,14 +76,14 @@ Last updated: 2026-10-01
 
 | Screen | Route | States (loading, empty, error, …) | Built in step |
 |---|---|---|---|
-| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; Step 7 placeholder | 5, 6 |
+| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips, time chips and confirmation placeholder | 5–7 |
 | History | `/history` | Session loading/error, signed-out Google screen, signed-in Step 9 placeholder | 6 |
 | Blogs | `/blogs` | Placeholder | 1 |
 | Blog post | `/blogs/:id` | Later-step placeholder | 1 |
 | Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, policy links, save toast and logout | 6 |
 | Call room | `/call/:bookingId` | Later-step placeholder | 1 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
-| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile load/error/edit/preview/save; later-step section placeholders | 4 |
+| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile edit/preview/save, availability load/error/edit/validation/save; Bookings and Blogs placeholders | 4, 7 |
 | Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management and pricing/settings | 3 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
 | Not found | Any unmatched path | Link back to Home | 1 |
@@ -92,7 +94,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 
 | Situation | Text | Where |
 |---|---|---|
-| Later feature route or panel section | “Coming in a later step.” | Call, blog post, policies, Availability, Bookings and astrologer Blogs |
+| Later feature route or panel section | “Coming in a later step.” | Call, blog post, policies, Bookings and astrologer Blogs |
 | Unknown route | “This page does not exist.” | Not-found screen |
 | Design success toast | “Your changes were saved.” | Development design page |
 | Owner login error | “The email or password is incorrect.” | Owner login |
@@ -104,7 +106,11 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Preview context | “This preview uses your unsaved changes.” | Astrologer profile preview |
 | Empty Home list | “No astrologers are available right now. Please check again later.” | Home |
 | Private-details note | “Your details are private. Only the astrologer you book can see them.” | First booking details and Settings |
-| Deferred time choice | “Choosing a time comes in the next step” | Home after sign-in and required details |
+| Empty slot date | “No free times on this day. Please try another day.” | Home slot picker |
+| Deferred confirmation | “Confirming comes in the next step” | Home after choosing a slot |
+| Availability scope | “Changes affect future free times only. Existing bookings stay booked.” | Astrologer Availability |
+| Availability validation summary | “Please fix the highlighted hours above.” | Astrologer Availability save action |
+| Empty birth date | “Enter your date of birth.” | First booking details and Settings |
 | Settings save | “Saved” | Settings toast |
 
 ## Accessibility
@@ -118,7 +124,8 @@ Messages shown in the UI, so the same situation always uses the same words.
 - Dialog, BottomSheet and Toast use React portals into `document.body`, so a transformed screen animation cannot confine their fixed positioning to the page column.
 - Owner settings validation places a specific error beside every invalid field and links it with `aria-describedby` and `aria-invalid`.
 - Astrologer password and profile validation use visible field labels, field-linked errors and numeric limits. Tag buttons meet the 48px target and name the tag they remove.
-- User detail validation places specific messages with each invalid field. The phone-only step reports its error beside the phone field; the Google email is visibly read-only.
+- User detail validation places specific messages with each invalid field. Phone controls have a visible fixed `+91` prefix and linked hints/errors; the phone-only step reports its error beside the field, and the Google email is visibly read-only.
+- Availability time/date controls have visible labels and field-linked errors. An invalid save scrolls to and focuses the first invalid control and repeats the required action beside Save. The Day off label provides the checkbox's 48px target, and repeatable ranges remain a single flexible column at the mobile baseline.
 - Toasts use polite or assertive live regions according to their kind.
 - Avatars use `Intl.Segmenter` for initials in Latin and non-Latin scripts and expose the person's name.
 - A 360px browser emulation check found no horizontal overflow on the app shell or design page.
@@ -126,4 +133,6 @@ Messages shown in the UI, so the same situation always uses the same words.
 - The astrologer panel, tag editor, actions and 360px preview use wrapping/flexible layouts with no fixed text height. The Step 4 manual try-out includes the rendered 360px check.
 - Home uses one card column by default, two from 42rem and three from 64rem. Card contents and call-option summaries wrap without fixed text heights.
 - User sign-in, details and Settings use the existing mobile-first card/input system. Google’s rendered button is capped to the available width, and Settings uses one flexible column at the 360px baseline.
+- Date chips scroll horizontally without widening the BottomSheet and reveal part of the next date on phones. Time chips wrap to about three per row at 360px. Empty dates remain visible but disabled, and selection uses the golden control background rather than golden text.
+- Date exceptions stay in the existing one-column phone layout and use overlap-safe responsive grid columns at desktop widths.
 - `prefers-reduced-motion: reduce` changes all animations and transitions to one 1ms iteration.

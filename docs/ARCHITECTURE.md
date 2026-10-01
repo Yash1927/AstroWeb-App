@@ -6,10 +6,10 @@ Last updated: 2026-10-01
 
 ## Current state
 
-Step 6 adds Google Identity Services redirect sign-in, 30-day user sessions, self-only details, Settings, and the pre-slot Home booking flow (README §2, §5.2, §5.5, §5.6, §12 and §17). The current contract remains applied and verified on Neon; this step needs no migration.
+Step 7 adds authenticated astrologer availability, one settings-backed IST slot engine, the public 14-day slots endpoint and Home date/time selection (README §4, §6.1–§6.3 and §8.3). The current contract remains applied and verified on Neon; this step needs no migration.
 
-- `frontend/` is a React single-page app with public Home, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
-- `backend/` separates `app.ts` from the `index.ts` listener so routers can be tested without opening a port. HTTP routes are mounted at `/api`; public data, all three role sessions, user self-service, owner management and astrologer authentication/profile APIs are implemented.
+- `frontend/` is a React single-page app with public Home through time selection, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `backend/` separates `app.ts` from the `index.ts` listener so routers can be tested without opening a port. HTTP routes are mounted at `/api`; public data/slots, all three role sessions, user self-service, owner management and astrologer authentication/profile/availability APIs are implemented.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
@@ -80,7 +80,8 @@ backend/
   routes/OwnerAuth.ts       Owner credential login
   routes/Owner.ts           Protected owner account and settings handlers
   routes/AstrologerAuth.ts  Astrologer credential login
-  routes/Astrologer.ts      Protected astrologer session and profile handlers
+  routes/Astrologer.ts      Protected astrologer session, profile and availability handlers
+  src/availability/         Availability validation/storage and the shared slot engine
   src/astrologer/           Astrologer validation and database service
   src/auth/                 Session cookies, role guards and login throttling
   src/http/                 Shared Zod response helper
@@ -97,6 +98,7 @@ frontend/
   src/api/public.ts         Typed public card and settings client
   src/api/user.ts           Typed user account/details/logout client
   src/components/           Shared UI components
+  src/components/AvailabilityEditor.tsx Protected weekly and exception editor
   src/screens/DesignPage.tsx Development-only component and motion gallery
   src/screens/OwnerPage.tsx  Owner login and management interface
   src/screens/AstrologerPage.tsx Astrologer login and profile interface
@@ -138,7 +140,7 @@ docs/
 
 | Service | Used for | Env vars | Added in step |
 |---|---|---|---|
-| Neon Postgres | Application data, settings, owner seed, profiles, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–6 |
+| Neon Postgres | Application data, settings, owner seed, profiles, availability, booking conflict reads, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–7 |
 | Google Identity Services | Redirect-mode user identity and verified Google account claims | `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` | 6 |
 
 ## Main flows
@@ -151,7 +153,8 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | Public database health, settings and Home cards | 2, 5 | [Public Home flow](#public-home-flow) |
 | Owner and astrologer login | 3, 4 | [Panel session flows](#panel-session-flows) |
 | User sign-in with Google and own details | 6 | [User sign-in and details flow](#user-sign-in-and-details-flow) |
-| Time slots and booking holds | 7, 8 | — |
+| Availability and time slots | 7 | [Availability and slot flow](#availability-and-slot-flow) |
+| Booking creation and holds | 8 | — |
 | In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | — |
 | Payments (Razorpay orders, verification, webhooks, refunds) | 12, 13 | — |
 | Blogs | 14 | — |
@@ -161,7 +164,33 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 
 On mount, Home requests `GET /api/astrologers` and `GET /api/settings/public` independently. The card service filters `Astrologer` by `isActive = true`, `isListed = true` and non-null `profileSavedAt`, selects only card fields, and orders by display name. The route then rebuilds each response object from those public fields before serialization.
 
-Settings stay separate from card data. A settings failure leaves browsing intact and appears only inside the call-type sheet. Selecting a call type now checks the user session, collects missing details and a phone number when required, then stops at the Step 7 time-choice placeholder.
+Settings stay separate from card data. A settings failure leaves browsing intact and appears only inside the call-type sheet. Selecting a call type checks the user session, collects missing details and a phone number when required, loads 14 days of free slots, then stops after the user chooses a time.
+
+## Availability and slot flow
+
+```mermaid
+flowchart LR
+    Panel[Astrologer Availability form]
+    Guard[Astrologer session guard]
+    Rules[(AvailabilityRule and AvailabilityException)]
+    SlotAPI[Public slots endpoint]
+    Settings[(Settings duration)]
+    Bookings[(Confirmed bookings and active holds)]
+    Engine[One IST slot engine]
+    Picker[Home date and time chips]
+
+    Panel -->|GET/PUT own availability| Guard
+    Guard --> Rules
+    Rules --> Engine
+    Settings --> Engine
+    Bookings --> Engine
+    SlotAPI --> Engine
+    Engine -->|UTC startsAt and endsAt| Picker
+```
+
+The availability save replaces only the signed-in astrologer's rules and exceptions in one transaction. Weekly ranges form the base schedule; extra exception windows are merged in and blocked ranges are subtracted. The transaction reads confirmed future bookings only to count warnings and never changes a Booking row.
+
+The public service requires an active, listed, profile-saved astrologer, reads the current duration for the requested call type, and loads only exceptions and booking intervals that can affect the 14-date range. `calculateAvailableSlots` is clock-injected for deterministic tests. It interprets local availability in `Asia/Kolkata`, emits UTC instants, ignores expired holds and leaves today empty for Normal. Home displays those instants in IST and does not send a price or create a booking.
 
 ## User sign-in and details flow
 
@@ -224,4 +253,4 @@ The login limiter is held in the backend process. It is correct for the current 
 
 ## Differences from the spec
 
-None in Step 6. Time-slot selection and booking creation remain clearly labelled later-step work.
+None in Step 7. Booking creation remains clearly labelled Step 8 work.

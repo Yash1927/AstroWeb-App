@@ -13,8 +13,8 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 3 | Owner panel | Done | [03-owner-panel.md](features/03-owner-panel.md) | Owner sessions, protected account/settings API and the `/owner` UI are in place. |
 | 4 | Astrologer login and profile | Done | [04-astrologer-login-profile.md](features/04-astrologer-login-profile.md) | Astrologer login, forced password change, own-profile editing and shared Home-card preview are in place. |
 | 5 | Home page | Done | [05-home-page.md](features/05-home-page.md) | Public privacy-limited cards, responsive Home states and the settings-backed call-type picker are in place. |
-| 6 | Google login, details form, Settings | Done | [06-google-login-details-settings.md](features/06-google-login-details-settings.md) | Google redirect sign-in, user sessions/details, Settings and the pre-slot Home flow are in place. |
-| 7 | Availability and time slots | Not started | — | |
+| 6 | Google login, details form, Settings | Done | [06-google-login-details-settings.md](features/06-google-login-details-settings.md) | Google redirect sign-in, user sessions/details and Settings underpin the current Home flow. |
+| 7 | Availability and time slots | Done | [07-availability-time-slots.md](features/07-availability-time-slots.md) | Weekly hours, date exceptions, the IST slot engine and Home date/time picker are in place. |
 | 8 | Booking free Normal calls | Not started | — | |
 | 9 | History and astrologer bookings | Not started | — | |
 | 10 | In-app call, part 1 | Not started | — | |
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Step 7: Astrologer availability and the time-slot picker.
+Step 8: Booking free Normal calls.
 
 ## Known issues
 
