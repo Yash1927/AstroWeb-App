@@ -6,14 +6,14 @@ Last updated: 2026-10-01
 
 ## Current state
 
-Step 9 adds subject-scoped Normal booking history for users and astrologers, shared time-aware cards and protected call-room placeholders (README §2, §5.3, §7.1, §8.4 and §12). The current contract and overlap constraint remain applied on Neon; this step needs no migration.
+Step 10 adds authenticated, booking-scoped WebSocket rooms and peer-to-peer WebRTC audio for Normal calls (README §1, §7.1–§7.3, §10.4, §12 and §14). The current contract already contains participant join timestamps and booking statuses, so this step needs no migration.
 
-- `frontend/` is a React single-page app with public Home through zero-price booking success, private user History, protected call placeholders, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
-- `backend/` separates `app.ts` from the `index.ts` listener so routers can be tested without opening a port. HTTP routes are mounted at `/api`; public data/slots, all three role sessions, user self-service/history, zero-price booking creation, owner management and astrologer authentication/profile/availability/booking APIs are implemented.
+- `frontend/` is a React single-page app with public Home through zero-price booking success, private user History, authenticated user/astrologer audio rooms, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
-- The existing WebSocket stubs remain unchanged until Step 10.
+- WebSocket rooms are keyed by booking id. They relay validated WebRTC signalling and live presence/mute state only between the booked user and astrologer during the stored call window.
 
 ## Overview
 
@@ -22,7 +22,10 @@ flowchart LR
     Browser[Browser at localhost:5173]
     React[React app shell]
     Vite[Vite development server]
-    Express[Express at localhost:3000]
+    Server[Node HTTP server at localhost:3000]
+    Express[Express /api]
+    Realtime[Authenticated WebSocket /ws]
+    WebRTC[Peer-to-peer WebRTC audio]
     Public[Public health, settings and card routes]
     OwnerAuth[Owner login route]
     Owner[Protected owner routes]
@@ -38,7 +41,11 @@ flowchart LR
 
     Browser --> React
     Browser -->|/api and /ws| Vite
-    Vite -->|development proxy| Express
+    Vite -->|development proxy| Server
+    Server --> Express
+    Server --> Realtime
+    Realtime --> WebRTC
+    Browser --> WebRTC
     Express -->|GET /api/health| Browser
     Express --> Public
     Express --> OwnerAuth
@@ -76,7 +83,7 @@ Production hosting is not built yet. README §1 requires the frontend, API and W
 ```text
 backend/
   app.ts                    Express setup, CORS and router mounting
-  index.ts                  Environment loading and HTTP listener
+  index.ts                  Environment loading and shared HTTP/WebSocket listener
   routes/Public.ts          Public database health and settings handlers
   routes/Astrologers.ts     Public privacy-limited Home-card handler
   routes/UserAuth.ts        Google redirect callback and user-session creation
@@ -98,9 +105,10 @@ backend/
   src/user/                 Google verification, user validation and database service
   src/prisma/               Contract, generated artifacts, runtime client and seed
   migrations/               Prisma 8 migration graph, snapshots and compiled operations
-  src/realtime/             Existing stubs reserved for Step 10
+  src/realtime/             Upgrade authentication, room protocol and booking lifecycle
 frontend/
-  src/App.tsx               Route map, placeholders and user app shell
+  src/App.tsx               Route map, call routes, placeholders and user app shell
+  src/call/                  Browser WebSocket protocol and WebRTC perfect negotiation
   src/api/owner.ts          Typed owner API client and money conversion
   src/api/astrologer.ts     Typed astrologer API client
   src/api/public.ts         Typed public card and settings client
@@ -114,7 +122,7 @@ frontend/
   src/screens/AstrologerPage.tsx Astrologer login, profile, availability and bookings interface
   src/screens/HomePage.tsx   Public Home list and call-type picker
   src/screens/HistoryPage.tsx Private user booking history
-  src/screens/CallPlaceholderPage.tsx Protected pre-Step-10 call routes
+  src/screens/CallRoomPage.tsx Authenticated user/astrologer call-room states and controls
   src/screens/SettingsPage.tsx User profile, editable details, policies and logout
   src/user-details.ts       Shared browser-side detail validation and form shaping
   src/design.css             Tokens, base styles, components and animation
@@ -145,7 +153,7 @@ docs/
 | `zod` | Strict protected and public request validation | 3 |
 | `supertest` and `@types/supertest` | HTTP authorization, privacy-boundary and route tests | 3 (development only) |
 | Testing Library, user-event and jsdom | Frontend component interaction tests in a browser-like DOM | After 3 (development only) |
-| `ws` | Existing WebSocket stubs | Boilerplate; implementation is Step 10 |
+| `ws` | Authenticated upgrade handling and booking-room signalling | Boilerplate; implemented in 10 |
 
 ## External services
 
@@ -153,6 +161,7 @@ docs/
 |---|---|---|---|
 | Neon Postgres | Application data, settings, owner seed, profiles, availability, bookings, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–9 |
 | Google Identity Services | Redirect-mode user identity and verified Google account claims | `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` | 6 |
+| Google public STUN | WebRTC host/server-reflexive ICE candidates; no account or secret | None | 10 |
 
 ## Main flows
 
@@ -167,7 +176,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | Availability and time slots | 7 | [Availability and slot flow](#availability-and-slot-flow) |
 | Zero-price booking creation | 8 | [Booking creation flow](#booking-creation-flow) |
 | Private booking history | 9 | [Booking history flow](#booking-history-flow) |
-| In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | — |
+| In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | [In-app call flow](#in-app-call-flow) |
 | Payments (Razorpay orders, verification, webhooks, refunds) | 12, 13 | — |
 | Blogs | 14 | — |
 | Install and offline support (service worker) | 15 | — |
@@ -242,7 +251,7 @@ flowchart LR
     HistoryService[Booking history service]
     Bookings[(Booking)]
     People[(User and Astrologer)]
-    CallRoutes[Protected call placeholders]
+    CallRoutes[Protected call rooms]
 
     UserHistory --> UserGuard --> HistoryService
     AstroBookings --> AstroGuard --> HistoryService
@@ -254,7 +263,38 @@ flowchart LR
 
 List and detail reads receive the authenticated subject id from the route guard. The repository includes that id in the Booking predicate, so a caller cannot select another account through a path or query value. User responses join only the astrologer's id and display name. Astrologer responses select the booked user's permitted details and do not select email.
 
-The server splits Normal calls by their current end time and derives Completed only when both join timestamps exist. The browser keeps the UTC start/end and ended result, schedules updates at the next boundary, re-splits Upcoming/Past, and changes Join to Join now without polling or a page refresh. Direct user and astrologer call routes reload one subject-scoped booking before showing the Step 9 placeholder.
+The server splits Normal calls by their current end time and derives Completed only when both join timestamps exist. The browser keeps the UTC start/end and ended result, schedules updates at the next boundary, re-splits Upcoming/Past, and changes Join to Join now without polling or a page refresh. Direct user and astrologer call routes reload one subject-scoped booking before showing the Step 10 room.
+
+## In-app call flow
+
+```mermaid
+sequenceDiagram
+    participant Person as User or astrologer
+    participant Room as React call room
+    participant Server as Main HTTP server /ws
+    participant Sessions as Session manager
+    participant Booking as Booking lifecycle service
+    participant Peer as Other participant
+
+    Person->>Room: Tap Join
+    Room->>Person: Request microphone permission
+    Room->>Server: Upgrade with role cookie + exact Origin
+    Server->>Sessions: Resolve selected role session
+    Room->>Server: join + booking id
+    Server->>Booking: Check participant, in_app mode and time window
+    Booking->>Booking: Record first join timestamp
+    Server-->>Room: join acknowledgement + presence
+    Server-->>Peer: presence
+    Room->>Server: offer / answer / ICE
+    Server-->>Peer: Relay within this booking room
+    Room-->>Peer: Peer-to-peer audio
+    Room->>Server: mute state or leave
+    Server-->>Peer: mute state / presence
+```
+
+The role query selects which root-path session cookie to resolve; it does not grant access. The booking service compares that session subject with the stored booking participant, requires `callMode = in_app`, `status = confirmed`, and a current time from `startsAt` inclusive to `endsAt` exclusive. The WebSocket server accepts text JSON up to 16 KiB, validates every inbound and outbound message with Zod, serializes each socket's input, and keeps only one live socket per role in a room.
+
+The browser asks for the exact README §7.3 audio constraints only after Join. A user-side impolite peer and astrologer-side polite peer implement perfect negotiation; recreating the peer connection when presence changes supports simultaneous joins and later rejoining. Individual description and ICE rejections can belong to an ignored offer or an obsolete peer, so they do not drive user-visible failure state. The room shows the audio warning only when the current peer connection reports `failed` or remains unconnected for 15 seconds after the other participant appears, and clears it on `connected`. Local mute follows the live audio track, while each presence snapshot carries the other participant's current mute state across rejoins. Step 10 uses the public Google STUN endpoint only. The active room closes at its exact end timer. A 30-second server sweep also finalizes confirmed in-app bookings that never had a live room, using both first-join timestamps to choose Completed or Missed.
 
 ## User sign-in and details flow
 
@@ -317,4 +357,4 @@ The login limiter is held in the backend process. It is correct for the current 
 
 ## Differences from the spec
 
-None in Step 8. Paid booking holds, payment and subscription-credit use remain later-step work and are explicitly rejected without a write.
+Step 10 deliberately stops before the full README §7.1–§7.3 connected-room feature set because the build request assigns the timer, two-minute notice, TURN, chat, speaker switching, earbuds handling and speaking ring to Step 11. The current STUN-only audio path can fail on restrictive networks and is not production-ready; see [D-016](DECISIONS.md#d-016-step-10-is-stun-only-and-step-11-finishes-the-call-room).

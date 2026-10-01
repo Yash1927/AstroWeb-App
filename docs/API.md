@@ -229,8 +229,27 @@ Saving deletes and recreates only this astrologer's availability inside one tran
 
 ## WebSocket messages
 
+### Connection and admission
+
+- **URL:** `/ws?role=user` or `/ws?role=astrologer` on the same host as the page. The query must contain exactly that one role selector.
+- **Upgrade checks:** the `Origin` header must exactly equal `APP_ORIGIN`, and the selected role's signed, unexpired server session cookie must resolve during the upgrade. Missing sessions are rejected before a WebSocket opens.
+- **Room admission:** a valid `join` is accepted only when the session subject is that booking's user or astrologer, the booking is confirmed and `in_app`, and current time is from `startsAt` inclusive to `endsAt` exclusive. A generic unavailable close reason does not reveal which check failed.
+- **Format and limit:** text JSON only, at most 16 KiB. Every client and server message is checked by a strict Zod schema. Binary, malformed, oversized and out-of-order messages close the socket.
+- **Isolation:** rooms are keyed by booking UUID. Offers, answers, ICE candidates and mute state go only to the other participant in that room. A newer socket replaces only the same role's older socket.
+
 | Type | Direction | Payload | Who can send it | Step |
 |---|---|---|---|---|
+| `join` | Client → server | `{type:"join",bookingId}` | An upgraded user or astrologer; the server performs booking/window authorization | 10 |
+| `join` | Server → client | `{type:"join",bookingId,participant}` | Server acknowledgement after admission and first-join recording | 10 |
+| `leave` | Client → server | `{type:"leave"}` | A participant currently in a room | 10 |
+| `leave` | Server → client | `{type:"leave",participant,reason:"left"\|"ended"}` | Server when the other participant leaves or the room ends | 10 |
+| `presence` | Server → client | `{type:"presence",participants:{user,astrologer}}`; each participant has `present` and `muted` booleans | Server after joins and departures | 10 |
+| `offer` | Client → server / server → peer | Client sends `{type:"offer",sdp}`; peer receives `{type:"offer",from,sdp}` | A participant currently in the room | 10 |
+| `answer` | Client → server / server → peer | Client sends `{type:"answer",sdp}`; peer receives `{type:"answer",from,sdp}` | A participant currently in the room | 10 |
+| `ice-candidate` | Client → server / server → peer | `{type:"ice-candidate",candidate}`; relayed form also includes `from` | A participant currently in the room | 10 |
+| `mute-state` | Client → server / server → peer | Client sends `{type:"mute-state",muted}`; peer receives `{type:"mute-state",participant,muted}` | A participant currently in the room | 10 |
+
+The first admitted join updates only the matching `userJoinedAt` or `astrologerJoinedAt` null field. Active rooms finalize at `endsAt`; a server sweep covers confirmed in-app bookings without an active room. The stored status becomes `completed` only when both first-join timestamps exist, otherwise `missed`.
 
 ## Webhooks
 

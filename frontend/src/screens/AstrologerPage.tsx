@@ -6,6 +6,7 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from 'react'
+import { useLocation } from 'react-router-dom'
 import {
   AstrologerApiError,
   astrologerApi,
@@ -131,8 +132,11 @@ function TagInput({ error, label, onChange, suggestions = [], tags }: TagInputPr
 }
 
 export default function AstrologerPage() {
+  const location = useLocation()
   const [authState, setAuthState] = useState<AuthState>('checking')
-  const [section, setSection] = useState<AstrologerSection>('profile')
+  const [section, setSection] = useState<AstrologerSection>(() => (
+    new URLSearchParams(location.search).get('section') === 'bookings' ? 'bookings' : 'profile'
+  ))
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPassword, setLoginPassword] = useState('')
   const [loginError, setLoginError] = useState('')

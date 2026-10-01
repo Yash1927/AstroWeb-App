@@ -16,6 +16,27 @@ Last updated: 2026-10-01
 
 ---
 
+## 2026-10-01: Step 10 two-tab call fixes
+- **Fixed:** rejected offer/answer or ICE work during perfect negotiation no longer leaves a false audio error while media is connected; the audio warning now appears only after the peer connection reports failure or remains unconnected for 15 seconds, and it clears on connection
+- **Fixed:** local mute is tied to the live audio track across peer resets, and presence snapshots give joining or rejoining participants the other person's current mute state
+- **Changed:** an ended astrologer call now says **Back to Bookings** and opens the panel's Bookings section
+- **Files:** `frontend/src/call/audio-peer.ts`, `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/screens/AstrologerPage.tsx`, `frontend/src/screens/CallPlaceholderPage.test.tsx`, `backend/src/realtime/index.test.ts`
+- **Database:** none
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/features/10-in-app-call-part-1.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/TESTING.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 83 tests pass; frontend lint, all 27 tests and the production build pass. The new regressions cover ignored signalling failures, connection failure/timeout/recovery, mute/unmute through peer rejoin, track state and rejoin presence state
+
+## 2026-10-01: Step 10, in-app call room and audio
+- **Added:** one authenticated `/ws` endpoint on the main HTTP server, booking-id rooms, strict join/presence/leave/offer/answer/ICE/mute messages, first-join recording, ended-booking finalization, the four live user/astrologer room states, microphone permission help, peer-to-peer WebRTC audio, mute visibility and leave/rejoin
+- **Changed:** protected call placeholders now open a standalone room and switch at start/end boundaries without refresh; the old separate port-8080 global socket pair is removed from runtime use
+- **Files:** `backend/index.ts`, `backend/src/realtime/`, `frontend/src/call/`, `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/App.tsx`, `frontend/src/design.css`, and related backend/frontend tests
+- **Database:** none; Step 10 updates the existing `Booking.userJoinedAt`, `astrologerJoinedAt` and `status` fields
+- **Env vars:** none; the existing exact `APP_ORIGIN` is now enforced during WebSocket upgrade
+- **Dependencies:** none; this uses existing `ws`, `zod`, React and browser WebRTC APIs
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/10-in-app-call-part-1.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 82 tests pass; frontend TypeScript, lint, all 25 tests and production build pass. Step 10 is STUN-only; TURN, timer, two-minute notice, chat, speaker switch, earbuds handling and speaking ring remain Step 11
+
 ## 2026-10-01: Step 9, History and astrologer bookings
 - **Added:** private user and astrologer booking-list/detail APIs, user History, the astrologer Bookings section, shared time-aware Normal-call cards, protected user/astrologer call placeholders, and the production-blocked `dev:make-booking` helper
 - **Changed:** Normal calls now move from Join to glowing Join now and then Completed or Missed without a refresh; the astrologer panel shows only the booked user's permitted details and never their email; the temporary-password gate now protects profile, availability and booking APIs

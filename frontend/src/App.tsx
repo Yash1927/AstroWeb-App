@@ -11,7 +11,7 @@ import AstrologerPage from './screens/AstrologerPage'
 import HomePage from './screens/HomePage'
 import HistoryPage from './screens/HistoryPage'
 import SettingsPage from './screens/SettingsPage'
-import CallPlaceholderPage from './screens/CallPlaceholderPage'
+import CallRoomPage from './screens/CallRoomPage'
 
 const DesignPage = import.meta.env.DEV
   ? lazy(() => import('./screens/DesignPage'))
@@ -154,15 +154,15 @@ function App() {
         />
         <Route path="blogs/:id" element={<LaterStep title="Blog post" />} />
         <Route path="settings" element={<SettingsPage />} />
-        <Route path="call/:bookingId" element={<CallPlaceholderPage audience="user" />} />
         {policyPages.map(([path, title]) => (
           <Route key={path} path={path} element={<LaterStep title={title} />} />
         ))}
       </Route>
+      <Route path="call/:bookingId" element={<CallRoomPage audience="user" />} />
       <Route path="astrologer" element={<AstrologerPage />} />
       <Route
         path="astrologer/call/:bookingId"
-        element={<CallPlaceholderPage audience="astrologer" />}
+        element={<CallRoomPage audience="astrologer" />}
       />
       <Route path="owner" element={<OwnerPage />} />
       {DesignPage ? (

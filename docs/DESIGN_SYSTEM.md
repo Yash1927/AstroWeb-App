@@ -44,7 +44,7 @@ Last updated: 2026-10-01
 | Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Home cards, panel authentication/data loading and design page |
 | StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Booking cards and design page |
 | BookingLists | `frontend/src/components/BookingLists.tsx` | User/astrologer views, Upcoming/Past sections, live Join states and participant details | History and astrologer Bookings |
-| BookingListSkeleton | `frontend/src/components/BookingListSkeleton.tsx` | Card-shaped title, avatar and fact placeholders | History, astrologer Bookings and call placeholders |
+| BookingListSkeleton | `frontend/src/components/BookingListSkeleton.tsx` | Card-shaped title, avatar and fact placeholders | History, astrologer Bookings and call-room loading |
 | GoogleSignInButton / UserSignIn | `frontend/src/components/GoogleSignInButton.tsx`, `UserSignIn.tsx` | GIS standard “Continue with Google” button in redirect mode plus a calm sign-in card | Home booking flow, History and Settings |
 | PhoneNumberField | `frontend/src/components/PhoneNumberField.tsx` | Fixed `+91` prefix, 10-digit local input, linked hint/error and canonical value output | First booking, phone-only booking step and Settings |
 | UserDetailsForm | `frontend/src/components/UserDetailsForm.tsx` | Name, date, local time with 12-hour reading, place, optional fixed-prefix phone, gender, field errors and privacy line | First booking and Settings |
@@ -52,7 +52,7 @@ Last updated: 2026-10-01
 | Inputs, selects and tags | `frontend/src/design.css` | Label, hint, linked error, input, read-only input, rupee input, select, tag editor and removable tags | User forms, panel forms and design page |
 | Chips | `frontend/src/design.css` | Default, selected, horizontal date/time and disabled-empty states | Panel navigation, Home slot picker and design page |
 | Bottom tab bar | `frontend/src/App.tsx` | Home, History, Blogs and Settings; gold active tab | User app shell and design preview |
-| Call control | `frontend/src/design.css` | Pressed and icon cross-fade states | Design page; call room comes later |
+| Call-room controls | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Large labelled Mute/Unmute and Leave controls, track-backed mute state across rejoins, current remote-muted badge, two-person layout and full-width end action | User and astrologer call rooms |
 
 ## Animations
 
@@ -65,7 +65,7 @@ Last updated: 2026-10-01
 | `sheet-up` / `sheet-down` | 300ms in, 200ms out | Bottom sheet | Reduced to 1ms once |
 | `scale-in` / `scale-out` | 200–300ms | Dialogs and success mark | Reduced to 1ms once |
 | `shimmer` | 1.4s linear loop | Skeleton loader | Runs once for 1ms |
-| `breathe` | 8s loop | Waiting-circle example | Runs once for 1ms |
+| `breathe` | 8s loop | Waiting room and design example | Runs once for 1ms |
 | `speak-ring` | 1.2s loop | Speaking-avatar example | Runs once for 1ms |
 | Icon cross-fade | 150ms | Call control | Transition reduced to 1ms |
 | `message-in` | 180ms | Chat-message example | Reduced to 1ms once |
@@ -83,10 +83,10 @@ Last updated: 2026-10-01
 | Blogs | `/blogs` | Placeholder | 1 |
 | Blog post | `/blogs/:id` | Later-step placeholder | 1 |
 | Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, policy links, save toast and logout | 6 |
-| Call room | `/call/:bookingId` | Protected loading/error/sign-in states, before-start waiting time and after-start Step 10 placeholder | 9 |
+| Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; mute, leave and rejoin | 9, 10 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
 | Astrologer panel | `/astrologer` | Session check, login, forced password change, profile and availability workflows, private Upcoming/Past bookings; Blogs placeholder | 4, 7, 9 |
-| Astrologer call | `/astrologer/call/:bookingId` | Protected login/loading/error states, before-start waiting time and after-start Step 10 placeholder | 9 |
+| Astrologer call | `/astrologer/call/:bookingId` | The same four call states and controls, with caller-first-name waiting text and astrologer session protection | 9, 10 |
 | Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management and pricing/settings | 3 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
 | Not found | Any unmatched path | Link back to Home | 1 |
@@ -120,8 +120,14 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Empty birth date | “Enter your date of birth.” | First booking details and Settings |
 | Settings save | “Saved” | Settings toast |
 | Empty booking section | “No upcoming calls.” / “No past calls yet.” | History and astrologer Bookings |
-| Call before start | “Please wait. Your call will start at {time}.” | User and astrologer call placeholders |
-| Call from start | “Coming in the next step” | User and astrologer call placeholders |
+| Call before start | “Please wait. Your call will start at {time}.” | User and astrologer call rooms |
+| Waiting for astrologer | “Waiting for {astrologer name} to join…” | User call room |
+| Waiting for user | “Waiting for {user first name} to join…” | Astrologer call room |
+| Connected call | “Connected.” | Both call rooms |
+| Ended user call | “This call has ended.” with **Back to History** | User call room |
+| Ended astrologer call | “This call has ended.” with **Back to Bookings** | Astrologer call room |
+| Microphone blocked | “Microphone access is blocked. In your browser's site settings, allow the microphone for this site, then try again.” with **Try again** | Both call rooms |
+| Audio connection failed | “Audio could not connect. Leave the call and try joining again.” only after peer failure or a 15-second connection timeout; removed when connected | Both call rooms |
 
 ## Accessibility
 
@@ -147,5 +153,6 @@ Messages shown in the UI, so the same situation always uses the same words.
 - The booking summary uses a semantic description list for astrologer, call type, IST date/time, duration and price. Submission errors are announced in an alert without closing the sheet. The upcoming-Normal limit instead uses a softly highlighted polite status, removes the repeat confirmation action and offers a full-size History link. The success checkmark has an accessible name and its History action uses the same shared link-button treatment.
 - History and astrologer booking cards use semantic headings and description lists, 40px labelled avatars, visible status text, and full-width 48px Join actions. The shared card is one flexible column at 360px, wraps its header, and allows every detail value to break safely.
 - Join now reuses the reduced-motion-aware soft-glow animation. A scheduled clock update switches button/status state and moves the card between sections without requiring focus movement or a page refresh.
+- Call-room phase text is a polite live status. Before-start and one-person waiting states use the reduced-motion-aware breathing circle. Connected participants have named 96px avatars; a visible muted badge also exposes an accessible “{name} is muted” label. Mute and Leave are separate large controls with their text below the icon. The mobile-first two-column participant grid and wrapping controls fit the 360px baseline without fixed text heights.
 - Date exceptions stay in the existing one-column phone layout and use overlap-safe responsive grid columns at desktop widths.
 - `prefers-reduced-motion: reduce` changes all animations and transitions to one 1ms iteration.

@@ -129,3 +129,10 @@ Use this format:
 - **Context:** README §5.6 defines initials from the first and last space-separated words, but labels such as `007` are not useful initials.
 - **Decision:** Before choosing the first and last words, discard any word whose first Unicode character is not a letter. Continue to use `Intl.Segmenter` for the selected characters.
 - **Consequences:** `sumit 007` displays `S`, while Latin, Hindi and other letter-based names keep their existing initials behavior. A name with no letter-leading word displays `?`.
+
+## D-016: Step 10 is STUN-only and Step 11 finishes the call room
+- **Date:** 2026-10-01
+- **Status:** Accepted (owner's instruction)
+- **Context:** README §7.1–§7.3 describes the finished call room with a timer, two-minute notice, TURN relay and additional controls. The Step 10 request explicitly limits this build to microphone permission, Mute, Leave, STUN and the four room states, and assigns TURN and the remaining features to Step 11. The README does not select a STUN provider.
+- **Decision:** Step 10 uses `stun:stun.l.google.com:19302` directly in the browser and implements perfect negotiation over the authenticated `/ws` channel. It intentionally omits the timer, two-minute notice, TURN, chat, speaker switch, earbuds handling and speaking ring until Step 11.
+- **Consequences:** Basic peer-to-peer audio works without a new account, key or environment variable, but restrictive and many mobile networks may fail to connect. The call feature is not production-ready until Step 11 supplies short-lived TURN credentials and completes the specified room controls and feedback.

@@ -83,7 +83,17 @@ On a wider screen, date-exception controls wrap into as many rows as they need. 
 
 1. Open **Bookings** to see Upcoming calls soonest first and Past calls newest first.
 2. Each Normal call shows the user's name, birth date, birth time, birth place, gender and phone number when one was saved. The user's email is never shown.
-3. Before the start, choose **Join** to see the waiting time. From the start until the end, choose the glowing **Join now** button. The audio room itself arrives in Step 10.
+3. Before the start, choose **Join** to see the waiting time. From the start until the end, choose the glowing **Join now** button.
 4. After the end there is no Join button. The call is Completed only after both people have joined; otherwise it is Missed.
 
 The cards change as the start and end times pass without reloading the page. **Blogs** still says “Coming in a later step” until Step 14.
+
+### Join a Normal call
+
+1. Open the call from **Bookings**. Before its start, the room shows the start time and does not ask for the microphone or connect audio.
+2. At the start time, choose **Join call**. Allow microphone access when the browser asks. If access is blocked, allow it in the browser's site settings and choose **Try again**.
+3. While waiting for the user, the breathing circle stays visible. When both people are present, the room shows both avatars and says **Connected.**
+4. Use **Mute** or **Unmute** to control your microphone. A muted badge appears for the other person. Use **Leave call** to disconnect; you can choose **Join call** again until the booked end time.
+5. At the end time, audio closes and the room says **This call has ended.** Choose **Back to Bookings** to return directly to the panel's Bookings section.
+
+An audio warning appears only if the peer connection fails or has not connected about 15 seconds after the other person joins. It disappears if the connection succeeds. Step 10 uses direct peer-to-peer audio. The timer, two-minute notice, TURN relay and the other call controls arrive in Step 11, so restrictive networks may not connect yet.

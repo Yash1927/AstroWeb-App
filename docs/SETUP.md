@@ -77,7 +77,9 @@ npm install
 8. Open `http://localhost:5173/owner` and log in with the seeded owner credentials. The browser must go through the Vite origin so its `/api/owner` cookie and requests share one origin.
 9. Use the owner panel to create an astrologer, then open `http://localhost:5173/astrologer` in a separate browser profile. Sign in with the temporary credentials and replace the password before editing the profile.
 
-The backend denies cross-origin access when `APP_ORIGIN` is missing. Requests through the Vite proxy remain same-origin.
+The backend denies cross-origin access when `APP_ORIGIN` is missing. Requests through the Vite proxy remain same-origin. The backend's one Node listener serves both HTTP and `/ws`; do not start a separate realtime process or open port 8080.
+
+Step 10 uses Google's public STUN endpoint and needs no additional account, key or environment variable. `localhost` is accepted by browsers for microphone development. A real phone must use HTTPS, and reliable restrictive-network testing waits for the Step 11 TURN setup.
 
 ## Database setup
 
@@ -115,4 +117,7 @@ _Write in Step 16:_ building and starting the app, production env vars, HTTPS an
 | Google rejects the redirect | Add the exact browser callback, such as `http://localhost:5173/api/auth/google`, to the Web client's authorised redirect URIs. Also confirm both Google client-id variables use that client. |
 | The sixth owner or astrologer login attempt returns 429 during development | Wait for the 15-minute window, or restart the backend process to clear the process-local development limiter. |
 | An astrologer sees “Set a new password” after an owner reset | This is expected. Enter a new password of at least 10 characters before returning to the panel. |
+| The call page says the connection ended immediately | Open the frontend through the exact `APP_ORIGIN`, confirm the correct user or astrologer session is signed in, and confirm current time is inside the stored booking window. |
+| Microphone access is blocked | Allow the microphone for the frontend origin in browser site settings, return to the room and choose **Try again**. Production and real-phone access require HTTPS. |
+| Two peers cannot establish audio on a restrictive or mobile network | Step 10 has STUN only. Test another network for now; Step 11 adds the required TURN relay. |
 | Prisma reports `RUNTIME.TEMPORAL_UNAVAILABLE` | Run `npm install`; `temporal-polyfill` must be installed and is loaded by `src/prisma/db.ts`. |

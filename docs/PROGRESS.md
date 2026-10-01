@@ -17,7 +17,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 7 | Availability and time slots | Done | [07-availability-time-slots.md](features/07-availability-time-slots.md) | Weekly hours, date exceptions, the IST slot engine and Home date/time picker are in place. |
 | 8 | Booking free Normal calls | Done | [08-booking-free-normal-calls.md](features/08-booking-free-normal-calls.md) | Transactional zero-price booking creation, overlap handling and the Home summary/success flow are in place. |
 | 9 | History and astrologer bookings | Done | [09-history-and-astrologer-bookings.md](features/09-history-and-astrologer-bookings.md) | Private History, astrologer Bookings and protected call placeholders are in place. |
-| 10 | In-app call, part 1 | Not started | — | |
+| 10 | In-app call, part 1 | Done | [10-in-app-call-part-1.md](features/10-in-app-call-part-1.md) | Authenticated booking rooms, STUN WebRTC audio and the four live call states are in place. |
 | 11 | In-app call, part 2 | Not started | — | |
 | 12 | Urgent calls with Razorpay | Not started | — | |
 | 13 | Subscription packs | Not started | — | |
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Step 10: In-app call, part 1.
+Step 11: In-app call, part 2.
 
 ## Known issues
 
@@ -35,6 +35,5 @@ Bugs, limitations and loose ends that aren't fixed yet. When one is fixed, remov
 
 | Issue | Where | Found | Plan |
 |---|---|---|---|
-| The WebSocket handler is attached at the wrong level and supports only one global call | `backend/src/realtime/` | Before Step 1 | Rebuilt in Step 10 |
 | Owner and astrologer login throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/auth/login-rate-limit.ts` | Step 3 | Choose the production topology or a shared limiter store in Step 16 |
 | `npm audit` reports 5 moderate and 8 high issues in the backend development dependency tree; the production-only audit reports 0 | `backend/package-lock.json` | Step 1 | Review dependency upgrades with the Prisma stable upgrade before launch |
