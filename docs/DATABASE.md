@@ -41,7 +41,7 @@ The Step 2 seed creates the one owner row. Step 3 reads its hash for owner login
 
 Relations: availability rules, availability exceptions, bookings and blogs.
 
-Owner creates override the database's `isListed = false` default with `true` and leave `mustChangePassword = true`. Step 4 records `profileSavedAt` without changing an owner's listing choice; Step 5's public query will require active, listed and saved. Deactivation sets both `isActive = false` and `isListed = false`; reactivation changes only `isActive`.
+Owner creates override the database's `isListed = false` default with `true` and leave `mustChangePassword = true`. Step 4 records `profileSavedAt` without changing an owner's listing choice; the public query requires active, listed and saved. Deactivation sets both `isActive = false` and `isListed = false`; reactivation changes only `isActive`.
 
 ### `User`
 
@@ -59,7 +59,7 @@ Owner creates override the database's `isListed = false` default with `true` and
 | `subscriptionCredits` | integer | No | `0` |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-Relations: bookings, payments, blog likes and blog comments. Nullable onboarding fields are recorded in `docs/DECISIONS.md`.
+Relations: bookings, payments, blog likes and blog comments. Nullable onboarding fields are recorded in `docs/DECISIONS.md`. Step 6 creates an account by the verified Google `sub`, refreshes its verified email on later sign-ins, and writes the editable details through self-only `/api/me`; birth time remains the local clock value with no timezone conversion.
 
 ### `AvailabilityRule`
 
@@ -181,7 +181,7 @@ The composite key makes `(blogId, userId)` unique.
 | `expiresAt` | timestamptz(3) | No | Revocation and expiry boundary |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-The session manager stores a random UUID as the session id and sends a signed form of that id in the role-specific cookie. Resolution verifies the signature, expected role and `expiresAt`. Logout and expired-session cleanup delete the row. Owner and astrologer rows expire 12 hours after login. Astrologer password replacement, owner password reset and owner deactivation delete all sessions for that astrologer.
+The session manager stores a random UUID as the session id and sends a signed form of that id in the role-specific cookie. Resolution verifies the signature, expected role and `expiresAt`. Logout and expired-session cleanup delete the row. User rows expire 30 days after Google sign-in; owner and astrologer rows expire after 12 hours. Astrologer password replacement, owner password reset and owner deactivation delete all sessions for that astrologer.
 
 ## Rules the database enforces
 

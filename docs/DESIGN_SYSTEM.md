@@ -34,16 +34,18 @@ Last updated: 2026-10-01
 
 | Component | File | Variants / props | Used on |
 |---|---|---|---|
-| Button | `frontend/src/components/Button.tsx` | Primary, secondary, text, disabled, optional soft glow | Design page and both panels |
-| Card | `frontend/src/components/Card.tsx` | Default, compact, interactive hover | Panel and placeholder screens; design page |
-| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour | Astrologer cards, owner list/profile and design page |
-| AstrologerCard | `frontend/src/components/AstrologerCard.tsx` | 56px avatar, name, expertise, languages, experience and full-width Call action | Astrologer preview and design page; shared with Home in Step 5 |
-| BottomSheet | `frontend/src/components/BottomSheet.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Design page |
+| Button | `frontend/src/components/Button.tsx` | Primary, secondary, text, disabled, optional soft glow | User screens, design page and both panels |
+| Card | `frontend/src/components/Card.tsx` | Default, compact, interactive hover | User screens, panels, placeholders and design page |
+| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour | Settings, astrologer cards, owner list/profile and design page |
+| AstrologerCard | `frontend/src/components/AstrologerCard.tsx` | 56px avatar, name, expertise, languages, experience, full-width Call action and desktop hover | Home, astrologer preview and design page |
+| BottomSheet | `frontend/src/components/BottomSheet.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Home call-type picker and design page |
 | Dialog | `frontend/src/components/Dialog.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Owner forms, astrologer preview and design page |
 | Toast | `frontend/src/components/Toast.tsx` | Body portal; success or error; live region; closes after four seconds | Panel action feedback; design page |
-| Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Panel authentication/data loading; design page |
+| Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Home cards, panel authentication/data loading and design page |
 | StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Design page |
-| Inputs, selects and tags | `frontend/src/design.css` | Label, hint, linked error, input, rupee input, select, tag editor and removable tags | Panel forms and design page |
+| GoogleSignInButton / UserSignIn | `frontend/src/components/GoogleSignInButton.tsx`, `UserSignIn.tsx` | GIS standard “Continue with Google” button in redirect mode plus a calm sign-in card | Home booking flow, History and Settings |
+| UserDetailsForm | `frontend/src/components/UserDetailsForm.tsx` | Name, date, local time with 12-hour reading, place, optional phone, gender, field errors and privacy line | First booking and Settings |
+| Inputs, selects and tags | `frontend/src/design.css` | Label, hint, linked error, input, read-only input, rupee input, select, tag editor and removable tags | User forms, panel forms and design page |
 | Chips | `frontend/src/design.css` | Default and selected | Panel section navigation and design page |
 | Bottom tab bar | `frontend/src/App.tsx` | Home, History, Blogs and Settings; gold active tab | User app shell and design preview |
 | Call control | `frontend/src/design.css` | Pressed and icon cross-fade states | Design page; call room comes later |
@@ -53,7 +55,7 @@ Last updated: 2026-10-01
 | Name | Duration and easing | Where it's used | With reduced motion |
 |---|---|---|---|
 | `fade-up` | 240ms, ease out | Every screen and design demos | Reduced to 1ms once |
-| Staggered `fade-up` | 40ms between items | Design example; prepared for first six Home cards | Delay remains but movement is 1ms once |
+| Staggered `fade-up` | 40ms between items | First six Home cards and design example | Delay remains but movement is 1ms once |
 | Button press | 120ms | All buttons shrink to 0.97 while pressed | Transition reduced to 1ms |
 | Card hover | 200ms | Interactive cards on hover-capable devices | Transition reduced to 1ms |
 | `sheet-up` / `sheet-down` | 300ms in, 200ms out | Bottom sheet | Reduced to 1ms once |
@@ -72,11 +74,11 @@ Last updated: 2026-10-01
 
 | Screen | Route | States (loading, empty, error, …) | Built in step |
 |---|---|---|---|
-| Home | `/` | Placeholder | 1 |
-| History | `/history` | Placeholder | 1 |
+| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; Step 7 placeholder | 5, 6 |
+| History | `/history` | Session loading/error, signed-out Google screen, signed-in Step 9 placeholder | 6 |
 | Blogs | `/blogs` | Placeholder | 1 |
 | Blog post | `/blogs/:id` | Later-step placeholder | 1 |
-| Settings | `/settings` | Placeholder | 1 |
+| Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, policy links, save toast and logout | 6 |
 | Call room | `/call/:bookingId` | Later-step placeholder | 1 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
 | Astrologer panel | `/astrologer` | Session check, login, forced password change, profile load/error/edit/preview/save; later-step section placeholders | 4 |
@@ -100,6 +102,10 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Forced password heading | “Set a new password” | First astrologer login and owner-reset login |
 | Profile context | “This information appears on your Home card.” | Astrologer profile |
 | Preview context | “This preview uses your unsaved changes.” | Astrologer profile preview |
+| Empty Home list | “No astrologers are available right now. Please check again later.” | Home |
+| Private-details note | “Your details are private. Only the astrologer you book can see them.” | First booking details and Settings |
+| Deferred time choice | “Choosing a time comes in the next step” | Home after sign-in and required details |
+| Settings save | “Saved” | Settings toast |
 
 ## Accessibility
 
@@ -112,9 +118,12 @@ Messages shown in the UI, so the same situation always uses the same words.
 - Dialog, BottomSheet and Toast use React portals into `document.body`, so a transformed screen animation cannot confine their fixed positioning to the page column.
 - Owner settings validation places a specific error beside every invalid field and links it with `aria-describedby` and `aria-invalid`.
 - Astrologer password and profile validation use visible field labels, field-linked errors and numeric limits. Tag buttons meet the 48px target and name the tag they remove.
+- User detail validation places specific messages with each invalid field. The phone-only step reports its error beside the phone field; the Google email is visibly read-only.
 - Toasts use polite or assertive live regions according to their kind.
 - Avatars use `Intl.Segmenter` for initials in Latin and non-Latin scripts and expose the person's name.
 - A 360px browser emulation check found no horizontal overflow on the app shell or design page.
 - Owner cards, action buttons and forms use wrapping/minmax layouts so they fit the 360px mobile baseline without fixed content widths. A fresh rendered check remains in the Step 3 manual try-out because no browser surface was available in the build session.
 - The astrologer panel, tag editor, actions and 360px preview use wrapping/flexible layouts with no fixed text height. The Step 4 manual try-out includes the rendered 360px check.
+- Home uses one card column by default, two from 42rem and three from 64rem. Card contents and call-option summaries wrap without fixed text heights.
+- User sign-in, details and Settings use the existing mobile-first card/input system. Google’s rendered button is capped to the available width, and Settings uses one flexible column at the 360px baseline.
 - `prefers-reduced-motion: reduce` changes all animations and transitions to one 1ms iteration.

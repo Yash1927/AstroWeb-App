@@ -76,7 +76,7 @@ Use this format:
 - **Date:** 2026-09-30
 - **Status:** Accepted (owner's instruction)
 - **Context:** The `Astrologer.isListed` schema default is false, while README §8.2 says a saved profile appears on Home immediately. Step 3 explicitly requires owner-created accounts to start with `isListed = true`.
-- **Decision:** The owner create route sets `isListed = true`. Step 4 adds the saved-profile marker, and the public Home query in Step 5 will require all three conditions: active, listed and profile saved.
+- **Decision:** The owner create route sets `isListed = true`. Step 4 adds the saved-profile marker, and the public Home query requires all three conditions: active, listed and profile saved.
 - **Consequences:** Creating an account expresses the owner's intent to list it, but no unfinished profile can appear publicly. Deactivation sets `isListed = false`; reactivation does not relist the account without another owner action.
 
 ## D-009: User and astrologer cookies use the root path
@@ -92,3 +92,24 @@ Use this format:
 - **Context:** README §8.2 allows free-form expertise and language tags but does not set storage limits or say the lists are required.
 - **Decision:** Accept zero through 20 entries in each list, trim each entry, remove case-insensitive duplicates, and limit one entry to 40 characters.
 - **Consequences:** Empty lists remain valid, custom labels are supported, and request sizes stay bounded. The UI explains how to add tags and suggests Vedic, Tarot and Numerology for expertise.
+
+## D-011: Home cards use a stable alphabetical order
+- **Date:** 2026-10-01
+- **Status:** Accepted
+- **Context:** README §5.1 defines which astrologers appear but does not define their order. Database row order is not stable.
+- **Decision:** Order eligible public astrologers by display name ascending.
+- **Consequences:** Refreshing Home produces a predictable list. A later ranking or availability requirement can replace this ordering explicitly.
+
+## D-012: Google redirect continuation uses validated local button state
+- **Date:** 2026-10-01
+- **Status:** Accepted
+- **Context:** Google Identity Services redirect mode replaces the page and posts its result to the backend. Step 6 requires History, Settings and a selected Home astrologer/call type to survive that round trip, but the README does not prescribe the storage mechanism.
+- **Decision:** Put a local return route in the GIS button `state`. The backend accepts it only when it resolves to `APP_ORIGIN`; otherwise it returns to Home. Home's route contains only the astrologer id and call type and removes those query parameters after restoring the flow.
+- **Consequences:** No personal details or credentials are stored in browser persistence or placed in the URL, and the callback cannot be used as an external open redirect. The selected public booking context survives the Google round trip.
+
+## D-013: Google re-login refreshes email but preserves user-edited details
+- **Date:** 2026-10-01
+- **Status:** Accepted
+- **Context:** The README identifies a user by Google `sub` and makes email read-only, but it does not say whether later Google claims overwrite a name the user edited in Settings.
+- **Decision:** Find by `googleSub`. On first sign-in, prefill the stored name from Google. On later sign-ins, refresh the verified Google email but keep the stored name, birth details, phone number and credits.
+- **Consequences:** Settings changes are not unexpectedly lost. The displayed read-only email follows the current verified Google claim.

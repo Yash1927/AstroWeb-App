@@ -8,6 +8,9 @@ import {
 } from 'react-router-dom'
 import OwnerPage from './screens/OwnerPage'
 import AstrologerPage from './screens/AstrologerPage'
+import HomePage from './screens/HomePage'
+import HistoryPage from './screens/HistoryPage'
+import SettingsPage from './screens/SettingsPage'
 
 const DesignPage = import.meta.env.DEV
   ? lazy(() => import('./screens/DesignPage'))
@@ -137,24 +140,8 @@ function App() {
   return (
     <Routes>
       <Route element={<UserShell />}>
-        <Route
-          index
-          element={
-            <Placeholder
-              description="Astrologer profiles will appear here in Step 5."
-              title="Home"
-            />
-          }
-        />
-        <Route
-          path="history"
-          element={
-            <Placeholder
-              description="Your upcoming and past calls will appear here in Step 9."
-              title="History"
-            />
-          }
-        />
+        <Route index element={<HomePage />} />
+        <Route path="history" element={<HistoryPage />} />
         <Route
           path="blogs"
           element={
@@ -165,15 +152,7 @@ function App() {
           }
         />
         <Route path="blogs/:id" element={<LaterStep title="Blog post" />} />
-        <Route
-          path="settings"
-          element={
-            <Placeholder
-              description="Your details and account options will appear here in Step 6."
-              title="Settings"
-            />
-          }
-        />
+        <Route path="settings" element={<SettingsPage />} />
         <Route path="call/:bookingId" element={<LaterStep title="Call room" />} />
         {policyPages.map(([path, title]) => (
           <Route key={path} path={path} element={<LaterStep title={title} />} />

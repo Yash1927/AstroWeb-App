@@ -7,9 +7,9 @@ Last updated: 2026-10-01
 ## Conventions
 
 - HTTP endpoints are mounted below `/api` (README §1).
-- The health and public settings endpoints are public. Owner and astrologer login are public; every `/api/owner/*` and `/api/astrologer/*` endpoint runs its role guard first.
-- Owner and astrologer bodies, parameters and query strings are strict Zod objects. Invalid protected input returns `400` with `{"error":"Check the information and try again."}`. Invalid login input deliberately uses the same 401 response as bad credentials.
-- Owner authentication uses `astrowebapp_owner_session` scoped to `/api/owner`. Astrologer authentication uses `astrowebapp_astrologer_session` scoped to `/` so later shared APIs and `/ws` receive it. Both are httpOnly, last 12 hours, use SameSite=Lax and are Secure when `NODE_ENV=production`.
+- Health, public settings and public astrologer cards need no session. Owner, astrologer and Google callback endpoints are public; protected endpoints run the matching role guard.
+- Current account, profile and public-card bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
+- Owner authentication uses `astrowebapp_owner_session` scoped to `/api/owner`. Astrologer and user authentication use separate cookies scoped to `/` so shared APIs and `/ws` receive them. All three are httpOnly, use SameSite=Lax and are Secure when `NODE_ENV=production`; the owner and astrologer last 12 hours and the user lasts 30 days.
 - Missing or invalid authentication returns `401`. Missing records return `404`; duplicate email, password-gate failures and invalid state transitions return `409`; database/service failures return a generic `503`.
 
 ## Endpoints
@@ -19,6 +19,11 @@ Last updated: 2026-10-01
 | GET | `/api/health` | Public | Confirms that the Express process can answer requests | 1 |
 | GET | `/api/health/db` | Public | Runs a small database query and reports whether Neon is reachable | 2 |
 | GET | `/api/settings/public` | Public | Returns only current prices, pack size and call durations | 2 |
+| GET | `/api/astrologers` | Public | Returns only eligible Home-card fields | 5 |
+| POST | `/api/auth/google` | Public Google redirect | Verifies a Google credential and creates a user session | 6 |
+| GET | `/api/me` | User | Returns the signed-in user's own account and details | 6 |
+| PUT | `/api/me` | User | Replaces the signed-in user's own editable details | 6 |
+| POST | `/api/auth/logout` | User | Deletes the current user session and clears its cookie | 6 |
 | POST | `/api/auth/owner/login` | Public | Verifies owner credentials and creates an owner session | 3 |
 | POST | `/api/auth/astrologer/login` | Public | Verifies an active astrologer and creates an astrologer session | 4 |
 | GET | `/api/owner/session` | Owner | Confirms that the owner session is valid | 3 |
@@ -46,6 +51,28 @@ Last updated: 2026-10-01
 - **Errors:** No endpoint-specific errors. Connection failures mean the backend process or development proxy is unavailable.
 - **Rate limit:** None yet.
 
+## User authentication and details
+
+### POST /api/auth/google
+
+- **Request:** Google Identity Services posts `application/x-www-form-urlencoded` fields including `credential`, `g_csrf_token`, optional `select_by` and optional button `state`.
+- **CSRF:** The body token must match the `g_csrf_token` cookie before the credential is verified.
+- **Identity:** `google-auth-library` verifies the ID token with `GOOGLE_CLIENT_ID` as its audience, including signature, issuer and expiry checks. The route additionally requires `email_verified = true`, `sub` and `email`.
+- **Account:** The service finds the `User` by `googleSub` or creates it with the Google email and name. Existing birth details, phone number, chosen name and credits are preserved; a changed verified Google email is refreshed.
+- **Response:** `303` to the validated same-origin button state, or Home when state is absent or unsafe, with a signed 30-day `astrowebapp_user_session` cookie.
+- **Errors:** Missing/mismatched CSRF or malformed provider input returns `400`; an unaccepted token returns `401`; missing Google configuration or a service failure returns `503`. Tokens and personal claims are not logged.
+
+### GET and PUT /api/me
+
+Both routes resolve the record id only from the valid user session. They do not accept a user id.
+
+| Endpoint | Valid request data | Success response |
+|---|---|---|
+| `GET /api/me` | No body, params or query | `{user}` with id, Google email, editable details, credits and computed `detailsComplete` |
+| `PUT /api/me` | Name 2–60 chars; non-future `YYYY-MM-DD` birth date; `HH:mm` local birth time; birth place 1–100 chars; optional null or `+91` mobile; `male`, `female` or `other` gender | `{user}` after replacing those editable fields |
+
+The email, Google subject and credits cannot be changed through `PUT`. Birth time is stored as the local clock time entered, without timezone conversion. `POST /api/auth/logout` deletes the current Session row, clears the root-path user cookie and returns `204`.
+
 ### GET /api/health/db
 
 - **Who:** Public.
@@ -61,6 +88,16 @@ Last updated: 2026-10-01
 - **Response:** `200 OK` with `normalPricePaise`, `urgentPricePaise`, `subscriptionPricePaise`, `subscriptionCallsPerPack`, `normalDurationMin`, `urgentDurationMin` and `subscriptionDurationMin`.
 - **Errors:** `503 Service Unavailable` with a generic message when the singleton row is missing or the database query fails.
 - **Data boundary:** The response excludes the settings id and update timestamp.
+- **Rate limit:** None yet.
+
+### GET /api/astrologers
+
+- **Who:** Public visitors and signed-in users. No cookie or login is required.
+- **Request:** No body, parameters or query.
+- **Response:** `200 OK` with `{astrologers}`. Each item contains only `id`, `displayName`, `expertise`, `languages` and `experienceYears`.
+- **Eligibility:** The database query requires `isActive = true`, `isListed = true` and a non-null `profileSavedAt`. Results are ordered by display name.
+- **Privacy boundary:** The query does not select email, password/session data, account flags or timestamps. The route also reconstructs each response from the five public fields.
+- **Errors:** Unexpected request input returns `400`. A database/service failure returns `503` with `{"error":"Astrologers are unavailable. Please try again."}`.
 - **Rate limit:** None yet.
 
 ## Owner authentication

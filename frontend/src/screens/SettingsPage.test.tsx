@@ -1,0 +1,69 @@
+// @vitest-environment jsdom
+
+import { cleanup, render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import SettingsPage from './SettingsPage'
+
+const userDetails = {
+  id: 'maya',
+  email: 'maya@example.com',
+  name: 'Maya Shah',
+  birthDate: '1991-08-17',
+  birthTime: '05:30',
+  birthPlace: 'Jaipur',
+  phone: null,
+  gender: 'female',
+  subscriptionCredits: 0,
+  detailsComplete: true,
+}
+
+function response(body: unknown, status = 200) {
+  return {
+    json: async () => body,
+    ok: status >= 200 && status < 300,
+    status,
+  } as Response
+}
+
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+})
+
+describe('SettingsPage', () => {
+  it('shows Google sign-in when signed out', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => response({ error: 'Sign in' }, 401)))
+    render(<MemoryRouter><SettingsPage /></MemoryRouter>)
+
+    expect(await screen.findByRole('heading', { name: 'Continue with Google' })).toBeDefined()
+  })
+
+  it('keeps email read-only, saves details and logs out', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/auth/logout') return response({}, 204)
+      if (init?.method === 'PUT') {
+        return response({ user: { ...userDetails, birthPlace: 'Udaipur' } })
+      }
+      return response({ user: userDetails })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<MemoryRouter><SettingsPage /></MemoryRouter>)
+
+    const email = await screen.findByLabelText(/Email/) as HTMLInputElement
+    expect(email.readOnly).toBe(true)
+    const place = screen.getByLabelText('Place of birth')
+    await user.clear(place)
+    await user.type(place, 'Udaipur')
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(await screen.findByText('Saved')).toBeDefined()
+    expect(fetchMock).toHaveBeenCalledWith('/api/me', expect.objectContaining({ method: 'PUT' }))
+
+    await user.click(screen.getByRole('button', { name: 'Log out' }))
+    expect(await screen.findByRole('heading', { name: 'Continue with Google' })).toBeDefined()
+  })
+})
+

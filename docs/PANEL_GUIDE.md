@@ -27,10 +27,12 @@ Each card has these actions:
 | Action | What it does |
 |---|---|
 | **View and edit** | Shows the name, email, expertise, languages, experience and whether the profile has been saved. The owner can change the name or email. |
-| **Hide from Home** / **Show on Home** | Changes whether an eligible, saved profile may appear to users. Unsaved profiles remain off Home. |
+| **Hide from Home** / **Show on Home** | Removes or restores an active, saved profile on public Home. Unsaved profiles remain off Home. |
 | **Deactivate** | Stops login, hides the account from Home and ends all of that astrologer's signed-in sessions. |
 | **Reactivate** | Restores the account, but leaves it hidden until you choose **Show on Home**. |
 | **Reset password** | Stores a new temporary password, ends all current sessions and requires the astrologer to replace it on their next login. |
+
+Public Home shows only the astrologer's initials, display name, expertise, languages and experience. It never shows their email or account details. Cards appear only when the account is active, the owner has chosen **Show on Home**, and the astrologer has saved the profile at least once.
 
 ### Change prices and call durations
 
@@ -62,7 +64,7 @@ Five failed attempts for the same email and internet address use the login allow
 2. Enter the display name users should see.
 3. Add expertise tags. Vedic, Tarot and Numerology are suggestions; another short label is allowed.
 4. Add the languages you speak and set whole years of experience from 0 to 60.
-5. Choose **Preview** to see the exact card planned for Home. Preview uses the unsaved form values. Its **Call** button does nothing.
-6. Choose **Save profile**. The first save records that the profile is ready for Home. It appears there in Step 5 only while the owner has it shown and the account is active.
+5. Choose **Preview** to see the exact card used on Home. Preview uses the unsaved form values. Its **Call** button does nothing.
+6. Choose **Save profile**. The first save makes the profile eligible for Home immediately while the owner has it shown and the account is active.
 
 **Availability**, **Bookings** and **Blogs** currently say “Coming in a later step.” Weekly hours arrive in Step 7, bookings in Step 9, and writing/publishing blogs in Step 14.

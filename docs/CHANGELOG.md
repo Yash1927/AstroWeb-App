@@ -14,6 +14,26 @@ Every change to the project, newest first, with one entry per task. Use this for
 
 ---
 
+## 2026-10-01: Step 6, Google login, details form and Settings
+- **Added:** Google Identity Services redirect login, verified Google account creation, 30-day user sessions, self-only details endpoints, user logout, signed-out History and Settings gates, the shared details form, the complete Settings screen, and the Home flow through the Step 7 time-choice placeholder
+- **Changed:** Home now continues after call-type selection instead of showing the Step 5 deferred-booking toast; Urgent and Subscription collect one phone field when a completed profile has no saved number
+- **Files:** `backend/routes/UserAuth.ts`, `backend/routes/User.ts`, `backend/src/user/`, `backend/src/auth/require-user.ts`, `frontend/src/api/user.ts`, `frontend/src/components/GoogleSignInButton.tsx`, `frontend/src/components/UserDetailsForm.tsx`, `frontend/src/screens/HomePage.tsx`, `frontend/src/screens/HistoryPage.tsx`, `frontend/src/screens/SettingsPage.tsx`, `frontend/src/design.css`
+- **Database:** none; Step 6 uses the existing `User` and `Session` tables
+- **Env vars:** added the public `VITE_GOOGLE_CLIENT_ID` frontend example; `GOOGLE_CLIENT_ID` was already present in the backend example
+- **Dependencies:** added backend runtime `google-auth-library`
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/05-home-page.md`, `docs/features/06-google-login-details-settings.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 43 tests pass; frontend TypeScript, lint, all 10 tests and production build pass; production dependencies audit clean. Real Google and installed-iPhone redirect testing remain manual. No slots or booking records were added.
+
+## 2026-10-01: Step 5, Home page
+- **Added:** public privacy-limited astrologer cards, the real Home loading/empty/error/list states, responsive one/two/three-column layout, first-six stagger animation, and a settings-backed call-type BottomSheet with the later-step toast
+- **Changed:** the shared `AstrologerCard` now uses its existing interactive desktop hover style; eligible Home cards are ordered by display name
+- **Files:** `backend/routes/Astrologers.ts`, `backend/src/public/public-astrologer-service.ts`, `frontend/src/screens/HomePage.tsx`, `frontend/src/api/public.ts`, `frontend/src/components/AstrologerCard.tsx`, `frontend/src/design.css`, `frontend/src/App.tsx`
+- **Database:** none; Home reads existing `Astrologer` and `Settings` rows
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/05-home-page.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/API.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and 32 tests pass; frontend TypeScript, lint, 4 tests and production build pass; no login, slots or booking behavior was added
+
 ## 2026-10-01: Step 4, astrologer login and profile
 - **Added:** astrologer login/logout, a 12-hour server session, forced temporary-password replacement, protected own-profile endpoints, the `/astrologer` panel, tag editing, unsaved phone-width preview, and the reusable `AstrologerCard`
 - **Changed:** user and astrologer cookie paths now use `/`; owner deactivation and password reset revoke that astrologer's sessions immediately; the owner full-profile view shows profile fields and first-save state

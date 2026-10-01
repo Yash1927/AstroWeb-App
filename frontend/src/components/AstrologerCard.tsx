@@ -21,7 +21,7 @@ function listOrFallback(items: string[]) {
 
 export function AstrologerCard({ onCall, profile }: AstrologerCardProps) {
   return (
-    <Card className="astrologer-card">
+    <Card className="astrologer-card" interactive>
       <div className="astrologer-card__header">
         <Avatar id={profile.id} name={profile.displayName} size={56} />
         <div>

@@ -60,12 +60,18 @@ export function signSessionId(sessionId: string) {
   return `${sessionId}.${signatureFor(sessionId)}`;
 }
 
-function cookieValue(cookieHeader: string | undefined, name: string) {
+export function cookieValue(cookieHeader: string | undefined, name: string) {
   if (!cookieHeader) return null;
 
   for (const part of cookieHeader.split(";")) {
     const [rawName, ...rawValue] = part.trim().split("=");
-    if (rawName === name) return decodeURIComponent(rawValue.join("="));
+    if (rawName === name) {
+      try {
+        return decodeURIComponent(rawValue.join("="));
+      } catch {
+        return null;
+      }
+    }
   }
 
   return null;
