@@ -41,6 +41,7 @@ Replace the Home placeholder with a public, privacy-limited astrologer list and 
 - **Call** opens the existing portaled BottomSheet for the selected astrologer. Normal, Urgent and Subscription show current Settings prices, duration, pack size where relevant, and the README call-mode description.
 - Step 6 replaced the temporary selection toast, Step 7 added the real date/time picker, Step 8 added free confirmation, Step 12 added Razorpay Checkout and Urgent phone-call success, and Step 13 added Subscription credits and packs.
 - Astrologer cards and settings load independently. Browsing and opening Home never requires authentication.
+- Step 15 added the supported-browser install banner, one-time iPhone/iPad Safari install hint and compact seven-link policy footer without changing the booking flow.
 - No database, session, real-time, dependency or environment change was needed.
 
 ## How to try it
@@ -52,8 +53,10 @@ Replace the Home placeholder with a public, privacy-limited astrologer list and 
 5. Choose Normal and follow the current sign-in/details/date/time flow through the Step 8 summary and success screen.
 6. Temporarily make every saved profile hidden and confirm the exact empty message appears.
 7. Check at 360px that cards use one column. Check wider layouts for two and then three columns, the first-six stagger, keyboard focus and reduced motion.
+8. In a production preview, confirm install guidance appears only when eligible and all seven footer links open their public pages.
 
 ## Follow-ups and known issues
 
 - Step 6 added user login and details while Home browsing remained public.
 - Steps 7, 8, 12 and 13 now carry Home through slots, free or paid confirmation, and all three call types.
+- Step 15 added installation guidance and the policy footer.

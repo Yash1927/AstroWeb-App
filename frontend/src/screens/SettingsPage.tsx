@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { userApi, UserApiError, type UserDetails, type UserDetailsInput } from '../api/user'
 import {
   Avatar,
   Button,
   Card,
+  PolicyLinks,
   Skeleton,
   Toast,
   UserDetailsForm,
@@ -152,12 +152,7 @@ export default function SettingsPage() {
 
           <Card>
             <h2>Policies and help</h2>
-            <nav aria-label="Policies and help" className="settings-links">
-              <Link to="/terms">Terms</Link>
-              <Link to="/privacy">Privacy</Link>
-              <Link to="/refunds">Cancellation &amp; Refunds</Link>
-              <Link to="/contact">Contact us</Link>
-            </nav>
+            <PolicyLinks />
           </Card>
 
           {error ? <p className="field__error" role="alert">{error}</p> : null}
@@ -169,4 +164,3 @@ export default function SettingsPage() {
     </section>
   )
 }
-

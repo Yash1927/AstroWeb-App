@@ -57,6 +57,8 @@ Last updated: 2026-10-02
 | Blog cards and comments | `frontend/src/screens/BlogsPage.tsx`, `BlogPostPage.tsx`, `frontend/src/design.css` | Two-line excerpts, 40px author avatars, 32px commenter avatars, counts, plain-text paragraphs, 500-character comment form and responsive one/two-column list | Public Blogs and post pages |
 | AstrologerBlogs | `frontend/src/components/AstrologerBlogs.tsx` | Own draft/published list, title counter, plain-text editor, publishing controls, comments and delete confirmation | Astrologer Blogs |
 | OwnerRecentComments | `frontend/src/components/OwnerRecentComments.tsx` | Newest comments, post context and delete confirmation | Owner Recent comments |
+| InstallPrompt | `frontend/src/components/InstallPrompt.tsx` | Compact Android/desktop install banner, persistent dismissal and one-time iPhone/iPad Safari Add to Home Screen guidance | Home app shell |
+| PolicyLinks | `frontend/src/components/PolicyLinks.tsx` | Seven policy/help links in stacked or compact wrapping layouts | Settings and Home footer |
 
 ## Animations
 
@@ -82,13 +84,14 @@ Last updated: 2026-10-02
 
 | Screen | Route | States (loading, empty, error, …) | Built in step |
 |---|---|---|---|
-| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary; free confirmation or on-demand Razorpay Checkout; dismissal/failure/refund; Normal/Urgent success | 5–8, 12 |
+| Home | `/` | Public skeleton/error/empty/list states; install guidance; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary; free confirmation or on-demand Razorpay Checkout; dismissal/failure/refund; booking success; compact policy footer | 5–8, 12, 13, 15 |
 | History | `/history` | Booking skeleton/error, signed-out Google screen, Upcoming/Past Normal and phone cards, empty sections, live Join states and phone-call/number guidance | 6, 9, 12 |
 | Blogs | `/blogs` | Public skeleton/error/empty/list states, 20-post pages and Load more | 14 |
 | Blog post | `/blogs/:id` | Public loading/not-found/full-text states, viewer-aware like, Google gate, oldest-first comments and commenter deletion | 14 |
-| Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, upcoming-phone-call removal error, policy links, save toast and logout | 6, 12 |
+| Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, upcoming-phone-call removal error, all seven policy links, save toast and logout | 6, 12, 15 |
 | Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; countdown/notice; mute, conditional Speaker, transient chat, device-change feedback, speaking rings, leave and rejoin | 9–11 |
-| Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
+| Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Public readable content with owner placeholders; Pricing loading/error/live Settings states | 15 |
+| Offline | Current route while disconnected | Centered app mark and exact offline status message; current route returns when online | 15 |
 | Astrologer panel | `/astrologer` | Session check, login, forced password change, profile, availability, bookings, and own draft/published blog authoring and moderation | 4, 7, 9, 12, 14 |
 | Astrologer call | `/astrologer/call/:bookingId` | The same four call states and complete controls, with caller-first-name waiting text and astrologer session protection | 9–11 |
 | Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management, pricing/settings and Recent comments moderation | 3, 14 |
@@ -101,8 +104,11 @@ Messages shown in the UI, so the same situation always uses the same words.
 
 | Situation | Text | Where |
 |---|---|---|
-| Later feature route or panel section | “Coming in a later step.” | Policy pages only |
 | Unknown route | “This page does not exist.” | Not-found screen |
+| Offline | “You're offline. Please check your internet connection.” | Global offline screen |
+| Install banner | “Install AstroWebApp” with **Install app** and **Not now** | Home in supported Android/desktop browsers |
+| iOS installation | “To install: tap Share, then Add to Home Screen.” | Home in iPhone/iPad Safari |
+| Shipping | “Services are delivered online or by phone. Nothing is shipped.” | Shipping policy |
 | Design success toast | “Your changes were saved.” | Development design page |
 | Owner login error | “The email or password is incorrect.” | Owner login |
 | Settings scope | “Changes apply to new bookings only.” | Owner pricing and call settings |
@@ -166,6 +172,8 @@ Messages shown in the UI, so the same situation always uses the same words.
 - Owner cards, action buttons and forms use wrapping/minmax layouts so they fit the 360px mobile baseline without fixed content widths. A fresh rendered check remains in the Step 3 manual try-out because no browser surface was available in the build session.
 - The astrologer panel, tag editor, actions and 360px preview use wrapping/flexible layouts with no fixed text height. The Step 4 manual try-out includes the rendered 360px check.
 - Home uses one card column by default, two from 42rem and three from 64rem. Card contents and call-option summaries wrap without fixed text heights.
+- The Home install banner and policy footer wrap at the 360px baseline. Install actions and every policy link keep the shared 48px minimum target. Pricing uses one card column by default and three from 48rem.
+- The offline sentence uses `role="status"`; policy pages keep one readable text column, semantic headings and a full-size Home action. Pricing errors use an alert and a full-size retry action.
 - User sign-in, details and Settings use the existing mobile-first card/input system. Google’s rendered button is capped to the available width, and Settings uses one flexible column at the 360px baseline.
 - Date chips scroll horizontally without widening the BottomSheet and reveal part of the next date on phones. Time chips wrap to about three per row at 360px. Empty dates remain visible but disabled, and selection uses the golden control background rather than golden text.
 - The booking summary uses a semantic description list for astrologer, call type, IST date/time, duration and price. Submission errors are announced in an alert without closing the sheet. The upcoming-Normal limit instead uses a softly highlighted polite status, removes the repeat confirmation action and offers a full-size History link. The success checkmark has an accessible name and its History action uses the same shared link-button treatment.

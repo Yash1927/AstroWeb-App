@@ -16,6 +16,16 @@ Last updated: 2026-10-02
 
 ---
 
+## 2026-10-02: Step 15, Installable app and policy pages
+- **Added:** an AstroWebApp web manifest; generated 192px, 512px, maskable and Apple touch icons from one SVG; an auto-updating app-shell service worker; offline UI; Android/desktop installation prompting; one-time iPhone/iPad Safari installation guidance; seven public policy pages; live Settings-backed Pricing; and policy links on Home and Settings
+- **Changed:** the frontend production build now emits the manifest, registration helper and Workbox service worker; API, WebSocket, call-room and payment/Razorpay paths are denied from navigation fallback and no runtime cache is configured
+- **Files:** `frontend/vite.config.ts`, `frontend/pwa-assets.config.ts`, `frontend/public/`, `frontend/src/App.tsx`, `frontend/src/components/InstallPrompt.tsx`, `frontend/src/components/PolicyLinks.tsx`, `frontend/src/screens/PolicyPage.tsx`, `frontend/src/screens/HomePage.tsx`, `frontend/src/screens/SettingsPage.tsx`, `frontend/src/design.css`, and related tests
+- **Database:** none
+- **Env vars:** none
+- **Dependencies:** added frontend development dependencies `vite-plugin-pwa` 1.3.0 and `@vite-pwa/assets-generator` 1.0.4
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/01-foundation-app-shell.md`, `docs/features/05-home-page.md`, `docs/features/06-google-login-details-settings.md`, `docs/features/15-install-app-policy-pages.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 113 tests pass; frontend lint, all 53 tests and production build pass. A stopped-after-check production preview served the app, a policy route, manifest and service worker successfully. Generated output contains 50 app-shell entries and no API, WebSocket, call-room or payment path. Physical-device installation, offline launch and installed-iPhone Google sign-in remain manual; the owner policy placeholders must be replaced before Razorpay live-mode approval
+
 ## 2026-10-02: Step 14, Blogs
 - **Added:** public 20-post blog pagination and post pages; Google-gated like/comment actions; plain-text comments with throttling; astrologer draft/publish/unpublish/edit/delete workflows; commenter, author and owner comment deletion; and the owner's Recent comments list
 - **Changed:** the user Blogs tab and astrologer Blogs section now contain their real Step 14 interfaces; the existing heart-pop animation drives the like toggle; published/draft access and every mutation are scoped on the server

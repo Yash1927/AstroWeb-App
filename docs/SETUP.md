@@ -57,6 +57,8 @@ npm install
 | Backend tests | `backend/` | `npm test` |
 | Frontend dev server | `frontend/` | `npm run dev` |
 | Frontend production build | `frontend/` | `npm run build` |
+| Frontend production preview | `frontend/` | `npm run preview` |
+| Regenerate install icons | `frontend/` | `npm run generate:pwa-assets` |
 | Frontend lint | `frontend/` | `npm run lint` |
 | Frontend tests | `frontend/` | `npm test` |
 | Emit the Prisma contract | `backend/` | `npm run contract:emit` |
@@ -84,6 +86,14 @@ npm install
 The backend denies cross-origin access when `APP_ORIGIN` is missing. Requests through the Vite proxy remain same-origin. The backend's one Node listener serves both HTTP and `/ws`; do not start a separate realtime process or open port 8080.
 
 The call room fetches Google's public STUN address and configured TURN values from the protected booking API only after Join. `localhost` is accepted by browsers for microphone development. Real phones still need an HTTPS origin.
+
+## Installable app checks
+
+The manifest and service worker are production-build output. Run `npm run build`, then `npm run preview` in `frontend/`; the normal Vite development server does not install the generated service worker. Use a fresh browser profile when retesting install banners because dismissal is remembered in local storage.
+
+`frontend/public/app-icon.svg` is the editable source icon. After changing it, run `npm run generate:pwa-assets` from `frontend/` to replace the 192px, 512px, maskable 512px and Apple touch PNGs. Do not edit those PNGs separately.
+
+Real Android/desktop installation and iPhone/iPad Add to Home Screen checks need localhost or HTTPS. Physical-device checks need HTTPS. After a successful online load, disabling the connection shows the offline message from README §5.7; API, WebSocket, call-room and payment paths are not cached.
 
 ## TURN setup
 

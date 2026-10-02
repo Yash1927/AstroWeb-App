@@ -22,12 +22,12 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 12 | Urgent calls with Razorpay | Done | [12-urgent-calls-razorpay.md](features/12-urgent-calls-razorpay.md) | Ten-minute holds, Razorpay verification/webhooks/refunds, Urgent phone delivery and phone cards are in place. |
 | 13 | Subscription packs | Done | [13-subscription-packs.md](features/13-subscription-packs.md) | Existing credits confirm atomically; zero balances buy a snapshotted one-time pack through Razorpay. |
 | 14 | Blogs | Done | [14-blogs.md](features/14-blogs.md) | Public reading, Google-gated reactions, own authoring and scoped comment moderation are in place. |
-| 15 | Install as an app, policy pages | Not started | — | |
+| 15 | Install as an app, policy pages | Done | [15-install-app-policy-pages.md](features/15-install-app-policy-pages.md) | Install assets, auto-updating app-shell service worker, offline handling, install guidance and public policy pages are in place. |
 | 16 | Security review and launch checklist | Not started | — | |
 
 ## Next up
 
-Step 15: Install as an app and policy pages.
+Apply every item in `docs/PENDING_FIXES.md`, then start Step 16.
 
 ## Known issues
 
@@ -35,7 +35,7 @@ Bugs, limitations and loose ends that aren't fixed yet. When one is fixed, remov
 
 | Issue | Where | Found | Plan |
 |---|---|---|---|
-| **10 fixes from the Steps 12–14 browser reviews are still open, including 3 high-severity ones (webhook fee, blog post delete, session revocation)** | See [PENDING_FIXES.md](PENDING_FIXES.md) | Steps 12–14 reviews (2026-10-02) | Apply every item in PENDING_FIXES.md before Step 16 |
+| **16 items are open in PENDING_FIXES.md: bugs 1–10 from the Steps 12–15 reviews (3 high severity: webhook fee, blog post delete, session revocation) and owner change requests 11–16 (brand "Astro Shashank" and logo, font precache, R2 media, astrologer photos, Medium-style blogs, UI polish; spec in README §19)** | See [PENDING_FIXES.md](PENDING_FIXES.md) | Steps 12–15 reviews (2026-10-02) | Apply every item in PENDING_FIXES.md before Step 16 |
 | Owner and astrologer login throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/auth/login-rate-limit.ts` | Step 3 | Choose the production topology or a shared limiter store in Step 16 |
 | Blog comment throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/blog/comment-rate-limit.ts` | Step 14 | Choose the production topology or a shared limiter store in Step 16 |
 | `npm audit` reports 5 moderate and 8 high issues in the backend development dependency tree; the production-only audit reports 0 | `backend/package-lock.json` | Step 1 | Review dependency upgrades with the Prisma stable upgrade before launch |

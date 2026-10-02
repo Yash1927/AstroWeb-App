@@ -25,6 +25,7 @@ import {
   Button,
   Card,
   PhoneNumberField,
+  PolicyLinks,
   Skeleton,
   Toast,
   UserDetailsForm,
@@ -569,6 +570,11 @@ export default function HomePage() {
           ))}
         </div>
       )}
+
+      <footer className="home-footer">
+        <p>Policies and help</p>
+        <PolicyLinks compact />
+      </footer>
 
       <BottomSheet onClose={closeFlow} open={Boolean(selectedAstrologer)} title={sheetTitle}>
         {flowStep === 'options' ? (

@@ -38,7 +38,7 @@ Replace the starter frontend with the AstroWebApp shell and shared design system
 - `backend/.env.example` contains placeholder values for every backend variable in README §13, plus the optional `PORT` used by the server.
 - The backend now has `dev`, `typecheck` and passing Vitest scripts. `cors` is recorded as a runtime dependency; `tsx`, TypeScript and Vitest are development dependencies.
 - `frontend/src/design.css` is the single design stylesheet. It contains the README §10 tokens, responsive base styles, every named component class, all required motion, exit motion for overlays, and the reduced-motion override.
-- The starter UI and assets were removed. React Router now serves every user route from README §3, the four-tab shell, later-step placeholders for the two panels, and a not-found page.
+- The starter UI and assets were removed. React Router serves every user route from README §3, the four-tab shell and a not-found page. Later steps replaced the original route and panel placeholders with their real screens.
 - Shared `Button`, `Card`, `Avatar`, `BottomSheet`, `Dialog`, `Toast`, `Skeleton` and `StatusBadge` components live in `frontend/src/components/`.
 - `/_design` demonstrates all colours, components and animations only in development. The conditional lazy route and its code are absent from the production bundle.
 - Vite proxies `/api` and `/ws` to the backend. The document title, language and theme colour match the spec.
@@ -56,6 +56,6 @@ Replace the starter frontend with the AstroWebApp shell and shared design system
 
 ## Follow-ups and known issues
 
-- The existing `backend/src/realtime/` stubs are unchanged and remain for Step 10.
-- Policy routes are placeholders until Step 15. The user and astrologer call routes now load an owned booking and show Step 9 waiting/deferred text; real call behavior arrives in Step 10.
+- Steps 10 and 11 replaced the realtime and call-room stubs with authenticated WebSocket/WebRTC calls.
+- Step 15 replaced every policy placeholder and added the installable app shell.
 - The backend's production dependency audit reports no vulnerabilities. The full audit reports 13 issues in development dependencies; these are recorded in `docs/PROGRESS.md` for the planned dependency upgrade before launch.

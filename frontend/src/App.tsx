@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import {
   Link,
   NavLink,
@@ -14,6 +14,8 @@ import SettingsPage from './screens/SettingsPage'
 import CallRoomPage from './screens/CallRoomPage'
 import BlogsPage from './screens/BlogsPage'
 import BlogPostPage from './screens/BlogPostPage'
+import PolicyPage, { type PolicyPageKind } from './screens/PolicyPage'
+import { InstallPrompt } from './components'
 
 const DesignPage = import.meta.env.DEV
   ? lazy(() => import('./screens/DesignPage'))
@@ -84,20 +86,12 @@ function BottomTabBar() {
 function UserShell() {
   return (
     <div className="app-shell">
+      <InstallPrompt />
       <main className="app-main">
         <Outlet />
       </main>
       <BottomTabBar />
     </div>
-  )
-}
-
-function LaterStep({ title }: { title: string }) {
-  return (
-    <section className="screen">
-      <h1>{title}</h1>
-      <p className="screen__intro">Coming in a later step.</p>
-    </section>
   )
 }
 
@@ -115,17 +109,49 @@ function NotFound() {
   )
 }
 
-const policyPages = [
-  ['terms', 'Terms'],
-  ['privacy', 'Privacy'],
-  ['refunds', 'Refunds'],
-  ['shipping', 'Shipping'],
-  ['contact', 'Contact'],
-  ['about', 'About'],
-  ['pricing', 'Pricing'],
-] as const
+const policyPages: PolicyPageKind[] = [
+  'terms',
+  'privacy',
+  'refunds',
+  'shipping',
+  'contact',
+  'about',
+  'pricing',
+]
+
+function useOnlineStatus() {
+  const [online, setOnline] = useState(() => navigator.onLine)
+
+  useEffect(() => {
+    const handleOnline = () => setOnline(true)
+    const handleOffline = () => setOnline(false)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
+    return () => {
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
+    }
+  }, [])
+
+  return online
+}
+
+function OfflinePage() {
+  return (
+    <main className="standalone-page offline-page screen">
+      <section className="card">
+        <div aria-hidden="true" className="offline-page__mark">A</div>
+        <h1>You're offline</h1>
+        <p role="status">You're offline. Please check your internet connection.</p>
+      </section>
+    </main>
+  )
+}
 
 function App() {
+  const online = useOnlineStatus()
+  if (!online) return <OfflinePage />
+
   return (
     <Routes>
       <Route element={<UserShell />}>
@@ -134,8 +160,8 @@ function App() {
         <Route path="blogs" element={<BlogsPage />} />
         <Route path="blogs/:id" element={<BlogPostPage />} />
         <Route path="settings" element={<SettingsPage />} />
-        {policyPages.map(([path, title]) => (
-          <Route key={path} path={path} element={<LaterStep title={title} />} />
+        {policyPages.map((path) => (
+          <Route key={path} path={path} element={<PolicyPage kind={path} />} />
         ))}
       </Route>
       <Route path="call/:bookingId" element={<CallRoomPage audience="user" />} />

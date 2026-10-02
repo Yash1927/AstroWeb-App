@@ -1,6 +1,10 @@
 # Pending fixes
 
-These fixes come from browser reviews of Steps 12–14, done on 2026-10-02 against the running app with real Razorpay **test-mode** payments. Items 1–6 were requested twice and never applied. Items 7–10 are new from the Step 14 review.
+These fixes come from browser reviews of Steps 12–15, done on 2026-10-02 against the running app with real Razorpay **test-mode** payments. They're in two groups:
+- **Items 1–10 are bugs.** Items 1–6 were requested twice and never applied. Items 7–10 came from the Step 14 review.
+- **Items 11–16 are owner change requests** (brand, media, photos, Medium-style blogs, UI polish). Their full spec is in README §19.
+
+Do the bugs (1–10) first, then 11–16.
 
 Work through them in order. When an item is fixed:
 - mark it **Done** in the table
@@ -25,6 +29,12 @@ Last updated: 2026-10-02
 | 8 | Sessions | The same multi-row delete revokes astrologer sessions on deactivate and reset password | **High**: deactivation may not take effect | Not started |
 | 9 | Logging | Generic 503 responses hide the real error | Medium | Not started |
 | 10 | Polish | Comment-delete confirmation, kept comment drafts, stale counts, stretched badges | Low | Not started |
+| 11 | Brand | Rename to "Astro Shashank" and use `frontend/public/logo.jpg` everywhere, PWA icons included | Change request | Not started |
+| 12 | PWA | 40 of the 50 precached files are fonts (942 KB), 24 of them in unused scripts | Medium | Not started |
+| 13 | Media | Cloudflare R2 storage and a safe image upload pipeline | Change request | Not started |
+| 14 | Astrologers | Profile photo upload, shown everywhere an astrologer appears | Change request | Not started |
+| 15 | Blogs | Medium-style rich editor (headings, bold, italic, underline…), images, reading view | Change request | Not started |
+| 16 | UI | Consistent, polished layout across every screen and panel | Change request | Not started |
 
 There is also one **owner action** that isn't a code change: in the Razorpay dashboard, switch the fee bearer from the customer to the business. Until then, customers silently pay about 2% more than the price the app shows, which breaks README §10.5 ("no hidden charges"). Item 1 must be fixed either way, because the fee setting can change.
 
@@ -117,6 +127,97 @@ Many routes catch every error and return a 503 without logging. That hid the cau
 - Keep a visitor's typed comment across the Google sign-in redirect, using `sessionStorage`. Today the text is lost.
 - Refresh the like and comment counts in the astrologer's post list after changes, or when reopening the list.
 - Stop the "Draft" and "Published" badges in the astrologer's post list stretching to full width.
+
+### 11. Brand: "Astro Shashank" and the logo
+
+**The new name, "Astro Shashank", replaces "AstroWebApp" everywhere users see it:**
+- `index.html` `<title>` and the PWA manifest `name` and `short_name`
+- the app header and the panel headers
+- the install banner text and the offline screen
+- the policy pages
+- the Razorpay Checkout `name`
+
+Docs can keep describing the codebase as-is.
+
+**Use `frontend/public/logo.jpg` (1254×1254 JPEG) as the logo:**
+- **App header and panels:** show the logo next to the name, about 32–40px tall, with alt text "Astro Shashank".
+- **Login screens and the offline screen:** show it larger.
+- **Razorpay:** pass the logo as Checkout's `image`.
+
+**PWA icons:** the full logo includes a small wordmark that is unreadable at icon size. So:
+- Crop the **"AM" ring monogram** on its cream background.
+- Generate 192 and 512 icons, a maskable 512 icon with the monogram inside the 80% safe zone, and an `apple-touch-icon`, using `pwa-assets.config.ts`.
+- Use the cream background as the manifest `background_color`.
+- Remove the placeholder "A" icon.
+
+**Flag for the owner:** the logo's wordmark reads "Astromaitreyi", not "Astro Shashank". Don't edit the logo image. Note this in `docs/DECISIONS.md` and keep going.
+
+**Check:** run `npm run build`; DevTools → Application → Manifest shows the new name and icons with no errors, and the header shows the logo on every screen.
+
+### 12. Trim precached fonts
+
+The service worker precaches 50 files (942 KB). 40 of them are Nunito fonts: 24 are Cyrillic or Vietnamese subsets, and each weight has a legacy `.woff` duplicate of its `.woff2`.
+
+**Fix:**
+- Precache only the `.woff2` files for `latin` and `latin-ext`, and import only those subsets.
+- Leave any other font files to load on demand. Don't precache them.
+
+**Check:** the build's precache size drops by roughly 700 KB, and text still renders in Nunito.
+
+### 13. Media storage: Cloudflare R2 and the upload pipeline
+
+Build README §19.1:
+- Add the R2 env vars to `backend/.env.example` and `docs/SETUP.md`.
+- Add the `MediaAsset` table.
+- Add a shared upload service. For each upload it checks the real file type, 5 MB maximum, then resizes and re-encodes with `sharp` to WebP, stripping metadata including GPS, uploads with `@aws-sdk/client-s3` under random keys, and records the `MediaAsset` row.
+- Deleting or replacing an image removes the R2 object.
+- Clean up unused draft uploads after 24 hours.
+- Add the media domain to the CSP `img-src`.
+- In tests, mock R2.
+- Document the owner's setup in `docs/SETUP.md`: create a Cloudflare account, enable R2 (it may ask for a card), create a bucket and an API token, then development on `r2.dev` and production on a custom domain.
+
+### 14. Astrologer profile photos
+
+Build README §19.2, using the item 13 pipeline:
+- **Astrologer Profile:** upload, square crop, preview, save, change or remove.
+- **Display:** the photo shows wherever an astrologer appears, falling back to initials.
+- **Owner panel:** "view full profile" shows the photo with **Remove photo**.
+- **Access:** only the astrologer can change their own photo; the owner can remove it.
+
+**Tests:** the access rules, plus rejection of non-images and files over 5 MB.
+
+### 15. Medium-style blogs
+
+Build README §19.3:
+- **Editor:** TipTap with a floating toolbar offering bold, italic, underline, H2, H3, quote, lists and link, plus a "+" image insert with captions, an optional cover image, autosave, and Ctrl/Cmd shortcuts.
+- **Server:**
+  - validate the JSON against the allow-list
+  - limits: 200 KB and 20 images
+  - images only from our own `MediaAsset` URLs
+  - derive `excerpt` and `readingMinutes` on save
+- **Migration:** convert existing plain-text posts.
+- **Reading view:** a centred column of about 680px, the author row with "N min read", and comfortable typography. Render with React from the JSON, never `dangerouslySetInnerHTML`.
+- **List:** cards with a cover thumbnail and reading time.
+
+**Tests:**
+- disallowed nodes or marks, `javascript:` links and foreign image URLs are rejected
+- a valid document round-trips unchanged
+- the plain-text migration works
+
+### 16. UI consistency and polish
+
+Build README §19.4: one shared app bar with the logo, one content width and page-header pattern, a centred Home grid with equal cards, a fixed footer position, nothing hidden behind the tab bar, matching panels, a neutral read-only field style, consistent components and one time format.
+
+Items 2, 3 and the badge part of 10 belong here too.
+
+**Check:** every screen at 360px, 768px and 1280px, with before and after notes in `docs/DESIGN_SYSTEM.md`.
+
+## Owner actions (not code)
+
+- **Razorpay:** switch the fee bearer to the business (see item 1).
+- **Cloudflare R2:** create the account, enable R2, create the bucket and an API token, and put the values in `backend/.env` (item 13).
+- **Logo:** confirm or replace it, since the wordmark reads "Astromaitreyi" (item 11).
+- **Policy pages:** replace every "[Owner: …]" placeholder before applying for Razorpay live mode.
 
 ## Verified working in the reviews
 

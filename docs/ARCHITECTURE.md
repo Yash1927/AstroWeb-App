@@ -6,13 +6,14 @@ Last updated: 2026-10-02
 
 ## Current state
 
-Step 14 adds the complete plain-text blog flow (README §2, §5.4 and §8.5). Public readers see published posts only; user reactions use the existing Google session, while author and owner moderation use their existing protected panels.
+Step 15 makes the frontend installable and replaces the policy placeholders (README §3, §5.7 and §17). The production build emits a manifest and an auto-updating app-shell service worker; public policy pages include live Settings-backed pricing.
 
-- `frontend/` is a React single-page app with public Home and Blogs, Normal/Urgent/Subscription booking, History, Settings, authenticated Normal-call rooms, and protected owner and astrologer workflows. Blog reading is public; liking and commenting use the existing Google sign-in without requiring booking details. `frontend/src/design.css` is the only app stylesheet.
+- `frontend/` is an installable React single-page app with public Home, Blogs and policy pages, Normal/Urgent/Subscription booking, History, Settings, authenticated Normal-call rooms, and protected owner and astrologer workflows. Blog reading is public; liking and commenting use the existing Google sign-in without requiring booking details. `frontend/src/design.css` is the only app stylesheet.
 - `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
+- The Vite production build generates the web manifest and auto-updating Workbox service worker. It precaches only the app shell and denies API, WebSocket, call-room and payment paths from its navigation fallback.
 - WebSocket rooms are keyed by booking id. They relay validated WebRTC signalling, transient chat and live presence/mute state only between the booked user and astrologer during the stored call window. The room timer closes both sockets at the booking end.
 
 ## Overview
@@ -91,7 +92,7 @@ flowchart LR
     Payments -->|late refund| Razorpay
 ```
 
-Production hosting is not built yet. README §1 requires the frontend, API and WebSocket endpoint to use one HTTPS domain.
+Production hosting is not built yet. README §1 requires the frontend, API and WebSocket endpoint to use one HTTPS domain; install prompts and service workers also require HTTPS outside localhost.
 
 ## Folder structure
 
@@ -127,7 +128,8 @@ backend/
   migrations/               Prisma 8 migration graph, snapshots and compiled operations
   src/realtime/             Upgrade authentication, room/chat protocol, booking lifecycle and TURN credentials
 frontend/
-  src/App.tsx               Route map, call routes, placeholders and user app shell
+  public/                    Source SVG plus generated install icons
+  src/App.tsx               Route map, connectivity state and user app shell
   src/call/                  WebSocket protocol, WebRTC negotiation, timer and speaking analysis
   src/api/calls.ts           Typed booking-scoped ICE server client
   src/api/owner.ts          Typed owner API client and money conversion
@@ -138,6 +140,8 @@ frontend/
   src/api/booking-history.ts Shared booking-card response types
   src/api/blogs.ts          Public reading and signed-in reaction client
   src/components/           Shared UI components
+  src/components/InstallPrompt.tsx Home installation banner and iOS Safari hint
+  src/components/PolicyLinks.tsx Shared seven-route policy navigation
   src/components/AvailabilityEditor.tsx Protected weekly and exception editor
   src/screens/DesignPage.tsx Development-only component and motion gallery
   src/screens/OwnerPage.tsx  Owner login and management interface
@@ -148,11 +152,13 @@ frontend/
   src/screens/BlogPostPage.tsx Public post, like and comment interface
   src/screens/CallRoomPage.tsx Authenticated user/astrologer call-room states and controls
   src/screens/SettingsPage.tsx User profile, editable details, policies and logout
+  src/screens/PolicyPage.tsx Public policy content and Settings-backed pricing
   src/razorpay-checkout.ts  On-demand Standard Checkout loader and browser outcome adapter
   src/user-details.ts       Shared browser-side detail validation and form shaping
   src/design.css             Tokens, base styles, components and animation
   src/main.tsx               Fonts, global CSS, router and React root
-  vite.config.ts             Development proxy for /api and /ws
+  pwa-assets.config.ts       Reproducible PNG generation from the source SVG
+  vite.config.ts             Development proxy plus manifest/service-worker build
 docs/
   features/                 Per-step implementation records
 ```
@@ -180,6 +186,8 @@ docs/
 | Testing Library, user-event and jsdom | Frontend component interaction tests in a browser-like DOM | After 3 (development only) |
 | `ws` | Authenticated upgrade handling and booking-room signalling | Boilerplate; implemented in 10 |
 | `razorpay` | Official server-side order creation, payment lookup and refunds | 12 |
+| `vite-plugin-pwa` | Generate/register the manifest and auto-updating Workbox service worker | 15 (development only) |
+| `@vite-pwa/assets-generator` | Generate install PNGs from the one source SVG | 15 (development only) |
 
 ## External services
 
@@ -207,13 +215,23 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | [In-app call flow](#in-app-call-flow) |
 | Urgent payment (Razorpay orders, verification, webhooks, refunds) | 12 | [Paid booking flow](#paid-booking-flow) |
 | Blogs | 14 | [Blog flow](#blog-flow) |
-| Install and offline support (service worker) | 15 | — |
+| Install, offline and public policies | 15 | [Install, offline and policy flow](#install-offline-and-policy-flow) |
 
 ## Public Home flow
 
 On mount, Home requests `GET /api/astrologers` and `GET /api/settings/public` independently. The card service filters `Astrologer` by `isActive = true`, `isListed = true` and non-null `profileSavedAt`, selects only card fields, and orders by display name. The route then rebuilds each response object from those public fields before serialization.
 
 Settings stay separate from card data. A settings failure leaves browsing intact and appears only inside the call-type sheet. Selecting a call type checks the user session, collects missing details and a phone number when required, loads 14 days of free slots, then shows the chosen time in a summary. The browser sends only astrologer id, call type and UTC start to the protected booking endpoint.
+
+## Install, offline and policy flow
+
+`vite-plugin-pwa` runs only for a production build. It emits the README §5.7 manifest, registers an auto-updating generated service worker and precaches `index.html`, compiled JavaScript/CSS, local fonts, the manifest and install icons. There is no runtime caching strategy. The navigation fallback explicitly excludes `/api`, `/ws`, both call-room prefixes and paths containing payment, payments or Razorpay.
+
+`InstallPrompt` listens for `beforeinstallprompt` while the Home shell is mounted. Supported Android/desktop browsers get a dismissible banner; iPhone/iPad Safari gets the one-time Share → Add to Home Screen hint. Dismissal flags contain no personal data and stay in local storage. Standalone display mode suppresses both prompts.
+
+The React shell listens for browser online/offline events. With no connection it replaces the current route with the README offline message, then restores that route when the browser reports online. This is intentionally separate from API error states.
+
+All seven policy routes are public React pages and share navigation from Home and Settings. `/pricing` reuses `GET /api/settings/public`; it never embeds prices or durations in the bundle. The remaining pages contain clearly labelled owner placeholders, and Shipping states that the service is delivered online or by phone with nothing shipped.
 
 ## Availability and slot flow
 

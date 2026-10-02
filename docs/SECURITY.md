@@ -49,4 +49,6 @@ The ICE-server endpoint independently resolves the user and astrologer cookies, 
 
 The shared browser phone field accepts a local 10-digit number, discards spaces and dashes, and sends `+91XXXXXXXXXX`. This is input assistance only: `PUT /api/me` and phone booking creation still validate the canonical value on the server. Settings refuses a transition from a saved phone to null while a confirmed phone booking ends in the future and returns a field-specific error. Empty birth dates and invalid or future dates receive distinct client messages; the same server date rule remains authoritative.
 
+The Step 15 service worker has no runtime cache. Its precache contains only the built app shell, local fonts, manifest and install icons. Navigation fallback denies `/api`, `/ws`, both call-room prefixes and payment/Razorpay paths, so responses containing sessions, personal details, call traffic or payment state are never written to a service-worker cache. The manifest and install assets contain no secret or personal data.
+
 `npm audit --omit=dev` reports no production dependency vulnerabilities as of 2026-10-02, including the official Razorpay SDK. The full backend audit reports 5 moderate and 8 high findings in development dependencies; the planned dependency review is tracked in `docs/PROGRESS.md`.
