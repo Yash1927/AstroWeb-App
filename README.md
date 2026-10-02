@@ -1,6 +1,7 @@
-# AstroWebApp
+# Astro Shashank
 
-> Working name. The final app name, logo and icon are still to be decided (open question 15 in [§16](#16-gaps-and-open-questions)).
+> **App name: "Astro Shashank"** (decided 2026-10-02; it replaces the working name "AstroWebApp" everywhere users can see it).
+> **Logo:** `frontend/public/logo.jpg`, a gold "AM" monogram in a ring above a wordmark, on cream. Use it wherever a logo appears: app header, panels, login screens, offline screen, Razorpay Checkout and the PWA icons (§5.7). The wordmark on the current file reads "Astromaitreyi"; the owner must confirm or replace the logo before launch.
 
 An installable astrology web app (PWA). Users browse astrologers, book a call and pay with Razorpay. Depending on the call type, they talk to the astrologer inside the app or the astrologer phones them at the booked time. Astrologers manage their availability and blogs from their own panel. The owner manages astrologers, prices and call durations.
 
@@ -34,6 +35,7 @@ An installable astrology web app (PWA). Users browse astrologers, book a call an
 16. [Gaps and open questions](#16-gaps-and-open-questions)
 17. [Research notes and platform limits](#17-research-notes-and-platform-limits)
 18. [Definition of done](#18-definition-of-done)
+19. [Version 2 changes: brand, media, photos, Medium-style blogs, UI polish](#19-version-2-changes-brand-media-photos-medium-style-blogs-ui-polish)
 
 ---
 
@@ -50,6 +52,7 @@ An installable astrology web app (PWA). Users browse astrologers, book a call an
 | User login | Google Identity Services ("Continue with Google") | Not started |
 | Astrologer and owner login | Email + password | Not started |
 | Payments | Razorpay Standard Checkout + Orders API + webhooks | Not started |
+| Media storage | Cloudflare R2 (S3-compatible, free tier: 10 GB storage, zero egress fees), for astrologer photos and blog images. Images go through the backend, which resizes them with `sharp`, converts them to WebP and strips metadata before upload (§19). | Not started |
 
 Hosting requirements:
 
@@ -129,7 +132,7 @@ Take the layout from the Astrotalk app's astrologer list (a simple vertical list
 
 - Header: app name and logo only.
 - A vertical list of astrologer cards: one per row on phones, 2–3 columns on wide screens. Only active, listed astrologers appear.
-- Each card shows the initials avatar ([§5.6](#56-avatars-initials-everywhere)), name, expertise, languages and years of experience (Assumption: these fields come from the Astrotalk reference), plus one large **Call** button.
+- Each card shows the initials avatar ([§5.6](#56-avatars-astrologer-photos-otherwise-initials)), name, expertise, languages and years of experience (Assumption: these fields come from the Astrotalk reference), plus one large **Call** button.
 - **Call** starts the booking flow ([§6](#6-booking-and-payment)). Browsing Home needs no login.
 - While loading, show skeleton cards, not a spinner. With no astrologers, show "No astrologers are available right now. Please check again later."
 - If the app isn't installed, show a small install banner that can be dismissed ([§5.7](#57-install-as-an-app-pwa)).
@@ -177,12 +180,14 @@ If the user has subscription credits, show "Subscription calls left: N" at the t
 
 ### 5.4 Blogs
 
-- **List:** newest first, 20 per page with a "Load more" button. Each item shows the title, the astrologer's avatar and name, the date, a 2-line excerpt, and the like and comment counts.
-- **Post page:** title, author, date, full text, like button, comments (oldest first) and a comment box.
+The blog reading and writing experience is modelled closely on **Medium** (§19.3).
+
+- **List:** newest first, 20 per page with a "Load more" button. Each item shows the cover image (when the post has one), the title, the astrologer's photo or initials and name, the date, the reading time (e.g. "4 min read"), a 2-line plain-text excerpt, and the like and comment counts.
+- **Post page:** Medium-style reading view: a centred column about 680px wide, a large title, an author row (photo, name, date, reading time), then the formatted body: headings, bold, italic, underline, quotes, lists, links and images with captions. Then the like button, comments (oldest first) and a comment box.
 - **Likes:** one like per user per post. Tapping again removes it.
 - **Comments:** plain text, up to 500 characters. Each shows the commenter's initials avatar, first name and time.
 - A visitor who taps like or comment is asked to Continue with Google first.
-- The blog body is plain text with paragraphs, never HTML (Assumption).
+- The blog body is **rich text stored as structured JSON** (TipTap/ProseMirror document), never raw HTML. Only an allow-list of formatting is accepted (§19.3), and it is rendered by React components, never with `dangerouslySetInnerHTML`. Comments stay plain text.
 
 ### 5.5 Settings
 
@@ -192,9 +197,9 @@ If the user has subscription credits, show "Subscription calls left: N" at the t
 - Links: Terms, Privacy, Cancellation & Refunds, Contact us.
 - A **Log out** button.
 
-### 5.6 Avatars (initials everywhere)
+### 5.6 Avatars (astrologer photos, otherwise initials)
 
-Nobody uploads photos. Every person, user or astrologer, appears as a circle with their initials, the way Google Meet and Zoom show them.
+**Astrologers can upload a profile photo** (§8.2, §19.2). Wherever an astrologer appears (Home card, booking summary, History, the astrologer's own panel, the call room, blog author rows), show their photo as a circle. If they have no photo, show their initials. **Users never upload photos**; they always appear as initials. Initials follow the rules below, the way Google Meet and Zoom show them.
 
 - Split the name on spaces. With two or more words, take the first letter of the first word and the first letter of the last word ("Yash Kumar Rastogi" → **YR**). With one word, take its first letter ("Yash" → **Y**). Uppercase.
 - Get the first character with `Intl.Segmenter`, so names in Hindi and other scripts display correctly.
@@ -333,6 +338,7 @@ Use large buttons with a text label under each icon, never icon-only buttons.
 
 ### 8.2 Profile and preview
 
+- **Profile photo:** upload, change or remove a photo (JPG, PNG or WebP, up to 5 MB). Show a square crop step before saving. The server stores a 512×512 WebP (§19.2). Until a photo is saved, the card uses initials.
 - **Form fields:** display name, expertise (e.g. Vedic, Tarot, Numerology), languages and years of experience (Assumption: taken from the Astrotalk reference).
 - **Preview** button: renders the exact Home card component with the unsaved form data inside a phone-width frame, so the astrologer sees exactly how they'll look on Home.
 - **Save:** the card appears on Home straight away (Assumption). The owner can hide any astrologer at any time.
@@ -353,7 +359,7 @@ Use large buttons with a text label under each icon, never icon-only buttons.
 ### 8.5 Blogs
 
 - A list of their own posts, both drafts and published.
-- **Write or edit:** title (up to 120 characters) and body (plain text). Buttons: Save draft, Publish, Unpublish, and Delete (with a confirmation dialog).
+- **Write or edit** in a **Medium-style editor** (§19.3): title (up to 120 characters), optional cover image, and a rich-text body with headings, bold, italic, underline, quotes, lists, links and inline images with captions. Buttons: Save draft, Publish, Unpublish, and Delete (with a confirmation dialog).
 
 ## 9. Owner panel
 
@@ -518,7 +524,7 @@ The current schema (`backend/src/prisma/contract.prisma`) needs to grow into the
 | Table | Key fields | Notes |
 |---|---|---|
 | `Owner` | id, email (unique), passwordHash | One row, created by the seed script |
-| `Astrologer` | id, email (unique), passwordHash, mustChangePassword, displayName, expertise[], languages[], experienceYears, isActive, isListed, createdAt | Replaces `Astro` |
+| `Astrologer` | id, email (unique), passwordHash, mustChangePassword, displayName, expertise[], languages[], experienceYears, photoMediaId (nullable), isActive, isListed, createdAt | Replaces `Astro` |
 | `User` | id, googleSub (unique), email, name, birthDate, birthTime, birthPlace, phone (nullable), gender, subscriptionCredits (default 0), createdAt | Identify users by Google's `sub`, not by email |
 | `AvailabilityRule` | id, astrologerId, weekday (0–6), startTime, endTime | Weekly hours |
 | `AvailabilityException` | id, astrologerId, date, kind (`blocked` / `extra`), startTime (nullable), endTime (nullable) | Date overrides |
@@ -526,7 +532,8 @@ The current schema (`backend/src/prisma/contract.prisma`) needs to grow into the
 | `Payment` | id, userId, bookingId (nullable), purpose (`normal_call` / `urgent_call` / `subscription_pack`), razorpayOrderId (unique), razorpayPaymentId (unique, nullable), amountPaise, status (`created` / `paid` / `failed` / `refunded`), createdAt | |
 | `WebhookEvent` | eventId (unique), receivedAt | De-duplicates Razorpay webhooks |
 | `Settings` | One row: normalPricePaise, urgentPricePaise, subscriptionPricePaise, subscriptionCallsPerPack, normalDurationMin, urgentDurationMin, subscriptionDurationMin, updatedAt | The owner edits these ([§4](#4-pricing-and-call-settings-owner-can-edit)) |
-| `Blog` | id, astrologerId, title, body, status (`draft` / `published`), publishedAt (nullable), createdAt, updatedAt | Replaces `Blogs` |
+| `Blog` | id, astrologerId, title, body (JSONB rich-text document, §19.3), excerpt (plain text, derived), readingMinutes, coverMediaId (nullable), status (`draft` / `published`), publishedAt (nullable), createdAt, updatedAt | Replaces `Blogs` |
+| `MediaAsset` | id, ownerAstrologerId, kind (`profile_photo` / `blog_image`), storageKey (unique), width, height, bytes, createdAt | One row per stored image in R2 (§19.1) |
 | `BlogLike` | blogId, userId, createdAt, unique on (blogId, userId) | Replaces the `Blogs.Like` number |
 | `BlogComment` | id, blogId, userId, body, createdAt | Replaces the `Blogs.Comment` string |
 | `Session` | id, role (`user` / `astrologer` / `owner`), subjectId, expiresAt, createdAt | Server-side sessions that can be revoked |
@@ -571,7 +578,13 @@ Before inserting a booking, in the same transaction, set that astrologer's expir
 - [ ] HTTPS only, with HSTS. CORS allows only `APP_ORIGIN`; today's `cors()` call allows every site.
 - [ ] Security headers (e.g. `helmet`) with a Content Security Policy that still allows Razorpay Checkout (`checkout.razorpay.com`) and Google sign-in (`accounts.google.com`).
 - [ ] Every request body is validated (e.g. with `zod`): types, lengths, allowed values and dates.
-- [ ] User and blog text is never rendered as HTML (no `dangerouslySetInnerHTML`).
+- [ ] User and blog text is never rendered as HTML (no `dangerouslySetInnerHTML`). Rich blog bodies are validated against an allow-list on the server and rendered as React components (§19.3).
+- [ ] Image uploads (§19.1):
+  - check the real file type from its bytes (JPG, PNG or WebP only), with a 5 MB limit
+  - re-encode with `sharp` and strip all metadata, including GPS location
+  - only astrologers can upload, and only for their own profile or posts
+  - the R2 secret keys stay on the server
+  - the Content Security Policy `img-src` allows only our own origin and the media domain
 - [ ] Logs never contain birth details, phone numbers or tokens.
 - [ ] Neon connection strings keep `sslmode=require`, and `.env` is never committed (`backend/.gitignore` already covers it).
 
@@ -606,6 +619,14 @@ TURN_URLS="turn:turn.example.com:3478?transport=udp,turns:turn.example.com:5349?
 TURN_SECRET="xxxx"
 
 APP_TIMEZONE="Asia/Kolkata"
+
+# Cloudflare R2 media storage (§19.1). The keys never go to the browser.
+R2_ACCOUNT_ID="xxxx"
+R2_ACCESS_KEY_ID="xxxx"
+R2_SECRET_ACCESS_KEY="xxxx"
+R2_BUCKET="astro-shashank-media"
+# Public base URL for images: the r2.dev URL in development, a custom domain on Cloudflare in production
+R2_PUBLIC_BASE_URL="https://pub-xxxx.r2.dev"
 ```
 
 `frontend/.env`:
@@ -653,7 +674,8 @@ Don't build any of these unless the owner asks for them later:
 
 - Video calls, chat-only consultations, per-minute billing, wallets
 - Ratings and reviews, public astrologer profile pages, search, filters, categories
-- Photo uploads of any kind (avatars are initials only)
+- Photo uploads by **users** (users are always initials). Astrologer profile photos and blog images *are* in scope (§19).
+- Video or audio uploads, or files other than images
 - Horoscopes, kundli or birth charts, panchang, or other astrology content
 - Live sessions, call recording
 - Push notifications, SMS, WhatsApp or email reminders
@@ -698,7 +720,7 @@ Until a question is answered, build the default in the right-hand column.
 | 12 | Which fields go on the astrologer card? | Name, expertise, languages, years of experience |
 | 13 | Does "custom link for astrologers" mean one shared panel link, or a personal link for each astrologer? | One shared link: `/astrologer` |
 | 14 | Should the owner see a list of bookings and payments in the owner panel? | No. Use the Razorpay dashboard. |
-| 15 | App name, logo and icon (needed for the install manifest) | "AstroWebApp" placeholder |
+| 15 | App name, logo and icon (needed for the install manifest) | **Decided 2026-10-02:** name "Astro Shashank", logo `frontend/public/logo.jpg`. The logo's wordmark reads "Astromaitreyi"; owner to confirm or replace it before launch. |
 | 16 | Many people don't know their exact birth time. Offer an "I don't know" option? | No. It stays required, as in the brief. |
 | 17 | Show a small mental-health helpline note in Settings, e.g. Tele-MANAS (free, 24×7): **14416**? | Recommended, but not built until the owner approves |
 | 18 | India's DPDP Rules (notified Nov 2025, fully in force around May 2027) give users the right to have their data erased. Add a "Delete my account" option? | Not built. Deletion requests come in through the Contact page. Check with a lawyer. |
@@ -760,3 +782,98 @@ Checked on 30 Sep 2026.
 - [ ] A user can't see another user's data, and an astrologer can't see users who didn't book them (tested through the API, not just the UI).
 - [ ] The astrologer preview looks exactly like the real Home card.
 - [ ] A Lighthouse accessibility audit shows no contrast or tap-target failures, and animations stop when "reduce motion" is on.
+
+## 19. Version 2 changes: brand, media, photos, Medium-style blogs, UI polish
+
+The owner requested these on 2026-10-02, after Steps 1–15. They extend the spec above. Where they conflict with an earlier section, **§19 wins**. They're tracked as items 11–17 in `docs/PENDING_FIXES.md`.
+
+### 19.1 Media storage (Cloudflare R2)
+
+**Why R2:** it was the best free option for images, checked 2026-10-02.
+
+| Option | Free storage | Downloads | Verdict |
+|---|---|---|---|
+| **Cloudflare R2** | **10 GB** | **Unlimited, $0** | **Chosen**: free downloads matter most for images shown to every user. Cloudflare may ask for a card or PayPal to enable R2 (no charge within the free tier). |
+| Neon Object Storage | 5 GB per project | Only 5 GB a month on the Free plan, **shared with database traffic** | Fine for development tests, too small to serve images to users |
+| Cloudinary / ImageKit | Small credit-based quotas | Counted against the quota | Good image tools, but quotas run out quickly |
+| AWS S3 | 5 GB for 12 months only | Paid egress | Not free long-term |
+
+**How it works:**
+- **Upload path:** the browser sends the file to our backend (`multipart/form-data`, 5 MB maximum). The backend:
+  - checks the real type from the file's bytes (JPG, PNG or WebP only)
+  - resizes with `sharp`: profile photos to 512×512 square WebP, blog images to at most 1600px wide WebP
+  - strips all metadata, including GPS location
+  - uploads to R2 with `@aws-sdk/client-s3`, using R2's S3-compatible endpoint
+  - records a `MediaAsset` row
+- **Serving:** images are public, read-only URLs under `R2_PUBLIC_BASE_URL`. Use the `r2.dev` URL **in development only**, because Cloudflare rate-limits it. Production needs a custom domain on Cloudflare, e.g. `media.<yourdomain>`.
+- **Storage keys:** use random keys, e.g. `astrologers/<id>/photo-<uuid>.webp` and `blogs/<postId>/<uuid>.webp`. Never use the original filenames.
+- **Cleanup:** when a photo is replaced or removed, or a post or image is deleted, delete the R2 object and its `MediaAsset` row. Clean up images uploaded to a draft but never used after 24 hours.
+- **Security:** see §12, "Image uploads".
+
+### 19.2 Astrologer profile photos
+
+- **Upload:** in the astrologer's Profile, upload, crop to a square, preview, save, change or remove a photo (§8.2). The Preview card shows the photo.
+- **Where it shows:** wherever an astrologer appears (§5.6). If loading fails, fall back to initials.
+- **Owner panel:** the owner's "view full profile" shows the photo with a **Remove photo** button, for moderation.
+- **Accessibility:** the photo's alt text is the astrologer's name.
+
+### 19.3 Medium-style blogs (writing and reading)
+
+Take the look and flow from Medium: a calm, distraction-free writing canvas and a clean reading column.
+
+**Editor (astrologer panel)**, built with **TipTap**, a headless editor built on ProseMirror:
+- A large borderless **Title** field, then the body. No visible toolbar until you need it.
+- A **floating formatting toolbar** appears when text is selected. It offers:
+  - **Bold**, *Italic*, Underline
+  - Heading (H2) and Subheading (H3)
+  - Quote
+  - Bulleted and numbered lists
+  - Link: http/https only, opens in a new tab with `rel="noopener noreferrer nofollow ugc"`
+- Keyboard shortcuts: Ctrl/Cmd+B, I, U and K.
+- A **"+" button** on an empty line inserts an **image**. It uploads through §19.1, shows progress, and accepts an optional caption.
+- **Cover image:** optional, picked or uploaded at the top. If none is set, the first image in the body is used on the list.
+- **Autosave:** drafts save automatically every few seconds while typing, showing "Saving…" then "Saved". Save draft, Publish, Unpublish and Delete stay as before.
+- **Mobile:** the toolbar works with touch selection, and the editor is usable at 360px.
+
+**Storage and safety:**
+- The body is stored as TipTap JSON (JSONB).
+- On save, the server validates the document against an allow-list:
+  - nodes: doc, paragraph, heading levels 2–3, blockquote, bulletList, orderedList, listItem, image (only our own `MediaAsset` URLs), hardBreak
+  - marks: bold, italic, underline, link
+- Limits: at most 200 KB of JSON and 20 images per post. Anything else is rejected.
+- On save, the server also derives `excerpt` (plain text, about 200 characters) and `readingMinutes` (about 200 words per minute, at least 1).
+- **Migration:** convert existing plain-text posts to JSON paragraphs, splitting on blank lines.
+
+**Reading view (user app):**
+- A centred column of about 680px.
+- A large title, then the author row: photo, name, date, "N min read".
+- Comfortable body text, about 1.125rem with line-height 1.7.
+- Headings, quotes with a left rule, lists, and full-column images with captions.
+- Then likes and comments as before.
+
+**List:** see §5.4. Cards show the cover thumbnail, title, excerpt, author, date and reading time. Keep them readable at 360px.
+
+### 19.4 UI consistency and polish
+
+The owner reported the UI as inconsistent and broken in places. Make every screen look like one calm, simple app, using the `design.css` tokens.
+
+**Layout:**
+- **One shared layout** for every user page (Home, Blogs, blog post, History, Settings, policy pages): a **top app bar** with the logo and "Astro Shashank", and one content width, centred (about 960px for lists, 680px for reading and forms).
+- **One page-header pattern:** title and optional subtitle, the same size and spacing everywhere. Today Home, Blogs, History and the policy pages each look different.
+- **Home:** a centred, responsive card grid (1 column on phones, 2 on tablets, 3 on desktop). Cards have equal heights and the Call button keeps its normal height.
+- **Footer:** policy links sit at the end of page content, not floating mid-page. No content may be hidden behind the bottom tab bar: reserve its height plus the safe area.
+- **Bottom tab bar:** on wide screens, align it with the content width, or switch to top navigation at 1024px and above.
+- **Panels:** the astrologer and owner panels use the same app bar (logo plus "Astrologer panel" or "Owner panel"), the same content width, and the same section tabs as each other.
+
+**Components:**
+- The read-only email field looks disabled (neutral), not highlighted in yellow.
+- Status badges size to their text.
+- Buttons, cards, chips and inputs use consistent sizes, padding and radius.
+- One time format everywhere, e.g. "5:30 pm".
+
+**Known bugs to fix as part of this** (see `docs/PENDING_FIXES.md`): the overflowing time picker, the double-height Call button, and stretched badges.
+
+**Checks:**
+- Check every screen at 360px, 768px and 1280px: no sideways scroll, all tap targets at least 48px.
+- Lighthouse accessibility: no contrast failures.
+- Update `docs/DESIGN_SYSTEM.md` with the final layout rules.
