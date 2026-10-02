@@ -24,6 +24,12 @@ export interface RealtimeBookingRepository {
 }
 
 export interface RealtimeBookingService {
+  authorizeBooking(input: {
+    bookingId: string;
+    participant: RealtimeParticipant;
+    subjectId: string;
+    now?: Temporal.Instant;
+  }): Promise<RealtimeBooking>;
   finalizeBooking(bookingId: string, now?: Temporal.Instant): Promise<void>;
   finalizeEnded(now?: Temporal.Instant): Promise<void>;
   joinBooking(input: {
@@ -119,7 +125,7 @@ export class DefaultRealtimeBookingService implements RealtimeBookingService {
     private readonly clock: () => Temporal.Instant = () => Temporal.Now.instant(),
   ) {}
 
-  async joinBooking({ bookingId, participant, subjectId, now = this.clock() }: {
+  async authorizeBooking({ bookingId, participant, subjectId, now = this.clock() }: {
     bookingId: string;
     participant: RealtimeParticipant;
     subjectId: string;
@@ -132,6 +138,17 @@ export class DefaultRealtimeBookingService implements RealtimeBookingService {
     if (!inCallWindow(booking, now)) {
       throw new RealtimeBookingUnavailableError("Call unavailable.");
     }
+
+    return booking;
+  }
+
+  async joinBooking({ bookingId, participant, subjectId, now = this.clock() }: {
+    bookingId: string;
+    participant: RealtimeParticipant;
+    subjectId: string;
+    now?: Temporal.Instant;
+  }) {
+    const booking = await this.authorizeBooking({ bookingId, participant, subjectId, now });
 
     await this.repository.markFirstJoin(booking.id, participant, now);
     return participant === "user"

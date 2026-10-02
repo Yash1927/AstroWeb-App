@@ -9,21 +9,49 @@ import CallRoomPage from './CallRoomPage'
 const peerSpies = vi.hoisted(() => ({
   close: vi.fn(),
   connectionStateCallbacks: [] as Array<(state: RTCPeerConnectionState) => void>,
+  constructorOptions: [] as Array<{
+    forceRelay: boolean
+    iceServers: RTCIceServer[]
+    onRemoteStream: (stream: MediaStream | null) => void
+  }>,
   receiveDescription: vi.fn(),
   receiveIceCandidate: vi.fn(),
+  replaceLocalAudioTrack: vi.fn(),
   resetForPeer: vi.fn(),
+}))
+
+const speakingSpies = vi.hoisted(() => ({
+  callbacks: [] as Array<(speaking: boolean) => void>,
+  stop: vi.fn(),
 }))
 
 vi.mock('../call/audio-peer', () => ({
   AudioPeer: class {
-    constructor(options: { onConnectionStateChange: (state: RTCPeerConnectionState) => void }) {
+    constructor(options: {
+      forceRelay: boolean
+      iceServers: RTCIceServer[]
+      onConnectionStateChange: (state: RTCPeerConnectionState) => void
+      onRemoteStream: (stream: MediaStream | null) => void
+    }) {
       peerSpies.connectionStateCallbacks.push(options.onConnectionStateChange)
+      peerSpies.constructorOptions.push(options)
     }
 
     close = peerSpies.close
     receiveDescription = peerSpies.receiveDescription
     receiveIceCandidate = peerSpies.receiveIceCandidate
+    replaceLocalAudioTrack = peerSpies.replaceLocalAudioTrack
     resetForPeer = peerSpies.resetForPeer
+  },
+}))
+
+vi.mock('../call/speaking-monitor', () => ({
+  SpeakingMonitor: class {
+    constructor(_stream: MediaStream, onChange: (speaking: boolean) => void) {
+      speakingSpies.callbacks.push(onChange)
+    }
+
+    stop = speakingSpies.stop
   },
 }))
 
@@ -32,7 +60,7 @@ const bookingId = '1c10ff39-56b3-4c86-9fa4-a8cb17d4a7df'
 class FakeWebSocket {
   static readonly OPEN = 1
   static instances: FakeWebSocket[] = []
-  onclose: (() => void) | null = null
+  onclose: ((event: { code: number }) => void) | null = null
   onmessage: ((event: { data: string }) => void) | null = null
   onopen: (() => void) | null = null
   readyState = FakeWebSocket.OPEN
@@ -46,7 +74,7 @@ class FakeWebSocket {
 
   close() {
     this.readyState = 3
-    this.onclose?.()
+    this.onclose?.({ code: 1000 })
   }
 
   open() {
@@ -55,6 +83,11 @@ class FakeWebSocket {
 
   receive(message: object) {
     this.onmessage?.({ data: JSON.stringify(message) })
+  }
+
+  serverClose(code: number) {
+    this.readyState = 3
+    this.onclose?.({ code })
   }
 
   send(message: string) {
@@ -73,6 +106,18 @@ function jsonResponse(body: object) {
 function mockApi(startsAt: string, endsAt: string) {
   vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
     const path = String(input)
+    if (path === `/api/calls/${bookingId}/ice-servers`) {
+      return jsonResponse({
+        iceServers: [
+          { urls: 'stun:stun.l.google.com:19302' },
+          {
+            urls: ['turn:turn.example.test:3478'],
+            username: `1790850000:${bookingId}`,
+            credential: 'short-lived-credential',
+          },
+        ],
+      })
+    }
     if (path === '/api/me') {
       return jsonResponse({
         user: {
@@ -127,15 +172,54 @@ function activeWindow() {
   }
 }
 
+async function joinActiveUserCall(
+  stream: MediaStream,
+  mediaDevices: Partial<MediaDevices> = {},
+) {
+  Object.defineProperty(navigator, 'mediaDevices', {
+    configurable: true,
+    value: {
+      getUserMedia: vi.fn(async () => stream),
+      ...mediaDevices,
+    },
+  })
+  vi.stubGlobal('WebSocket', FakeWebSocket)
+  const { startsAt, endsAt } = activeWindow()
+  mockApi(startsAt, endsAt)
+  renderUserCall()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Join call' }))
+  await waitFor(() => expect(FakeWebSocket.instances).toHaveLength(1))
+  const socket = FakeWebSocket.instances[0]!
+  act(() => {
+    socket.open()
+    socket.receive({ type: 'join', bookingId, participant: 'user' })
+    socket.receive({
+      type: 'presence',
+      participants: {
+        user: { present: true, muted: false },
+        astrologer: { present: true, muted: false },
+      },
+    })
+  })
+  await screen.findByText('Connected.')
+  return { socket, user }
+}
+
 afterEach(() => {
   vi.useRealTimers()
   cleanup()
   FakeWebSocket.instances = []
   peerSpies.close.mockReset()
   peerSpies.connectionStateCallbacks.length = 0
+  peerSpies.constructorOptions.length = 0
   peerSpies.receiveDescription.mockReset()
   peerSpies.receiveIceCandidate.mockReset()
+  peerSpies.replaceLocalAudioTrack.mockReset()
   peerSpies.resetForPeer.mockReset()
+  speakingSpies.callbacks.length = 0
+  speakingSpies.stop.mockReset()
+  delete (HTMLMediaElement.prototype as { setSinkId?: unknown }).setSinkId
   vi.unstubAllGlobals()
 })
 
@@ -203,7 +287,26 @@ describe('CallRoomPage', () => {
     })
 
     expect(await screen.findByText('Connected.')).toBeDefined()
+    expect(screen.getByText('Time left')).toBeDefined()
+    expect(screen.getByText('2 minutes left.')).toBeDefined()
     expect(screen.getByLabelText('Anika Rao is muted')).toBeDefined()
+    expect(screen.queryByRole('button', { name: 'Speaker' })).toBeNull()
+    expect(peerSpies.constructorOptions[0]).toMatchObject({
+      forceRelay: false,
+      iceServers: [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: ['turn:turn.example.test:3478'] },
+      ],
+    })
+
+    const remoteStream = { getTracks: () => [] } as unknown as MediaStream
+    act(() => peerSpies.constructorOptions[0]?.onRemoteStream(remoteStream))
+    act(() => {
+      speakingSpies.callbacks[0]?.(true)
+      speakingSpies.callbacks[1]?.(true)
+    })
+    expect(document.querySelectorAll('.call-participant__avatar--speaking')).toHaveLength(1)
+
     await user.click(screen.getByRole('button', { name: 'Mute' }))
     expect(track.enabled).toBe(false)
     expect(JSON.parse(socket.sent.at(-1)!)).toEqual({ type: 'mute-state', muted: true })
@@ -326,6 +429,106 @@ describe('CallRoomPage', () => {
     expect(await screen.findByRole('button', { name: 'Mute' })).toBeDefined()
     expect(track.enabled).toBe(true)
     expect(screen.queryByLabelText('Anika Rao is muted')).toBeNull()
+  })
+
+  it('opens transient chat and sends and announces messages in both directions', async () => {
+    const track = { enabled: true, stop: vi.fn() }
+    const stream = {
+      getAudioTracks: () => [track],
+      getTracks: () => [track],
+    } as unknown as MediaStream
+    const { socket, user } = await joinActiveUserCall(stream)
+
+    await user.click(screen.getByRole('button', { name: 'Chat' }))
+    const chat = await screen.findByRole('dialog', { name: 'Call chat' })
+    const input = screen.getByLabelText('Message')
+    await user.type(input, 'Hello from the user')
+    await user.click(screen.getByRole('button', { name: 'Send' }))
+
+    expect(JSON.parse(socket.sent.at(-1)!)).toEqual({
+      type: 'chat',
+      text: 'Hello from the user',
+    })
+    expect(chat.textContent).toContain('You')
+    expect(chat.textContent).toContain('Hello from the user')
+    expect(screen.getByRole('button', { name: 'Send' })).toHaveProperty('disabled', true)
+
+    act(() => socket.receive({
+      type: 'chat',
+      from: 'astrologer',
+      text: 'Hello from the astrologer',
+    }))
+    expect(await screen.findByText('Hello from the astrologer')).toBeDefined()
+    expect(chat.textContent).toContain('Anika Rao')
+  })
+
+  it('shows Speaker only when output selection is supported and switches the sink', async () => {
+    const setSinkId = vi.fn(async () => undefined)
+    Object.defineProperty(HTMLMediaElement.prototype, 'setSinkId', {
+      configurable: true,
+      value: setSinkId,
+    })
+    const track = { enabled: true, stop: vi.fn() }
+    const stream = {
+      getAudioTracks: () => [track],
+      getTracks: () => [track],
+    } as unknown as MediaStream
+    const { user } = await joinActiveUserCall(stream, {
+      enumerateDevices: vi.fn(async () => [
+        { deviceId: 'default', groupId: 'group', kind: 'audiooutput', label: 'Default' },
+        { deviceId: 'speaker-2', groupId: 'group', kind: 'audiooutput', label: 'Speaker 2' },
+      ]) as unknown as MediaDevices['enumerateDevices'],
+    })
+
+    await user.click(screen.getByRole('button', { name: 'Speaker' }))
+
+    expect(setSinkId).toHaveBeenCalledWith('speaker-2')
+    expect(await screen.findByText('Audio output changed.')).toBeDefined()
+  })
+
+  it('replaces the microphone after devicechange and reports the change', async () => {
+    const initialTrack = { enabled: true, stop: vi.fn() }
+    const nextTrack = { enabled: true, stop: vi.fn() }
+    const initialStream = {
+      getAudioTracks: () => [initialTrack],
+      getTracks: () => [initialTrack],
+    } as unknown as MediaStream
+    const replacementStream = {
+      getAudioTracks: () => [nextTrack],
+      getTracks: () => [nextTrack],
+    } as unknown as MediaStream
+    const getUserMedia = vi.fn()
+      .mockResolvedValueOnce(initialStream)
+      .mockResolvedValueOnce(replacementStream)
+    let deviceChange: (() => void) | undefined
+    await joinActiveUserCall(initialStream, {
+      getUserMedia,
+      addEventListener: vi.fn((type, listener) => {
+        if (type === 'devicechange') deviceChange = listener as () => void
+      }) as MediaDevices['addEventListener'],
+      removeEventListener: vi.fn() as MediaDevices['removeEventListener'],
+    })
+
+    act(() => deviceChange?.())
+
+    await waitFor(() => expect(peerSpies.replaceLocalAudioTrack).toHaveBeenCalledWith(nextTrack))
+    expect(nextTrack.enabled).toBe(true)
+    expect(await screen.findByText('Audio device changed.')).toBeDefined()
+  })
+
+  it('moves straight to the ended state when the server closes the room', async () => {
+    const track = { enabled: true, stop: vi.fn() }
+    const stream = {
+      getAudioTracks: () => [track],
+      getTracks: () => [track],
+    } as unknown as MediaStream
+    const { socket } = await joinActiveUserCall(stream)
+
+    act(() => socket.serverClose(4000))
+
+    expect(await screen.findByText('This call has ended.')).toBeDefined()
+    expect(screen.getByRole('link', { name: 'Back to History' })).toBeDefined()
+    expect(track.stop).toHaveBeenCalled()
   })
 
   it('explains a denied microphone and offers Try again', async () => {

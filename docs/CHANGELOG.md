@@ -2,7 +2,7 @@
 
 Every change to the project, newest first, with one entry per task. Use this format:
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ```markdown
 ## YYYY-MM-DD: Step N, title (or a short description)
@@ -15,6 +15,16 @@ Last updated: 2026-10-01
 ```
 
 ---
+
+## 2026-10-02: Step 11, complete in-app calls
+- **Added:** connected-call countdown and two-minute notice; transient, 500-character, rate-limited WebSocket chat; capability-gated Speaker output switching; automatic default-microphone replacement with the “Audio device changed.” toast; analyser-driven speaking rings; and participant-only `GET /api/calls/:bookingId/ice-servers` with short-lived coturn REST credentials
+- **Changed:** WebRTC now consumes server-authorized STUN/TURN configuration and supports a development-only relay policy; the authoritative server timer closes both room sockets at the booking end; realtime schemas and isolation cover chat as well as signalling and mute state
+- **Files:** `backend/app.ts`, `backend/routes/Calls.ts`, `backend/src/realtime/`, `frontend/.env.example`, `frontend/src/api/calls.ts`, `frontend/src/call/`, `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css`, and related backend/frontend tests
+- **Database:** none; existing booking window, status and first-join fields are reused, and chat is never stored
+- **Env vars:** added frontend `VITE_FORCE_RELAY` with a `false` placeholder; existing backend `TURN_URLS` and `TURN_SECRET` now power the ICE endpoint
+- **Dependencies:** none; Node crypto and existing browser WebRTC, MediaDevices and Web Audio APIs are used
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/10-in-app-call-part-1.md`, `docs/features/11-in-app-call-part-2.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 94 tests pass; frontend lint, all 35 tests and the production build pass. Static TURN credentials shared in chat were not stored; they should be rotated. A real TURN provider, HTTPS phone tunnel, mobile data, supported Speaker outputs and earbuds remain manual checks
 
 ## 2026-10-01: Step 10 two-tab call fixes
 - **Fixed:** rejected offer/answer or ICE work during perfect negotiation no longer leaves a false audio error while media is connected; the audio warning now appears only after the peer connection reports failure or remains unconnected for 15 seconds, and it clears on connection

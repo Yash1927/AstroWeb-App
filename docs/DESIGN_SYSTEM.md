@@ -2,7 +2,7 @@
 
 The UI as built: tokens, components, animations, screens and wording. In code, the source of truth is `frontend/src/design.css`, created in Step 1. The spec is README §10.
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ## Tokens
 
@@ -52,7 +52,8 @@ Last updated: 2026-10-01
 | Inputs, selects and tags | `frontend/src/design.css` | Label, hint, linked error, input, read-only input, rupee input, select, tag editor and removable tags | User forms, panel forms and design page |
 | Chips | `frontend/src/design.css` | Default, selected, horizontal date/time and disabled-empty states | Panel navigation, Home slot picker and design page |
 | Bottom tab bar | `frontend/src/App.tsx` | Home, History, Blogs and Settings; gold active tab | User app shell and design preview |
-| Call-room controls | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Large labelled Mute/Unmute and Leave controls, track-backed mute state across rejoins, current remote-muted badge, two-person layout and full-width end action | User and astrologer call rooms |
+| Call-room controls | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Large labelled Mute/Unmute, Chat and Leave controls; capability-gated Speaker; track-backed mute state across rejoins; current remote-muted badge; two-person layout; timer/notice and full-width end action | User and astrologer call rooms |
+| Call chat | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Portalled BottomSheet, 500-character textarea/counter, once-per-second send state, local/remote message bubbles and polite additions | Connected user and astrologer call rooms |
 
 ## Animations
 
@@ -66,9 +67,9 @@ Last updated: 2026-10-01
 | `scale-in` / `scale-out` | 200–300ms | Dialogs and success mark | Reduced to 1ms once |
 | `shimmer` | 1.4s linear loop | Skeleton loader | Runs once for 1ms |
 | `breathe` | 8s loop | Waiting room and design example | Runs once for 1ms |
-| `speak-ring` | 1.2s loop | Speaking-avatar example | Runs once for 1ms |
+| `speak-ring` | 1.2s loop | Live speaking avatars and design example | Runs once for 1ms |
 | Icon cross-fade | 150ms | Call control | Transition reduced to 1ms |
-| `message-in` | 180ms | Chat-message example | Reduced to 1ms once |
+| `message-in` | 180ms | Live chat messages and design example | Reduced to 1ms once |
 | `heart-pop` | 300ms | Like example | Reduced to 1ms once |
 | Toast in / out | 220ms / 180ms | Toast component | Reduced to 1ms once |
 | `check-draw` | 450ms after 300ms scale-in | Booking success and design example | Reduced to 1ms once |
@@ -83,10 +84,10 @@ Last updated: 2026-10-01
 | Blogs | `/blogs` | Placeholder | 1 |
 | Blog post | `/blogs/:id` | Later-step placeholder | 1 |
 | Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, policy links, save toast and logout | 6 |
-| Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; mute, leave and rejoin | 9, 10 |
+| Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; countdown/notice; mute, conditional Speaker, transient chat, device-change feedback, speaking rings, leave and rejoin | 9–11 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
 | Astrologer panel | `/astrologer` | Session check, login, forced password change, profile and availability workflows, private Upcoming/Past bookings; Blogs placeholder | 4, 7, 9 |
-| Astrologer call | `/astrologer/call/:bookingId` | The same four call states and controls, with caller-first-name waiting text and astrologer session protection | 9, 10 |
+| Astrologer call | `/astrologer/call/:bookingId` | The same four call states and complete controls, with caller-first-name waiting text and astrologer session protection | 9–11 |
 | Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management and pricing/settings | 3 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
 | Not found | Any unmatched path | Link back to Home | 1 |
@@ -124,6 +125,11 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Waiting for astrologer | “Waiting for {astrologer name} to join…” | User call room |
 | Waiting for user | “Waiting for {user first name} to join…” | Astrologer call room |
 | Connected call | “Connected.” | Both call rooms |
+| Call countdown | “Time left” with `M:SS` | Connected call rooms |
+| Call ending notice | “2 minutes left.” | Connected call rooms at two minutes or less |
+| Empty call chat | “No messages yet.” | Call chat sheet |
+| Changed microphone | “Audio device changed.” | Call-room success toast after device replacement |
+| Changed output | “Audio output changed.” | Call-room success toast after Speaker switches output |
 | Ended user call | “This call has ended.” with **Back to History** | User call room |
 | Ended astrologer call | “This call has ended.” with **Back to Bookings** | Astrologer call room |
 | Microphone blocked | “Microphone access is blocked. In your browser's site settings, allow the microphone for this site, then try again.” with **Try again** | Both call rooms |
@@ -153,6 +159,8 @@ Messages shown in the UI, so the same situation always uses the same words.
 - The booking summary uses a semantic description list for astrologer, call type, IST date/time, duration and price. Submission errors are announced in an alert without closing the sheet. The upcoming-Normal limit instead uses a softly highlighted polite status, removes the repeat confirmation action and offers a full-size History link. The success checkmark has an accessible name and its History action uses the same shared link-button treatment.
 - History and astrologer booking cards use semantic headings and description lists, 40px labelled avatars, visible status text, and full-width 48px Join actions. The shared card is one flexible column at 360px, wraps its header, and allows every detail value to break safely.
 - Join now reuses the reduced-motion-aware soft-glow animation. A scheduled clock update switches button/status state and moves the card between sections without requiring focus movement or a page refresh.
-- Call-room phase text is a polite live status. Before-start and one-person waiting states use the reduced-motion-aware breathing circle. Connected participants have named 96px avatars; a visible muted badge also exposes an accessible “{name} is muted” label. Mute and Leave are separate large controls with their text below the icon. The mobile-first two-column participant grid and wrapping controls fit the 360px baseline without fixed text heights.
+- Call-room phase text and the two-minute notice are polite live statuses. Before-start and one-person waiting states use the reduced-motion-aware breathing circle. Connected participants have named 96px avatars; a visible muted badge also exposes an accessible “{name} is muted” label. Web Audio speaking state adds the reduced-motion-aware ring without replacing the avatar name or badge.
+- Mute, capability-gated Speaker, Chat and Leave are separate large controls with text below each icon. The mobile-first two-column participant grid and wrapping controls fit the 360px baseline without fixed text heights. The countdown uses tabular numerals and an explicit accessible remaining-time label.
+- Call chat is a named modal BottomSheet. New bubbles animate with `message-in` and are announced as additions in a polite live region. The textarea has a visible label, 500-character counter and full-size Send action; Send is disabled while the local one-second allowance is active or the peer is absent.
 - Date exceptions stay in the existing one-column phone layout and use overlap-safe responsive grid columns at desktop widths.
 - `prefers-reduced-motion: reduce` changes all animations and transitions to one 1ms iteration.

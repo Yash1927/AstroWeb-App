@@ -44,6 +44,20 @@ function repository(rows: RealtimeBooking[]) {
 }
 
 describe("DefaultRealtimeBookingService", () => {
+  it("authorizes a participant without recording a join", async () => {
+    const fake = repository([booking()]);
+    const service = new DefaultRealtimeBookingService(fake.value);
+    const now = Temporal.Instant.from("2026-10-01T10:05:00Z");
+
+    await expect(service.authorizeBooking({
+      bookingId: booking().id,
+      participant: "astrologer",
+      subjectId: "astrologer-1",
+      now,
+    })).resolves.toEqual(booking());
+    expect(fake.firstJoins).toEqual([]);
+  });
+
   it("admits only the booking participant during the call window and records first join", async () => {
     const fake = repository([booking()]);
     const service = new DefaultRealtimeBookingService(fake.value);

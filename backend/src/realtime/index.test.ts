@@ -39,6 +39,13 @@ function fakeSessions(): SessionManager {
 
 function fakeBookings(): RealtimeBookingService {
   return {
+    authorizeBooking: vi.fn(async (input) => {
+      const expected = input.participant === "user" ? "user-1" : "astrologer-1";
+      if (input.bookingId !== bookingId || input.subjectId !== expected) {
+        throw new Error("not allowed");
+      }
+      return booking();
+    }),
     finalizeBooking: vi.fn(async () => undefined),
     finalizeEnded: vi.fn(async () => undefined),
     joinBooking: vi.fn(async (input) => {
@@ -247,6 +254,91 @@ describe("attachRealtimeServer", () => {
     realtime.close();
   });
 
+  it("relays transient chat at no more than one message per second", async () => {
+    let currentNow = now;
+    const server = createServer();
+    servers.push(server);
+    const realtime = attachRealtimeServer(server, {
+      appOrigin: "http://app.test",
+      bookings: fakeBookings(),
+      sessions: fakeSessions(),
+      now: () => currentNow,
+    });
+    const port = await listen(server);
+    const user = await connect(port, "user");
+    const astrologer = await connect(port, "astrologer");
+    sockets.push(user, astrologer);
+
+    const userJoin = nextMessageOfType(user, "join");
+    const userPresence = nextMessageOfType(user, "presence");
+    user.send(JSON.stringify({ type: "join", bookingId }));
+    await userJoin;
+    await userPresence;
+    const astrologerJoin = nextMessageOfType(astrologer, "join");
+    const astrologerPresence = nextMessageOfType(astrologer, "presence");
+    const joinedPresence = nextMessageOfType(user, "presence");
+    astrologer.send(JSON.stringify({ type: "join", bookingId }));
+    await astrologerJoin;
+    await astrologerPresence;
+    await joinedPresence;
+
+    const chats: Array<Record<string, unknown>> = [];
+    astrologer.on("message", (data) => {
+      const message = JSON.parse(data.toString()) as Record<string, unknown>;
+      if (message.type === "chat") chats.push(message);
+    });
+    user.send(JSON.stringify({ type: "chat", text: "  Hello  " }));
+    await vi.waitFor(() => expect(chats).toHaveLength(1));
+    expect(chats[0]).toEqual({ type: "chat", from: "user", text: "Hello" });
+
+    user.send(JSON.stringify({ type: "chat", text: "Too soon" }));
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(chats).toHaveLength(1);
+
+    currentNow = currentNow.add({ seconds: 1 });
+    user.send(JSON.stringify({ type: "chat", text: "One second later" }));
+    await vi.waitFor(() => expect(chats).toHaveLength(2));
+    expect(chats[1]).toMatchObject({ text: "One second later" });
+    realtime.close();
+  });
+
+  it("closes every participant at the stored end time", async () => {
+    const endNow = Temporal.Now.instant();
+    const endingBooking = {
+      ...booking(),
+      startsAt: endNow.subtract({ seconds: 1 }),
+      endsAt: endNow.add({ milliseconds: 100 }),
+    };
+    const bookings: RealtimeBookingService = {
+      authorizeBooking: vi.fn(async () => endingBooking),
+      finalizeBooking: vi.fn(async () => undefined),
+      finalizeEnded: vi.fn(async () => undefined),
+      joinBooking: vi.fn(async () => endingBooking),
+    };
+    const server = createServer();
+    servers.push(server);
+    const realtime = attachRealtimeServer(server, {
+      appOrigin: "http://app.test",
+      bookings,
+      sessions: fakeSessions(),
+    });
+    const port = await listen(server);
+    const user = await connect(port, "user");
+    sockets.push(user);
+
+    const joined = nextMessageOfType(user, "join");
+    const closed = new Promise<number>((resolve) => user.once("close", resolve));
+    user.send(JSON.stringify({ type: "join", bookingId }));
+    await joined;
+
+    expect(await closed).toBe(4000);
+    expect(bookings.finalizeBooking).toHaveBeenCalledWith(
+      bookingId,
+      expect.anything(),
+    );
+    realtime.close();
+  });
+
   it("closes a socket that sends an invalid message", async () => {
     const server = createServer();
     servers.push(server);
@@ -262,6 +354,26 @@ describe("attachRealtimeServer", () => {
     const closed = new Promise<number>((resolve) => user.once("close", resolve));
 
     user.send(JSON.stringify({ type: "mute-state", muted: "yes" }));
+
+    expect(await closed).toBe(1007);
+    realtime.close();
+  });
+
+  it("rejects chat longer than 500 characters", async () => {
+    const server = createServer();
+    servers.push(server);
+    const realtime = attachRealtimeServer(server, {
+      appOrigin: "http://app.test",
+      bookings: fakeBookings(),
+      sessions: fakeSessions(),
+      now: () => now,
+    });
+    const port = await listen(server);
+    const user = await connect(port, "user");
+    sockets.push(user);
+    const closed = new Promise<number>((resolve) => user.once("close", resolve));
+
+    user.send(JSON.stringify({ type: "chat", text: "x".repeat(501) }));
 
     expect(await closed).toBe(1007);
     realtime.close();

@@ -18,6 +18,7 @@ import {
 } from "./signaling";
 
 const END_SWEEP_INTERVAL_MS = 30_000;
+const CHAT_INTERVAL_MS = 1_000;
 
 type AuthenticatedSocket = {
   participant: RealtimeParticipant;
@@ -25,6 +26,7 @@ type AuthenticatedSocket = {
 };
 
 type RoomParticipant = AuthenticatedSocket & {
+  lastChatAtMs: number | null;
   muted: boolean;
   socket: WebSocket;
 };
@@ -223,7 +225,12 @@ export function attachRealtimeServer(
           detach(previous.socket, "left", false);
           previous.socket.close(4001, "Call opened elsewhere.");
         }
-        room.participants.set(state.participant, { ...state, muted: false, socket });
+        room.participants.set(state.participant, {
+          ...state,
+          lastChatAtMs: null,
+          muted: false,
+          socket,
+        });
         state.roomId = room.bookingId;
         send(socket, {
           type: "join",
@@ -264,6 +271,23 @@ export function attachRealtimeServer(
         type: "mute-state",
         participant: state.participant,
         muted: parsed.data.muted,
+      }, socket);
+      return;
+    }
+
+    if (parsed.data.type === "chat") {
+      const participant = room.participants.get(state.participant);
+      if (!participant) return;
+      const sentAtMs = now().epochMilliseconds;
+      if (
+        participant.lastChatAtMs !== null
+        && sentAtMs - participant.lastChatAtMs < CHAT_INTERVAL_MS
+      ) return;
+      participant.lastChatAtMs = sentAtMs;
+      broadcast(room, {
+        type: "chat",
+        from: state.participant,
+        text: parsed.data.text,
       }, socket);
       return;
     }

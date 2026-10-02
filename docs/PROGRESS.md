@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ## Build steps
 
@@ -18,7 +18,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 8 | Booking free Normal calls | Done | [08-booking-free-normal-calls.md](features/08-booking-free-normal-calls.md) | Transactional zero-price booking creation, overlap handling and the Home summary/success flow are in place. |
 | 9 | History and astrologer bookings | Done | [09-history-and-astrologer-bookings.md](features/09-history-and-astrologer-bookings.md) | Private History, astrologer Bookings and protected call placeholders are in place. |
 | 10 | In-app call, part 1 | Done | [10-in-app-call-part-1.md](features/10-in-app-call-part-1.md) | Authenticated booking rooms, STUN WebRTC audio and the four live call states are in place. |
-| 11 | In-app call, part 2 | Not started | — | |
+| 11 | In-app call, part 2 | Done | [11-in-app-call-part-2.md](features/11-in-app-call-part-2.md) | Countdown/end handling, transient chat, supported device controls, speaking indicators and booking-scoped TURN credentials are in place. |
 | 12 | Urgent calls with Razorpay | Not started | — | |
 | 13 | Subscription packs | Not started | — | |
 | 14 | Blogs | Not started | — | |
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Step 11: In-app call, part 2.
+Step 12: Urgent calls with Razorpay.
 
 ## Known issues
 

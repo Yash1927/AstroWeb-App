@@ -12,6 +12,7 @@ export type ServerCallMessage =
   | { type: 'offer' | 'answer'; from: CallParticipant; sdp: string }
   | { type: 'ice-candidate'; from: CallParticipant; candidate: RealtimeIceCandidate }
   | { type: 'mute-state'; participant: CallParticipant; muted: boolean }
+  | { type: 'chat'; from: CallParticipant; text: string }
 
 function participant(value: unknown): value is CallParticipant {
   return value === 'user' || value === 'astrologer'
@@ -69,6 +70,14 @@ export function parseServerCallMessage(value: string): ServerCallMessage | null 
   }
   if (message.type === 'mute-state') {
     return participant(message.participant) && typeof message.muted === 'boolean'
+      ? message as ServerCallMessage
+      : null
+  }
+  if (message.type === 'chat') {
+    return participant(message.from)
+      && typeof message.text === 'string'
+      && message.text.trim().length > 0
+      && message.text.length <= 500
       ? message as ServerCallMessage
       : null
   }

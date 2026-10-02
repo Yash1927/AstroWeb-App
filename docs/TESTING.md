@@ -2,7 +2,7 @@
 
 Automated tests and manual checks, as they exist now.
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ## Automated tests
 
@@ -38,9 +38,14 @@ Run backend tests from `backend/` with `npm test`, and frontend component tests 
 | `backend/src/booking-history/booking-history-service.test.ts` | Upcoming/Past ordering, join-timestamp Completed/Missed derivation, booked-user detail shaping and email omission | 9 |
 | `backend/src/dev/make-booking-helpers.test.ts` | Development booking command arguments, negative Past offset and production refusal | 9 |
 | `frontend/src/components/BookingLists.test.tsx` | Join/Join now/Missed transitions without refresh, Past movement, soft glow, astrologer-visible details and no email label | 9 |
-| `backend/src/realtime/booking-service.test.ts` | Participant ownership, inclusive-start/exclusive-end admission, first-join recording and Completed/Missed finalization | 10 |
-| `backend/src/realtime/index.test.ts` | Exact-Origin and session upgrade rejection, booking-room presence/mute/offer relay, current mute state after leave/rejoin, strict invalid-message closure and the 16 KiB limit | 10; two-tab review fix |
-| `frontend/src/screens/CallPlaceholderPage.test.tsx` | Before-start, waiting, connected and ended room states; deferred microphone request; exact capture constraints; peer-muted badge; local mute; leave/rejoin action; ignored stale signalling failures; failed/connected peer state and 15-second timeout; mute/unmute track and badge state through peer rejoin; denied-permission help | 9, 10; two-tab review fix |
+| `backend/src/realtime/booking-service.test.ts` | Participant ownership, inclusive-start/exclusive-end authorization with and without recording a join, first-join storage and Completed/Missed finalization | 10, 11 |
+| `backend/src/realtime/ice-server-service.test.ts` | STUN/TURN response, comma-separated relay URLs, exact booking-end username, base64 HMAC-SHA1 credential and missing configuration | 11 |
+| `backend/routes/calls.test.ts` | User and astrologer ICE access, participant-record isolation, strict UUID/query/body input and `Cache-Control: no-store` | 11 |
+| `backend/src/realtime/index.test.ts` | Exact-Origin/session rejection, booking-room presence/mute/offer relay, current mute after rejoin, strict message/size handling, bounded/rate-limited chat relay and server close/finalization at the room end | 10, 11; two-tab review fix |
+| `frontend/src/call/audio-peer.test.ts` | Relay-only/all ICE configuration and replacement of the live audio sender and local stream track | 11 |
+| `frontend/src/call/timer.test.ts` | Rounded/clamped countdown formatting and development-only relay flag behavior | 11 |
+| `frontend/src/call/speaking-monitor.test.ts` | Web Audio sample level and speaking-threshold behavior | 11 |
+| `frontend/src/screens/CallPlaceholderPage.test.tsx` | Four room states, microphone/error recovery, mute and rejoin state, countdown/notice, ICE configuration, transient chat, conditional Speaker/output switching, speaking/mute interaction, device-change track replacement/toast and server-ended close | 9–11; two-tab review fix |
 
 ### Prisma 8 overlap error verification
 
@@ -65,6 +70,7 @@ Results of each step's "Try it out" list in [BUILD_PROMPTS.md](../BUILD_PROMPTS.
 | 8 | 2026-10-01 | Reported browser issues fixed; live retest needed | The owner reported an unverified Prisma exclusion shape, a red/repeatable Normal-limit state and a roughly 2–3 second slot check. The mapper now uses the documented and installed Prisma `sqlState` shape, the limit is a calm History notice, and the four independent slot reads start in parallel. Backend type-check and all 67 tests pass; frontend lint, all 19 tests and the production build pass. A two-browser Neon race, rendered notice and post-change timing remain manual. |
 | 9 | 2026-10-01 | Automated pass; live time-boundary flow needed | Backend type-check and all 75 tests pass. Frontend TypeScript, lint, all 24 tests and production build pass. Tests prove session-subject booking scoping, cross-record 404s, no astrologer-visible user email, ordering/status rules, exact call-placeholder wording and automatic Join transitions. A real user/astrologer session, the development helper and a rendered 360px time-boundary flow remain manual. |
 | 10 | 2026-10-01 | Reported two-tab issues fixed; manual retest needed | A real Chrome two-tab call carried audio both ways while one side also showed a false audio error; one mute/unmute then peer-rejoin run may also have left the local control mismatched. Signalling-operation rejections no longer set the warning, actual peer failure or a 15-second timeout does, connection clears it, and local mute now follows the audio track through peer resets. Automated regressions also prove a rejoining participant receives the other side's current mute state. Backend type-check and all 83 tests pass; frontend lint, all 27 tests and the production build pass. Please retest those two sequences and the astrologer's **Back to Bookings** action in Chrome. |
+| 11 | 2026-10-02 | Automated pass; TURN and hardware checks needed | Backend type-check and all 94 tests pass. Frontend lint, all 35 tests and the production build pass. Tests cover participant-only short-lived TURN output, exact credential HMAC/expiry, strict/rate-limited transient chat, server end closure, countdown/notice, relay policy, output switching, speaking state and default-microphone track replacement with mute preservation. A real coturn/provider relay, HTTPS phone tunnel, mobile data, supported Speaker outputs and wired/Bluetooth earbuds remain manual because browser mocks cannot prove network or hardware routing. |
 
 ## Devices
 

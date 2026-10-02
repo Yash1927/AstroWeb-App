@@ -2,7 +2,7 @@
 
 How to install and run the project as it is now. The planned setup is in README §13.
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ## Requirements
 
@@ -10,6 +10,8 @@ Last updated: 2026-10-01
 - Windows 11 (the dev machine), with PowerShell or VS Code terminals
 - A Neon Postgres project for database commands
 - A Google Cloud OAuth client of type **Web application** for user sign-in
+- A coturn server or compatible managed TURN service with a REST shared secret for reliable in-app calls
+- An HTTPS tunnel to the Vite server for real-phone microphone, earbuds and mobile-data checks
 
 ## Install
 
@@ -32,6 +34,7 @@ npm install
 | `SESSION_SECRET` | `backend/.env` | Sign server sessions | 3 | At least 32 random characters |
 | `GOOGLE_CLIENT_ID` | `backend/.env` | Verify Google user sign-in | 6 | `xxxx.apps.googleusercontent.com` |
 | `VITE_GOOGLE_CLIENT_ID` | `frontend/.env` | Render Google Identity Services in the browser; this client id is public | 6 | `xxxx.apps.googleusercontent.com` |
+| `VITE_FORCE_RELAY` | `frontend/.env` | Force relay-only WebRTC while proving TURN locally; ignored by production builds | 11 | `false` |
 | `RAZORPAY_KEY_ID` | `backend/.env` | Create Razorpay checkout orders | 12 | `rzp_test_xxxx` |
 | `RAZORPAY_KEY_SECRET` | `backend/.env` | Authenticate Razorpay server calls | 12 | Placeholder only in the example |
 | `RAZORPAY_WEBHOOK_SECRET` | `backend/.env` | Verify Razorpay webhooks | 12 | Placeholder only in the example |
@@ -79,7 +82,16 @@ npm install
 
 The backend denies cross-origin access when `APP_ORIGIN` is missing. Requests through the Vite proxy remain same-origin. The backend's one Node listener serves both HTTP and `/ws`; do not start a separate realtime process or open port 8080.
 
-Step 10 uses Google's public STUN endpoint and needs no additional account, key or environment variable. `localhost` is accepted by browsers for microphone development. A real phone must use HTTPS, and reliable restrictive-network testing waits for the Step 11 TURN setup.
+The call room fetches Google's public STUN address and configured TURN values from the protected booking API only after Join. `localhost` is accepted by browsers for microphone development. Real phones still need an HTTPS origin.
+
+## TURN setup
+
+1. Configure coturn's REST API shared-secret authentication, or choose a managed service that accepts the same time-limited HMAC-SHA1 credential format.
+2. Put one or more comma-separated relay addresses in backend `TURN_URLS`, for example the placeholder UDP and TLS forms in `backend/.env.example`. Put only the matching shared secret in backend `TURN_SECRET`.
+3. Restart the backend. During an active confirmed Normal call, `GET /api/calls/:bookingId/ice-servers` now returns STUN plus a TURN username that expires at that booking's end. The response is participant-only and is not cached.
+4. For a local relay proof, set `VITE_FORCE_RELAY="true"` in `frontend/.env` and restart Vite. This selects relay-only ICE in development; production builds ignore it. Return the value to `false` after testing.
+
+Static usernames and passwords must not be added to frontend source or `VITE_` variables. If a managed provider supplies only fixed credentials instead of a REST shared secret, it does not match the current short-lived credential integration.
 
 ## Database setup
 
@@ -98,7 +110,14 @@ The second seed run should report that neither row was created. Applied migratio
 
 ## Testing on a phone (HTTPS tunnel)
 
-_Write the first time it's set up (from Step 11)._
+1. Start the backend on port 3000 and Vite on port 5173.
+2. Start an HTTPS tunnel that forwards its public address to `http://localhost:5173`. Keep that public URL private when it exposes the development app.
+3. Give the exact tunnel hostname to the project before testing so it can be added to Vite's `server.allowedHosts`. The repo does not enable every host, and no hostname is preconfigured because tunnel addresses vary.
+4. Set backend `APP_ORIGIN` to the exact public HTTPS origin, without a trailing slash, then restart the backend. This same value is enforced for CORS and the WebSocket `Origin` check.
+5. If Google sign-in is needed, add the exact HTTPS origin to the OAuth client's authorised JavaScript origins and `<origin>/api/auth/google` to its authorised redirect URIs.
+6. Open the HTTPS address on the phone. Join an active Normal call and test permission, mobile data, Speaker where the browser exposes it, and connecting/disconnecting wired or Bluetooth earbuds.
+
+Vite continues to proxy `/api` and `/ws` to the one backend listener, so the browser cookies stay first-party. Razorpay webhook tunnel setup arrives with Step 12.
 
 ## Production
 
@@ -119,5 +138,8 @@ _Write in Step 16:_ building and starting the app, production env vars, HTTPS an
 | An astrologer sees “Set a new password” after an owner reset | This is expected. Enter a new password of at least 10 characters before returning to the panel. |
 | The call page says the connection ended immediately | Open the frontend through the exact `APP_ORIGIN`, confirm the correct user or astrologer session is signed in, and confirm current time is inside the stored booking window. |
 | Microphone access is blocked | Allow the microphone for the frontend origin in browser site settings, return to the room and choose **Try again**. Production and real-phone access require HTTPS. |
-| Two peers cannot establish audio on a restrictive or mobile network | Step 10 has STUN only. Test another network for now; Step 11 adds the required TURN relay. |
+| Join reports “Call audio is unavailable” | Set valid `TURN_URLS` and `TURN_SECRET` for a coturn REST-compatible service, restart the backend and confirm the booking is currently active. |
+| A call works normally but fails with `VITE_FORCE_RELAY="true"` | The TURN relay is unreachable or its URL/shared secret does not match. Check coturn/provider logs without copying credentials into application logs. |
+| Vite rejects the HTTPS tunnel host | Add only the tunnel's exact hostname to `server.allowedHosts` in `frontend/vite.config.ts`, then restart Vite. Do not enable every host. |
+| Two peers cannot establish audio on a restrictive or mobile network | Confirm TURN is configured, then repeat with the development relay-only flag. A successful relay-only call proves media is not falling back to direct STUN. |
 | Prisma reports `RUNTIME.TEMPORAL_UNAVAILABLE` | Run `npm install`; `temporal-polyfill` must be installed and is loaded by `src/prisma/db.ts`. |

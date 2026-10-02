@@ -1238,6 +1238,34 @@ svg {
   font-weight: 700;
 }
 
+.call-room__timer {
+  display: grid;
+  min-width: 8rem;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-soft);
+}
+
+.call-room__timer span {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.call-room__timer strong {
+  font-size: var(--text-xl);
+  font-variant-numeric: tabular-nums;
+}
+
+.call-room__notice {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-soft);
+  font-weight: 700;
+}
+
 .call-room__participants {
   display: grid;
   width: 100%;
@@ -1265,6 +1293,16 @@ svg {
 
 .call-participant__avatar {
   position: relative;
+}
+
+.call-participant__avatar--speaking::before {
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--color-primary);
+  border-radius: var(--radius-full);
+  animation: speak-ring var(--dur-speak) var(--ease-out) infinite;
+  content: "";
+  pointer-events: none;
 }
 
 .call-participant__muted {
@@ -1361,6 +1399,69 @@ svg {
 
 .call-room audio {
   display: none;
+}
+
+.call-chat {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.call-chat__messages {
+  display: grid;
+  max-height: 18rem;
+  gap: var(--space-2);
+  overflow-y: auto;
+  padding: var(--space-2);
+}
+
+.call-chat__empty {
+  margin: 0;
+  color: var(--color-text-muted);
+  text-align: center;
+}
+
+.call-chat .chat-message {
+  display: grid;
+  width: fit-content;
+  max-width: 88%;
+  gap: var(--space-1);
+  text-align: start;
+}
+
+.call-chat .chat-message--local {
+  justify-self: end;
+  background: var(--color-surface-soft);
+}
+
+.call-chat .chat-message--remote {
+  justify-self: start;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+}
+
+.call-chat .chat-message strong {
+  font-size: var(--text-sm);
+}
+
+.call-chat .chat-message span {
+  overflow-wrap: anywhere;
+}
+
+.call-chat__form {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.call-chat__input {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.call-chat__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
 .user-sign-in {

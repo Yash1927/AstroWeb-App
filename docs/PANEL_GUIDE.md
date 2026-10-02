@@ -2,7 +2,7 @@
 
 Plain-language instructions for running the app day to day, written for people who aren't technical. Update this guide whenever something in the owner panel or the astrologer panel changes.
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 The owner route at `/owner` and astrologer route at `/astrologer` are working. Both are separate from the user app and do not show its bottom tabs.
 
@@ -92,8 +92,11 @@ The cards change as the start and end times pass without reloading the page. **B
 
 1. Open the call from **Bookings**. Before its start, the room shows the start time and does not ask for the microphone or connect audio.
 2. At the start time, choose **Join call**. Allow microphone access when the browser asks. If access is blocked, allow it in the browser's site settings and choose **Try again**.
-3. While waiting for the user, the breathing circle stays visible. When both people are present, the room shows both avatars and says **Connected.**
-4. Use **Mute** or **Unmute** to control your microphone. A muted badge appears for the other person. Use **Leave call** to disconnect; you can choose **Join call** again until the booked end time.
-5. At the end time, audio closes and the room says **This call has ended.** Choose **Back to Bookings** to return directly to the panel's Bookings section.
+3. While waiting for the user, the breathing circle stays visible. When both people are present, the room shows both avatars, says **Connected.** and starts the **Time left** countdown. A gentle **2 minutes left.** notice appears near the end.
+4. Use **Mute** or **Unmute** to control your microphone. A muted badge appears for the other person. A soft ring appears around either avatar while that person is speaking.
+5. Use **Chat** for a short message of up to 500 characters. Messages are only live during this room; leaving clears them and the app does not save them. The Send button waits about one second between messages.
+6. **Speaker** appears only in browsers that can choose an audio output. Choose it to move through the outputs the browser reports. On browsers such as Chrome on Android, the button is absent and the phone controls the output.
+7. When the default microphone changes after earbuds or another device connects, the call swaps to it and shows **Audio device changed.** The current Mute state stays the same.
+8. Use **Leave call** to disconnect; you can choose **Join call** again until the booked end time. At the end time, the server closes audio for both people and the room says **This call has ended.** Choose **Back to Bookings** to return directly to the panel's Bookings section.
 
-An audio warning appears only if the peer connection fails or has not connected about 15 seconds after the other person joins. It disappears if the connection succeeds. Step 10 uses direct peer-to-peer audio. The timer, two-minute notice, TURN relay and the other call controls arrive in Step 11, so restrictive networks may not connect yet.
+An audio warning appears only if the peer connection fails or has not connected about 15 seconds after the other person joins. It disappears if the connection succeeds. The room can use the configured TURN relay when a direct connection is blocked, including on many mobile networks. Real phone, mobile-data, Speaker and earbuds behavior must still be checked on the actual devices listed in `docs/TESTING.md`.

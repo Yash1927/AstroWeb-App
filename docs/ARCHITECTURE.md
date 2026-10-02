@@ -2,18 +2,18 @@
 
 How the app is put together, as built. For what it should do, see [README.md](../README.md).
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ## Current state
 
-Step 10 adds authenticated, booking-scoped WebSocket rooms and peer-to-peer WebRTC audio for Normal calls (README §1, §7.1–§7.3, §10.4, §12 and §14). The current contract already contains participant join timestamps and booking statuses, so this step needs no migration.
+Step 11 completes the current Normal-call room with its countdown/end behavior, transient chat, speaker and microphone-device handling, speaking detection and short-lived TURN access (README §7.1–§7.3, §10.4, §12 and §17). The existing contract already contains participant join timestamps and booking statuses, so this step needs no migration.
 
-- `frontend/` is a React single-page app with public Home through zero-price booking success, private user History, authenticated user/astrologer audio rooms, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `frontend/` is a React single-page app with public Home through zero-price booking success, private user History, complete authenticated user/astrologer Normal-call rooms, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
 - `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
-- WebSocket rooms are keyed by booking id. They relay validated WebRTC signalling and live presence/mute state only between the booked user and astrologer during the stored call window.
+- WebSocket rooms are keyed by booking id. They relay validated WebRTC signalling, transient chat and live presence/mute state only between the booked user and astrologer during the stored call window. The room timer closes both sockets at the booking end.
 
 ## Overview
 
@@ -25,7 +25,9 @@ flowchart LR
     Server[Node HTTP server at localhost:3000]
     Express[Express /api]
     Realtime[Authenticated WebSocket /ws]
-    WebRTC[Peer-to-peer WebRTC audio]
+    WebRTC[WebRTC audio]
+    Ice[Protected ICE configuration route]
+    Turn[TURN relay]
     Public[Public health, settings and card routes]
     OwnerAuth[Owner login route]
     Owner[Protected owner routes]
@@ -57,6 +59,7 @@ flowchart LR
     UserAuth --> Express
     Express --> User
     Express --> Booking
+    Express --> Ice
     OwnerAuth --> Session
     Owner --> Session
     AstroAuth --> Session
@@ -64,6 +67,7 @@ flowchart LR
     UserAuth --> Session
     User --> Session
     Booking --> Session
+    Ice --> Session
     Session --> Prisma
     OwnerAuth --> Prisma
     Owner --> Prisma
@@ -72,8 +76,11 @@ flowchart LR
     UserAuth --> Prisma
     User --> Prisma
     Booking --> Prisma
+    Ice --> Prisma
     Public --> Prisma
     Prisma -->|pooled DATABASE_URL| Neon
+    Ice -->|short-lived credentials| Turn
+    WebRTC -. restrictive networks .-> Turn
 ```
 
 Production hosting is not built yet. README §1 requires the frontend, API and WebSocket endpoint to use one HTTPS domain.
@@ -89,6 +96,7 @@ backend/
   routes/UserAuth.ts        Google redirect callback and user-session creation
   routes/User.ts            Protected self-only user details, booking history and logout
   routes/Bookings.ts        Protected zero-price booking creation
+  routes/Calls.ts           Protected booking-scoped ICE server configuration
   routes/OwnerAuth.ts       Owner credential login
   routes/Owner.ts           Protected owner account and settings handlers
   routes/AstrologerAuth.ts  Astrologer credential login
@@ -105,10 +113,11 @@ backend/
   src/user/                 Google verification, user validation and database service
   src/prisma/               Contract, generated artifacts, runtime client and seed
   migrations/               Prisma 8 migration graph, snapshots and compiled operations
-  src/realtime/             Upgrade authentication, room protocol and booking lifecycle
+  src/realtime/             Upgrade authentication, room/chat protocol, booking lifecycle and TURN credentials
 frontend/
   src/App.tsx               Route map, call routes, placeholders and user app shell
-  src/call/                  Browser WebSocket protocol and WebRTC perfect negotiation
+  src/call/                  WebSocket protocol, WebRTC negotiation, timer and speaking analysis
+  src/api/calls.ts           Typed booking-scoped ICE server client
   src/api/owner.ts          Typed owner API client and money conversion
   src/api/astrologer.ts     Typed astrologer API client
   src/api/public.ts         Typed public card and settings client
@@ -162,6 +171,7 @@ docs/
 | Neon Postgres | Application data, settings, owner seed, profiles, availability, bookings, user details and server sessions | `DATABASE_URL`, `DIRECT_DATABASE_URL` | 2; live use expanded in 3–9 |
 | Google Identity Services | Redirect-mode user identity and verified Google account claims | `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` | 6 |
 | Google public STUN | WebRTC host/server-reflexive ICE candidates; no account or secret | None | 10 |
+| coturn or compatible TURN service | Relayed WebRTC audio on restrictive and mobile networks | `TURN_URLS`, `TURN_SECRET` | 11 |
 
 ## Main flows
 
@@ -271,13 +281,22 @@ The server splits Normal calls by their current end time and derives Completed o
 sequenceDiagram
     participant Person as User or astrologer
     participant Room as React call room
+    participant API as GET /api/calls/:id/ice-servers
     participant Server as Main HTTP server /ws
     participant Sessions as Session manager
     participant Booking as Booking lifecycle service
     participant Peer as Other participant
+    participant Turn as TURN relay
 
     Person->>Room: Tap Join
-    Room->>Person: Request microphone permission
+    par Prepare audio
+        Room->>Person: Request microphone permission
+    and Authorize ICE configuration
+        Room->>API: Booking id + participant cookie
+        API->>Sessions: Resolve user/astrologer session
+        API->>Booking: Check participant, mode and time window
+        API-->>Room: STUN + short-lived TURN credentials
+    end
     Room->>Server: Upgrade with role cookie + exact Origin
     Server->>Sessions: Resolve selected role session
     Room->>Server: join + booking id
@@ -287,14 +306,20 @@ sequenceDiagram
     Server-->>Peer: presence
     Room->>Server: offer / answer / ICE
     Server-->>Peer: Relay within this booking room
-    Room-->>Peer: Peer-to-peer audio
-    Room->>Server: mute state or leave
-    Server-->>Peer: mute state / presence
+    Room-->>Peer: Direct audio when possible
+    Room-->>Turn: Relayed audio when required
+    Room->>Server: mute state, chat or leave
+    Server-->>Peer: mute / chat / presence
+    Server-->>Room: Close at booking end
 ```
 
-The role query selects which root-path session cookie to resolve; it does not grant access. The booking service compares that session subject with the stored booking participant, requires `callMode = in_app`, `status = confirmed`, and a current time from `startsAt` inclusive to `endsAt` exclusive. The WebSocket server accepts text JSON up to 16 KiB, validates every inbound and outbound message with Zod, serializes each socket's input, and keeps only one live socket per role in a room.
+The role query selects which root-path session cookie to resolve; it does not grant access. The booking service compares that session subject with the stored booking participant, requires `callMode = in_app`, `status = confirmed`, and a current time from `startsAt` inclusive to `endsAt` exclusive. The ICE endpoint performs the same record/window authorization before deriving a coturn REST username ending at the booking's `endsAt` and a base64 HMAC-SHA1 credential from backend-only `TURN_SECRET`. The response is not cached.
 
-The browser asks for the exact README §7.3 audio constraints only after Join. A user-side impolite peer and astrologer-side polite peer implement perfect negotiation; recreating the peer connection when presence changes supports simultaneous joins and later rejoining. Individual description and ICE rejections can belong to an ignored offer or an obsolete peer, so they do not drive user-visible failure state. The room shows the audio warning only when the current peer connection reports `failed` or remains unconnected for 15 seconds after the other participant appears, and clears it on `connected`. Local mute follows the live audio track, while each presence snapshot carries the other participant's current mute state across rejoins. Step 10 uses the public Google STUN endpoint only. The active room closes at its exact end timer. A 30-second server sweep also finalizes confirmed in-app bookings that never had a live room, using both first-join timestamps to choose Completed or Missed.
+The WebSocket server accepts text JSON up to 16 KiB, validates every inbound and outbound message with Zod, serializes each socket's input, and keeps only one live socket per role in a room. Chat is trimmed to 1–500 characters, limited to one accepted message per second per socket, sent only to the peer and never stored. The exact room-end timer closes both roles with code `4000`; a 30-second sweep also finalizes calls that have no active room.
+
+The browser asks for the exact README §7.3 audio constraints and authorized ICE configuration only after Join. A user-side impolite peer and astrologer-side polite peer implement perfect negotiation; recreating the peer connection when presence changes supports simultaneous joins and later rejoining. Individual description and ICE rejections can belong to an ignored offer or an obsolete peer, so they do not drive user-visible failure state. The room shows the audio warning only when the current peer connection reports `failed` or remains unconnected for 15 seconds after the other participant appears, and clears it on `connected`. Local mute follows the live audio track, while each presence snapshot carries the other participant's current mute state across rejoins.
+
+The connected React room updates its countdown once per second, shows the two-minute notice, and treats the server's end close as authoritative. `setSinkId` capability controls whether Speaker is rendered. A `devicechange` captures the new default microphone, preserves the track's mute state and calls `replaceTrack`; local and remote `AnalyserNode` monitors drive speaking rings. `VITE_FORCE_RELAY=true` changes ICE policy only in development so a configured relay can be proved without affecting production bundles.
 
 ## User sign-in and details flow
 
@@ -357,4 +382,4 @@ The login limiter is held in the backend process. It is correct for the current 
 
 ## Differences from the spec
 
-Step 10 deliberately stops before the full README §7.1–§7.3 connected-room feature set because the build request assigns the timer, two-minute notice, TURN, chat, speaker switching, earbuds handling and speaking ring to Step 11. The current STUN-only audio path can fail on restrictive networks and is not production-ready; see [D-016](DECISIONS.md#d-016-step-10-is-stun-only-and-step-11-finishes-the-call-room).
+No Step 11 behavior differs from README §7.1–§7.3. Provider and real-device behavior still needs the manual TURN, mobile-data, Speaker and earbuds checks recorded in `docs/TESTING.md`.

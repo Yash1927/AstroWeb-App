@@ -11,15 +11,13 @@ export type OutgoingCallSignal =
   | { type: 'ice-candidate'; candidate: RealtimeIceCandidate }
 
 type AudioPeerOptions = {
+  forceRelay: boolean
+  iceServers: RTCIceServer[]
   onConnectionStateChange: (state: RTCPeerConnectionState) => void
   onRemoteStream: (stream: MediaStream | null) => void
   polite: boolean
   send: (signal: OutgoingCallSignal) => void
   stream: MediaStream
-}
-
-const peerConfiguration: RTCConfiguration = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
 }
 
 export class AudioPeer {
@@ -36,7 +34,10 @@ export class AudioPeer {
   }
 
   private createConnection() {
-    const connection = new RTCPeerConnection(peerConfiguration)
+    const connection = new RTCPeerConnection({
+      iceServers: this.options.iceServers,
+      iceTransportPolicy: this.options.forceRelay ? 'relay' : 'all',
+    })
     this.connection = connection
     this.ignoreOffer = false
     this.isSettingRemoteAnswerPending = false
@@ -128,6 +129,24 @@ export class AudioPeer {
     } catch (error) {
       if (!this.ignoreOffer) throw error
     }
+  }
+
+  async replaceLocalAudioTrack(nextTrack: MediaStreamTrack) {
+    const connection = this.connection
+    if (!connection || connection.signalingState === 'closed') {
+      throw new Error('The audio connection is closed.')
+    }
+    const sender = connection.getSenders().find((candidate) => candidate.track?.kind === 'audio')
+    if (!sender) throw new Error('The audio sender is unavailable.')
+    await sender.replaceTrack(nextTrack)
+    if (this.connection !== connection) throw new Error('The audio connection changed.')
+
+    const previousTrack = this.options.stream.getAudioTracks()[0]
+    if (previousTrack) {
+      this.options.stream.removeTrack(previousTrack)
+      previousTrack.stop()
+    }
+    this.options.stream.addTrack(nextTrack)
   }
 
   close() {

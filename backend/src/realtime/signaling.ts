@@ -4,6 +4,7 @@ export const MAX_REALTIME_MESSAGE_BYTES = 16 * 1_024;
 
 const bookingIdSchema = z.string().uuid();
 const sdpSchema = z.string().min(1).max(12_000);
+const chatTextSchema = z.string().trim().min(1).max(500);
 
 const iceCandidateSchema = z.object({
   candidate: z.string().max(2_048),
@@ -23,6 +24,7 @@ export const clientRealtimeMessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("answer"), sdp: sdpSchema }).strict(),
   z.object({ type: z.literal("ice-candidate"), candidate: iceCandidateSchema }).strict(),
   z.object({ type: z.literal("mute-state"), muted: z.boolean() }).strict(),
+  z.object({ type: z.literal("chat"), text: chatTextSchema }).strict(),
 ]);
 
 const participantSchema = z.enum(["user", "astrologer"]);
@@ -60,6 +62,11 @@ export const serverRealtimeMessageSchema = z.discriminatedUnion("type", [
     type: z.literal("mute-state"),
     participant: participantSchema,
     muted: z.boolean(),
+  }).strict(),
+  z.object({
+    type: z.literal("chat"),
+    from: participantSchema,
+    text: chatTextSchema,
   }).strict(),
 ]);
 

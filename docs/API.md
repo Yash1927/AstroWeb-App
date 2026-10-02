@@ -2,7 +2,7 @@
 
 Every HTTP endpoint, WebSocket message and webhook, as built. HTTP routes live under `/api` and WebSockets under `/ws`, both on the same domain as the frontend.
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ## Conventions
 
@@ -22,6 +22,7 @@ Last updated: 2026-10-01
 | GET | `/api/astrologers` | Public | Returns only eligible Home-card fields | 5 |
 | GET | `/api/astrologers/:id/slots?type=normal\|urgent\|subscription` | Public | Returns 14 days of current free slots | 7 |
 | POST | `/api/bookings` | User | Revalidates and creates one zero-price confirmed booking | 8 |
+| GET | `/api/calls/:bookingId/ice-servers` | Booked user or astrologer | Returns STUN and short-lived TURN configuration for an active in-app call | 11 |
 | POST | `/api/auth/google` | Public Google redirect | Verifies a Google credential and creates a user session | 6 |
 | GET | `/api/me` | User | Returns the signed-in user's own account and details | 6 |
 | PUT | `/api/me` | User | Replaces the signed-in user's own editable details | 6 |
@@ -142,6 +143,13 @@ Step 9 returns confirmed/completed/missed Normal bookings only. Urgent and Subsc
 - **Errors:** Malformed input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, a missing required phone, an unavailable/overlapping slot, a second upcoming Normal booking and a currently paid call type return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Other service failures return `503` with a generic message.
 - **Deferred work:** A price above zero returns `409` with `{"error":"Paid bookings come in a later step."}` and creates no booking. Payment holds arrive in Step 12.
 
+### GET /api/calls/:bookingId/ice-servers
+
+- **Who:** The signed-in user or astrologer on this booking. The route resolves both root-path participant cookies, but the session role never replaces the booking ownership check.
+- **Request:** A UUID booking id and no body or query values. The booking must be confirmed, use `in_app` mode and be inside its stored start/end window.
+- **Response:** `200` with `{iceServers}` and `Cache-Control: no-store`. The array contains the public STUN URL and the configured TURN URLs with username `<booking-end-unix-seconds>:<bookingId>` and a base64 HMAC-SHA1 credential derived from backend-only `TURN_SECRET`.
+- **Errors:** No participant session returns `401`. A missing, foreign or unavailable booking returns the same `404 Call not found` response. Missing/invalid TURN configuration or another service failure returns the generic `503 Call audio is unavailable` response without configuration details.
+
 ## Owner authentication
 
 ### POST /api/auth/owner/login
@@ -235,7 +243,7 @@ Saving deletes and recreates only this astrologer's availability inside one tran
 - **Upgrade checks:** the `Origin` header must exactly equal `APP_ORIGIN`, and the selected role's signed, unexpired server session cookie must resolve during the upgrade. Missing sessions are rejected before a WebSocket opens.
 - **Room admission:** a valid `join` is accepted only when the session subject is that booking's user or astrologer, the booking is confirmed and `in_app`, and current time is from `startsAt` inclusive to `endsAt` exclusive. A generic unavailable close reason does not reveal which check failed.
 - **Format and limit:** text JSON only, at most 16 KiB. Every client and server message is checked by a strict Zod schema. Binary, malformed, oversized and out-of-order messages close the socket.
-- **Isolation:** rooms are keyed by booking UUID. Offers, answers, ICE candidates and mute state go only to the other participant in that room. A newer socket replaces only the same role's older socket.
+- **Isolation:** rooms are keyed by booking UUID. Offers, answers, ICE candidates, mute state and chat go only to the other participant in that room. A newer socket replaces only the same role's older socket.
 
 | Type | Direction | Payload | Who can send it | Step |
 |---|---|---|---|---|
@@ -248,8 +256,9 @@ Saving deletes and recreates only this astrologer's availability inside one tran
 | `answer` | Client → server / server → peer | Client sends `{type:"answer",sdp}`; peer receives `{type:"answer",from,sdp}` | A participant currently in the room | 10 |
 | `ice-candidate` | Client → server / server → peer | `{type:"ice-candidate",candidate}`; relayed form also includes `from` | A participant currently in the room | 10 |
 | `mute-state` | Client → server / server → peer | Client sends `{type:"mute-state",muted}`; peer receives `{type:"mute-state",participant,muted}` | A participant currently in the room | 10 |
+| `chat` | Client → server / server → peer | Client sends `{type:"chat",text}`; peer receives `{type:"chat",from,text}`. Text is trimmed and must contain 1–500 characters | A participant currently in the room, at most once per second per socket | 11 |
 
-The first admitted join updates only the matching `userJoinedAt` or `astrologerJoinedAt` null field. Active rooms finalize at `endsAt`; a server sweep covers confirmed in-app bookings without an active room. The stored status becomes `completed` only when both first-join timestamps exist, otherwise `missed`.
+Chat is relay-only: the server does not store or replay it. The first admitted join updates only the matching `userJoinedAt` or `astrologerJoinedAt` null field. At `endsAt`, the authoritative server timer closes every active room socket with code `4000` and finalizes the booking; a server sweep covers confirmed in-app bookings without an active room. The stored status becomes `completed` only when both first-join timestamps exist, otherwise `missed`.
 
 ## Webhooks
 

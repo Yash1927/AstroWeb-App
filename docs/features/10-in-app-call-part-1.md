@@ -53,6 +53,6 @@ Build the authenticated, booking-scoped Normal-call room. Users and astrologers 
 
 ## Follow-ups and known issues
 
-- TURN relay, timer, two-minute notice, chat, speaker switching, earbuds handling and speaking rings remain Step 11 work as requested.
-- STUN-only peer-to-peer audio can fail on restrictive or mobile networks. This is the expected Step 10 limitation, not a production topology.
+- Step 11 now supplies the TURN relay, timer, two-minute notice, chat, supported speaker switching, earbuds microphone replacement and speaking rings. See [11-in-app-call-part-2.md](11-in-app-call-part-2.md).
+- The Step 10 STUN-only limitation is resolved by Step 11's booking-scoped TURN configuration. Provider and real-device relay behavior still needs its manual check.
 - Automated regressions cover stale signalling rejection, peer failure/timeout/recovery, mute/unmute across a peer rejoin, the live track state and current mute presence on rejoin. Backend type-check and all 83 tests pass; frontend lint, all 27 tests and the production build pass. The reported Chrome two-tab sequences need a manual retest.

@@ -2,7 +2,7 @@
 
 Choices made while building, and why. Newest entries go last. This file also records the owner's answers to the README's open questions (README §16.2).
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 Use this format:
 
@@ -135,4 +135,11 @@ Use this format:
 - **Status:** Accepted (owner's instruction)
 - **Context:** README §7.1–§7.3 describes the finished call room with a timer, two-minute notice, TURN relay and additional controls. The Step 10 request explicitly limits this build to microphone permission, Mute, Leave, STUN and the four room states, and assigns TURN and the remaining features to Step 11. The README does not select a STUN provider.
 - **Decision:** Step 10 uses `stun:stun.l.google.com:19302` directly in the browser and implements perfect negotiation over the authenticated `/ws` channel. It intentionally omits the timer, two-minute notice, TURN, chat, speaker switch, earbuds handling and speaking ring until Step 11.
-- **Consequences:** Basic peer-to-peer audio works without a new account, key or environment variable, but restrictive and many mobile networks may fail to connect. The call feature is not production-ready until Step 11 supplies short-lived TURN credentials and completes the specified room controls and feedback.
+- **Consequences:** Basic peer-to-peer audio worked without a new account, key or environment variable during Step 10. Step 11 supersedes the STUN-only runtime by fetching STUN and short-lived TURN configuration before joining.
+
+## D-017: TURN credentials end with the booking and relay forcing stays development-only
+- **Date:** 2026-10-02
+- **Status:** Accepted
+- **Context:** README §7.3 requires short-lived credentials but does not choose their exact lifetime, and Step 11 requests a development flag without naming it. The call API is usable only during the stored booking window.
+- **Decision:** Use the booking's `endsAt` Unix seconds as the coturn REST expiry, followed by the booking id in the username. Name the frontend flag `VITE_FORCE_RELAY`; honor it only when Vite reports a development build.
+- **Consequences:** A credential naturally expires when that booking ends and remains scoped in its username. The server still rechecks participant ownership and the active window before issuing it. Developers can prove TURN works with relay-only ICE, while a production bundle cannot accidentally force all calls through the relay.
