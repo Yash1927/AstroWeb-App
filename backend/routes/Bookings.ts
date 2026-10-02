@@ -8,7 +8,6 @@ import {
   BookingPhoneRequiredError,
   BookingSlotUnavailableError,
   BookingUserDetailsIncompleteError,
-  SubscriptionBookingDeferredError,
   bookingService,
   type BookingService,
 } from "../src/booking/booking-service";
@@ -33,7 +32,6 @@ function respondWithBookingError(error: unknown, response: Response) {
     || error instanceof BookingFreeNormalLimitError
     || error instanceof BookingSlotUnavailableError
     || error instanceof BookingOverlapError
-    || error instanceof SubscriptionBookingDeferredError
   ) {
     response.status(409).json({ error: error.message });
     return;

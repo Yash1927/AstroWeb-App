@@ -112,7 +112,9 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Private-details note | “Your details are private. Only the astrologer you book can see them.” | First booking details and Settings |
 | Empty slot date | “No free times on this day. Please try another day.” | Home slot picker |
 | Free booking action | “Confirm booking” | Home booking summary |
-| Subscription booking deferral | “Subscription packs come in a later step.” | Home booking summary error |
+| Subscription pack option | “₹999 for 4 calls · 15 min each” or “N calls left · 15 min each” | Home call-type sheet; values come from Settings and the signed-in user |
+| Credit booking action | “Confirm booking” with “1 subscription credit” in the summary | Home booking summary when a credit is available |
+| Subscription balance | “Subscription calls left: N” | Subscription success and History when relevant |
 | Checkout closed | “Payment was not completed. You can try again.” | Home booking summary error |
 | Checkout failed | “Payment didn't go through. If any money was deducted, it will be returned automatically.” | Home booking summary error |
 | Late payment refund | “This time was booked by someone else, so we've refunded your payment.” | Home booking summary error |

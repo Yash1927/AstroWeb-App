@@ -16,6 +16,16 @@ Last updated: 2026-10-02
 
 ---
 
+## 2026-10-02: Step 13, Subscription packs and credits
+- **Added:** atomic Subscription credit booking; one-time Settings-priced Razorpay pack orders; pack-size snapshots; zero-price pack handling; remaining-call responses; and calls-left displays in the Home flow, success screen and History
+- **Changed:** payment settlement now conditionally claims a Payment before confirming, so verification/webhook races can add a pack only once; Subscription bookings use phone delivery, `usedCredit=true` and the Step 12 phone cards; the call-type sheet and summary switch from pack price to an existing credit when available
+- **Files:** `backend/src/booking/booking-service.ts`, `backend/src/payment/payment-service.ts`, `backend/src/booking-history/booking-history-service.ts`, `backend/src/prisma/contract.prisma`, `frontend/src/screens/HomePage.tsx`, `frontend/src/screens/HistoryPage.tsx`, related API types/tests, and the Step 13 migration package
+- **Database:** added and applied `20261002T0936_subscription_pack_credits`, which adds non-null `Payment.creditsPurchased` with default `0`; migration status and full schema verification match contract `9608a099…`
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/05-home-page.md`, `docs/features/06-google-login-details-settings.md`, `docs/features/08-booking-free-normal-calls.md`, `docs/features/09-history-and-astrologer-bookings.md`, `docs/features/12-urgent-calls-razorpay.md`, `docs/features/13-subscription-packs.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 106 tests pass; frontend lint, all 40 tests and the production build pass; Prisma migration integrity, live status and Neon contract verification pass. A real Razorpay test-mode pack payment/webhook remains a manual check
+
 ## 2026-10-02: Step 12, Urgent calls with Razorpay
 - **Added:** ten-minute paid booking holds; official Razorpay order and refund calls; on-demand Standard Checkout with name/email/phone prefill; timing-safe owned-payment verification; raw signed, de-duplicated webhooks; idempotent confirmation; and automatic full refund when a late payment's slot is gone
 - **Changed:** positive-price Urgent calls now book as phone calls; Home shows payment dismissal/failure/refund and phone success states; user History and astrologer Bookings show phone-specific cards with no Join action; Settings prevents removing the phone number while a future confirmed phone call exists; browser price fields are discarded and Settings remains authoritative

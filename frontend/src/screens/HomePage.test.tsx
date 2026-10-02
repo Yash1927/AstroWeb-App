@@ -62,6 +62,7 @@ const confirmedBooking = {
   status: 'confirmed',
   pricePaise: 0,
   durationMin: 15,
+  usedCredit: false,
 }
 
 function response(body: unknown, status = 200) {
@@ -202,6 +203,47 @@ describe('HomePage', () => {
     const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
     expect(within(summary).getByText(/Anika Rao will call you on \+91 98765 43210/i)).toBeDefined()
     expect(within(summary).getByRole('button', { name: /Pay/ })).toBeDefined()
+  })
+
+  it('shows and spends an existing Subscription credit without Checkout', async () => {
+    const subscribedUser = {
+      ...completeUser,
+      phone: '+919876543210',
+      subscriptionCredits: 2,
+    }
+    const subscriptionBooking = {
+      ...confirmedBooking,
+      callType: 'subscription',
+      callMode: 'phone',
+      usedCredit: true,
+    }
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
+      if (String(input) === '/api/settings/public') return response(settings)
+      if (String(input) === '/api/me') return response({ user: subscribedUser })
+      if (String(input) === '/api/astrologers/anika/slots?type=subscription') return response(slots)
+      if (String(input) === '/api/bookings' && init?.method === 'POST') {
+        return response({
+          booking: subscriptionBooking,
+          subscriptionCredits: 1,
+        }, 201)
+      }
+      throw new Error(`Unexpected request: ${String(input)}`)
+    }))
+    const user = userEvent.setup()
+    renderHome()
+
+    await user.click(await screen.findByRole('button', { name: 'Call' }))
+    expect(await screen.findByText('2 calls left · 15 min each')).toBeDefined()
+    await user.click(screen.getByRole('button', { name: /Subscription/ }))
+    const slotsDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
+    await user.click(within(slotsDialog).getByRole('button', { name: /10:00 am/i }))
+    const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
+    expect(within(summary).getByText('1 subscription credit')).toBeDefined()
+    await user.click(within(summary).getByRole('button', { name: 'Confirm booking' }))
+
+    const success = await screen.findByRole('dialog', { name: 'Call booked' })
+    expect(within(success).getByText('Subscription calls left: 1')).toBeDefined()
   })
 
   it('shows the friendly conflict when the chosen time was just booked', async () => {

@@ -100,7 +100,11 @@ function fakeBookings(): BookingHistoryService {
         ? ownBooking()
         : null
     )),
-    listUserBookings: vi.fn(async () => ({ upcoming: [], past: [] })),
+    listUserBookings: vi.fn(async () => ({
+      upcoming: [],
+      past: [],
+      subscriptionCredits: 0,
+    })),
     getUserBooking: vi.fn(async () => null),
   };
 }

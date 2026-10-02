@@ -143,3 +143,10 @@ Use this format:
 - **Context:** README §7.3 requires short-lived credentials but does not choose their exact lifetime, and Step 11 requests a development flag without naming it. The call API is usable only during the stored booking window.
 - **Decision:** Use the booking's `endsAt` Unix seconds as the coturn REST expiry, followed by the booking id in the username. Name the frontend flag `VITE_FORCE_RELAY`; honor it only when Vite reports a development build.
 - **Consequences:** A credential naturally expires when that booking ends and remains scoped in its username. The server still rechecks participant ownership and the active window before issuing it. Developers can prove TURN works with relay-only ICE, while a production bundle cannot accidentally force all calls through the relay.
+
+## D-018: Each subscription payment snapshots its pack size
+- **Date:** 2026-10-02
+- **Status:** Accepted
+- **Context:** README §4 says changes to the pack price or size affect new purchases only. `Payment.amountPaise` already preserves price, but the README §11 fields did not say where to preserve the number of calls bought by an order that settles later.
+- **Decision:** Add `Payment.creditsPurchased`, defaulting to zero. A `subscription_pack` Payment stores the current `Settings.subscriptionCallsPerPack`; other payment purposes store zero. Settlement adds that stored number and consumes one call for the linked booking.
+- **Consequences:** An owner edit made after order creation cannot change what that purchase delivers. The schema needs one additive Step 13 migration, and payment settlement can remain idempotent without trusting current Settings or provider-supplied notes.

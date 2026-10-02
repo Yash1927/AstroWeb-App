@@ -25,12 +25,14 @@ type BookingUser = {
   id: string;
   name: string;
   phone: string | null;
+  subscriptionCredits: number;
 };
 
 type BookingSettings = {
   normalDurationMin: number;
   normalPricePaise: number;
   subscriptionDurationMin: number;
+  subscriptionCallsPerPack: number;
   subscriptionPricePaise: number;
   urgentDurationMin: number;
   urgentPricePaise: number;
@@ -46,7 +48,7 @@ export type BookingInsert = {
   pricePaise: number;
   startsAt: Temporal.Instant;
   status: "confirmed" | "pending_payment";
-  usedCredit: false;
+  usedCredit: boolean;
   userId: string;
 };
 
@@ -60,6 +62,7 @@ export type CreatedBooking = {
   pricePaise: number;
   startsAt: string;
   status: "confirmed" | "pending_payment";
+  usedCredit: boolean;
 };
 
 export type BookingCheckout = {
@@ -78,13 +81,15 @@ export type BookingCheckout = {
 export type CreateBookingResult = {
   booking: CreatedBooking;
   checkout?: BookingCheckout;
+  subscriptionCredits?: number;
 };
 
 export type PaymentInsert = {
   amountPaise: number;
   bookingId: string;
+  creditsPurchased: number;
   id: string;
-  purpose: "normal_call" | "urgent_call";
+  purpose: "normal_call" | "urgent_call" | "subscription_pack";
   razorpayOrderId: string;
   status: "created";
   userId: string;
@@ -93,6 +98,8 @@ export type PaymentInsert = {
 export interface BookingTransaction {
   createBooking(input: BookingInsert): Promise<Omit<CreatedBooking, "durationMin">>;
   createPayment(input: PaymentInsert): Promise<void>;
+  addSubscriptionPackAndConsume(userId: string, callsPerPack: number): Promise<number>;
+  consumeSubscriptionCredit(userId: string): Promise<number | null>;
   expireElapsedHolds(astrologerId: string, now: Temporal.Instant): Promise<void>;
   hasUpcomingNormal(userId: string, now: Temporal.Instant): Promise<boolean>;
 }
@@ -113,7 +120,6 @@ export class BookingAstrologerNotFoundError extends Error {}
 export class BookingSlotUnavailableError extends Error {}
 export class BookingOverlapError extends Error {}
 export class BookingFreeNormalLimitError extends Error {}
-export class SubscriptionBookingDeferredError extends Error {}
 
 function completeDetails(user: BookingUser) {
   return user.name.trim().length >= 2
@@ -140,7 +146,8 @@ function callModeFor(callType: CallType): CallMode {
   return callType === "normal" ? "in_app" : "phone";
 }
 
-function purposeFor(callType: Exclude<CallType, "subscription">) {
+function purposeFor(callType: CallType) {
+  if (callType === "subscription") return "subscription_pack" as const;
   return callType === "normal" ? "normal_call" as const : "urgent_call" as const;
 }
 
@@ -176,6 +183,7 @@ export class DatabaseBookingRepository implements BookingRepository {
       "birthPlace",
       "phone",
       "gender",
+      "subscriptionCredits",
     ).first({ id: userId });
   }
 
@@ -184,6 +192,7 @@ export class DatabaseBookingRepository implements BookingRepository {
       "normalPricePaise",
       "urgentPricePaise",
       "subscriptionPricePaise",
+      "subscriptionCallsPerPack",
       "normalDurationMin",
       "urgentDurationMin",
       "subscriptionDurationMin",
@@ -192,6 +201,35 @@ export class DatabaseBookingRepository implements BookingRepository {
 
   async transaction<T>(work: (transaction: BookingTransaction) => Promise<T>) {
     return db.transaction(async (transaction) => work({
+      async consumeSubscriptionCredit(userId) {
+        const plan = transaction.sql.public.User
+          .update((user, functions) => ({
+            subscriptionCredits: functions.raw`${user.subscriptionCredits} - ${1}`
+              .returns("pg/int4@1"),
+          }))
+          .where((user, functions) => functions.and(
+            functions.eq(user.id, userId),
+            functions.gt(user.subscriptionCredits, 0),
+          ))
+          .returning("subscriptionCredits")
+          .build();
+        const [updated] = await transaction.query(plan);
+        return updated?.subscriptionCredits ?? null;
+      },
+      async addSubscriptionPackAndConsume(userId, callsPerPack) {
+        const creditsToAdd = callsPerPack - 1;
+        const plan = transaction.sql.public.User
+          .update((user, functions) => ({
+            subscriptionCredits: functions.raw`${user.subscriptionCredits} + ${creditsToAdd}`
+              .returns("pg/int4@1"),
+          }))
+          .where((user, functions) => functions.eq(user.id, userId))
+          .returning("subscriptionCredits")
+          .build();
+        const [updated] = await transaction.query(plan);
+        if (!updated) throw new Error("User not found while adding subscription credits.");
+        return updated.subscriptionCredits;
+      },
       async expireElapsedHolds(astrologerId, now) {
         await transaction.orm.public.Booking
           .where({ astrologerId, status: "pending_payment" })
@@ -225,6 +263,7 @@ export class DatabaseBookingRepository implements BookingRepository {
           "endsAt",
           "status",
           "pricePaise",
+          "usedCredit",
         ).create(input);
 
         return {
@@ -249,7 +288,10 @@ export class DefaultBookingService implements BookingService {
     private readonly payments: RazorpayGateway = razorpayGateway,
   ) {}
 
-  async createBooking(userId: string, input: CreateBookingInput) {
+  async createBooking(
+    userId: string,
+    input: CreateBookingInput,
+  ): Promise<CreateBookingResult> {
     const now = this.now();
     const [user, settings] = await Promise.all([
       this.repository.getUser(userId),
@@ -299,13 +341,78 @@ export class DefaultBookingService implements BookingService {
         "Sorry, this time was just booked. Please pick another time.",
       );
     }
-    if (input.callType === "subscription" && pricePaise > 0) {
-      throw new SubscriptionBookingDeferredError(
-        "Subscription packs come in a later step.",
-      );
+    const id = randomUUID();
+
+    if (input.callType === "subscription") {
+      try {
+        const creditBooking = await this.repository.transaction(async (transaction) => {
+          await transaction.expireElapsedHolds(input.astrologerId, now);
+          const subscriptionCredits = await transaction.consumeSubscriptionCredit(userId);
+          if (subscriptionCredits === null) return null;
+          const booking = await transaction.createBooking({
+            id,
+            userId,
+            astrologerId: input.astrologerId,
+            callType: input.callType,
+            callMode,
+            startsAt: requestedStart,
+            endsAt: Temporal.Instant.from(slot.endsAt),
+            status: "confirmed",
+            holdExpiresAt: null,
+            pricePaise: 0,
+            usedCredit: true,
+          });
+          return { booking: { ...booking, durationMin }, subscriptionCredits };
+        });
+        if (creditBooking) return creditBooking;
+      } catch (error) {
+        if (isBookingOverlapConstraintError(error)) {
+          throw new BookingOverlapError(
+            "Sorry, this time was just booked. Please pick another time.",
+          );
+        }
+        throw error;
+      }
+
+      if (!Number.isInteger(settings.subscriptionCallsPerPack)
+        || settings.subscriptionCallsPerPack < 1) {
+        throw new Error("The subscription pack size is invalid.");
+      }
+
+      if (pricePaise === 0) {
+        try {
+          return await this.repository.transaction(async (transaction) => {
+            await transaction.expireElapsedHolds(input.astrologerId, now);
+            const subscriptionCredits = await transaction.addSubscriptionPackAndConsume(
+              userId,
+              settings.subscriptionCallsPerPack,
+            );
+            const booking = await transaction.createBooking({
+              id,
+              userId,
+              astrologerId: input.astrologerId,
+              callType: input.callType,
+              callMode,
+              startsAt: requestedStart,
+              endsAt: Temporal.Instant.from(slot.endsAt),
+              status: "confirmed",
+              holdExpiresAt: null,
+              pricePaise: 0,
+              usedCredit: true,
+            });
+            return { booking: { ...booking, durationMin }, subscriptionCredits };
+          });
+        } catch (error) {
+          if (isBookingOverlapConstraintError(error)) {
+            throw new BookingOverlapError(
+              "Sorry, this time was just booked. Please pick another time.",
+            );
+          }
+          throw error;
+        }
+      }
     }
 
-    const id = randomUUID();
     const holdExpiresAt = pricePaise > 0 ? now.add({ minutes: 10 }) : null;
     const order = pricePaise > 0
       ? await this.payments.createOrder({ amountPaise: pricePaise, bookingId: id, userId })
@@ -334,7 +441,7 @@ export class DefaultBookingService implements BookingService {
           pricePaise,
           usedCredit: false,
         });
-        if (order && input.callType !== "subscription") {
+        if (order) {
           await transaction.createPayment({
             id: randomUUID(),
             userId,
@@ -342,6 +449,9 @@ export class DefaultBookingService implements BookingService {
             purpose: purposeFor(input.callType),
             razorpayOrderId: order.id,
             amountPaise: pricePaise,
+            creditsPurchased: input.callType === "subscription"
+              ? settings.subscriptionCallsPerPack
+              : 0,
             status: "created",
           });
         }

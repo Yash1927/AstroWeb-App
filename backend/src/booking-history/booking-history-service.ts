@@ -67,10 +67,15 @@ export type BookingSections<T> = {
   upcoming: T[];
 };
 
+export type UserBookingSections = BookingSections<UserBookingCard> & {
+  subscriptionCredits: number;
+};
+
 export interface BookingHistoryRepository {
   findAstrologers(ids: string[]): Promise<AstrologerRow[]>;
   findUsers(ids: string[]): Promise<UserRow[]>;
   getAstrologerBooking(astrologerId: string, bookingId: string): Promise<BookingRow | null>;
+  getUserSubscriptionCredits(userId: string): Promise<number>;
   getUserBooking(userId: string, bookingId: string): Promise<BookingRow | null>;
   listAstrologerBookings(astrologerId: string): Promise<BookingRow[]>;
   listUserBookings(userId: string): Promise<BookingRow[]>;
@@ -80,7 +85,7 @@ export interface BookingHistoryService {
   getAstrologerBooking(astrologerId: string, bookingId: string): Promise<AstrologerBookingCard | null>;
   getUserBooking(userId: string, bookingId: string): Promise<UserBookingCard | null>;
   listAstrologerBookings(astrologerId: string): Promise<BookingSections<AstrologerBookingCard>>;
-  listUserBookings(userId: string): Promise<BookingSections<UserBookingCard>>;
+  listUserBookings(userId: string): Promise<UserBookingSections>;
 }
 
 const bookingFields = [
@@ -120,6 +125,11 @@ export class DatabaseBookingHistoryRepository implements BookingHistoryRepositor
       .where((booking) => booking.status.in(["confirmed", "completed", "missed"]))
       .first();
     return row ? { ...row, callType: "normal" as const, callMode: "in_app" as const } : null;
+  }
+
+  async getUserSubscriptionCredits(userId: string) {
+    const user = await db.orm.public.User.select("subscriptionCredits").first({ id: userId });
+    return user?.subscriptionCredits ?? 0;
   }
 
   async getAstrologerBooking(astrologerId: string, bookingId: string) {
@@ -215,23 +225,27 @@ export class DefaultBookingHistoryService implements BookingHistoryService {
   ) {}
 
   async listUserBookings(userId: string) {
-    const [bookings, currentUsers] = await Promise.all([
+    const [bookings, currentUsers, subscriptionCredits] = await Promise.all([
       this.repository.listUserBookings(userId),
       this.repository.findUsers([userId]),
+      this.repository.getUserSubscriptionCredits(userId),
     ]);
     const astrologers = await this.repository.findAstrologers(
       unique(bookings.map((booking) => booking.astrologerId)),
     );
     const byId = new Map(astrologers.map((astrologer) => [astrologer.id, astrologer]));
     const now = this.now();
-    return sections(bookings.flatMap((booking) => {
-      const astrologer = byId.get(booking.astrologerId);
-      return astrologer ? [{
-        ...baseCard(booking, now),
-        astrologer,
-        phone: currentUsers[0]?.phone ?? null,
-      }] : [];
-    }));
+    return {
+      ...sections(bookings.flatMap((booking) => {
+        const astrologer = byId.get(booking.astrologerId);
+        return astrologer ? [{
+          ...baseCard(booking, now),
+          astrologer,
+          phone: currentUsers[0]?.phone ?? null,
+        }] : [];
+      })),
+      subscriptionCredits,
+    };
   }
 
   async listAstrologerBookings(astrologerId: string) {

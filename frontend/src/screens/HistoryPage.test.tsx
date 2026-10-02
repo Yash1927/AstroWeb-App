@@ -25,7 +25,7 @@ describe('HistoryPage', () => {
 
   it('loads only the current user booking sections', async () => {
     const fetchMock = vi.fn(async () => ({
-      json: async () => ({ upcoming: [], past: [] }),
+      json: async () => ({ upcoming: [], past: [], subscriptionCredits: 3 }),
       ok: true,
       status: 200,
     } as Response))
@@ -35,6 +35,7 @@ describe('HistoryPage', () => {
 
     expect(await screen.findByText('No upcoming calls.')).toBeDefined()
     expect(screen.getByText('No past calls yet.')).toBeDefined()
+    expect(screen.getByText('Subscription calls left: 3')).toBeDefined()
     expect(fetchMock).toHaveBeenCalledWith('/api/me/bookings', expect.objectContaining({
       credentials: 'same-origin',
     }))

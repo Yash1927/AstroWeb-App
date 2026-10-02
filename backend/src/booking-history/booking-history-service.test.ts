@@ -34,6 +34,7 @@ function repository(rows: ReturnType<typeof booking>[]): BookingHistoryRepositor
     getUserBooking: vi.fn(async (userId, bookingId) => (
       rows.find((row) => row.userId === userId && row.id === bookingId) ?? null
     )),
+    getUserSubscriptionCredits: vi.fn(async () => 3),
     getAstrologerBooking: vi.fn(async (astrologerId, bookingId) => (
       rows.find((row) => row.astrologerId === astrologerId && row.id === bookingId) ?? null
     )),
@@ -64,6 +65,7 @@ describe("DefaultBookingHistoryService", () => {
     expect(result.upcoming.map(({ id }) => id)).toEqual(["future-sooner", "future-later"]);
     expect(result.past.map(({ id }) => id)).toEqual(["past-newer", "past-older"]);
     expect(result.past.map(({ status }) => status)).toEqual(["missed", "completed"]);
+    expect(result.subscriptionCredits).toBe(3);
   });
 
   it("returns the astrologer's booked user details without an email", async () => {

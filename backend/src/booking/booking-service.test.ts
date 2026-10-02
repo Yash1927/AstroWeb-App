@@ -11,7 +11,6 @@ import {
   BookingUserDetailsIncompleteError,
   DefaultBookingService,
   isBookingOverlapConstraintError,
-  SubscriptionBookingDeferredError,
   type BookingRepository,
   type BookingTransaction,
 } from "./booking-service";
@@ -33,12 +32,14 @@ const completeUser: NonNullable<Awaited<ReturnType<BookingRepository["getUser"]>
   birthPlace: "Jaipur",
   phone: "+919876543210",
   gender: "female" as const,
+  subscriptionCredits: 0,
 };
 
 const settings: NonNullable<Awaited<ReturnType<BookingRepository["getSettings"]>>> = {
   normalPricePaise: 0,
   urgentPricePaise: 30_000,
   subscriptionPricePaise: 99_900,
+  subscriptionCallsPerPack: 4,
   normalDurationMin: 15,
   urgentDurationMin: 15,
   subscriptionDurationMin: 15,
@@ -60,11 +61,25 @@ function fakeSlots(result?: Partial<SlotResult>): SlotService {
 function fakeRepository(options?: {
   createError?: unknown;
   hasUpcomingNormal?: boolean;
+  subscriptionCredits?: number;
   settings?: NonNullable<Awaited<ReturnType<BookingRepository["getSettings"]>>>;
   user?: NonNullable<Awaited<ReturnType<BookingRepository["getUser"]>>> | null;
 }) {
   const events: string[] = [];
+  let subscriptionCredits = options?.subscriptionCredits ?? 0;
   const transaction: BookingTransaction = {
+    consumeSubscriptionCredit: vi.fn(async () => {
+      events.push("credit");
+      await Promise.resolve();
+      if (subscriptionCredits < 1) return null;
+      subscriptionCredits -= 1;
+      return subscriptionCredits;
+    }),
+    addSubscriptionPackAndConsume: vi.fn(async (_userId, callsPerPack) => {
+      events.push("pack");
+      subscriptionCredits += callsPerPack - 1;
+      return subscriptionCredits;
+    }),
     expireElapsedHolds: vi.fn(async () => { events.push("expire"); }),
     hasUpcomingNormal: vi.fn(async () => {
       events.push("limit");
@@ -82,6 +97,7 @@ function fakeRepository(options?: {
         endsAt: input.endsAt.toString(),
         status: input.status,
         pricePaise: input.pricePaise,
+        usedCredit: input.usedCredit,
       };
     }),
     createPayment: vi.fn(async () => { events.push("payment"); }),
@@ -91,7 +107,7 @@ function fakeRepository(options?: {
     getSettings: vi.fn(async () => options?.settings ?? settings),
     transaction: vi.fn(async (work) => work(transaction)),
   };
-  return { events, repository, transaction };
+  return { events, repository, transaction, getCredits: () => subscriptionCredits };
 }
 
 function fakeGateway(): RazorpayGateway {
@@ -273,6 +289,7 @@ describe("DefaultBookingService", () => {
     }));
     expect(transaction.createPayment).toHaveBeenCalledWith(expect.objectContaining({
       amountPaise: 30_000,
+      creditsPurchased: 0,
       purpose: "urgent_call",
       razorpayOrderId: "order_test",
     }));
@@ -288,10 +305,101 @@ describe("DefaultBookingService", () => {
     }));
   });
 
-  it("leaves positive-price Subscription packs for Step 13", async () => {
-    const { repository } = fakeRepository();
-    await expect(new DefaultBookingService(repository, fakeSlots(), () => now, fakeGateway())
-      .createBooking(userId, { astrologerId, callType: "subscription", startsAt }))
-      .rejects.toBeInstanceOf(SubscriptionBookingDeferredError);
+  it("uses one existing Subscription credit and confirms without Checkout", async () => {
+    const current = fakeRepository({ subscriptionCredits: 2 });
+    const gateway = fakeGateway();
+    const result = await new DefaultBookingService(
+      current.repository,
+      fakeSlots(),
+      () => now,
+      gateway,
+    ).createBooking(userId, { astrologerId, callType: "subscription", startsAt });
+
+    expect(current.events).toEqual(["expire", "credit", "create"]);
+    expect(current.getCredits()).toBe(1);
+    expect(gateway.createOrder).not.toHaveBeenCalled();
+    expect(result).toEqual(expect.objectContaining({
+      subscriptionCredits: 1,
+      booking: expect.objectContaining({
+        callMode: "phone",
+        callType: "subscription",
+        pricePaise: 0,
+        status: "confirmed",
+        usedCredit: true,
+      }),
+    }));
+  });
+
+  it("creates a server-priced pack order when no Subscription credit remains", async () => {
+    const current = fakeRepository();
+    const gateway = fakeGateway();
+    const result = await new DefaultBookingService(
+      current.repository,
+      fakeSlots(),
+      () => now,
+      gateway,
+    ).createBooking(userId, { astrologerId, callType: "subscription", startsAt });
+
+    expect(current.events).toEqual(["expire", "credit", "expire", "create", "payment"]);
+    expect(gateway.createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      amountPaise: 99_900,
+      bookingId: result.booking.id,
+      userId,
+    }));
+    expect(current.transaction.createPayment).toHaveBeenCalledWith(expect.objectContaining({
+      amountPaise: 99_900,
+      creditsPurchased: 4,
+      purpose: "subscription_pack",
+    }));
+    expect(result.booking).toEqual(expect.objectContaining({
+      pricePaise: 99_900,
+      status: "pending_payment",
+      usedCredit: false,
+    }));
+    expect(result.checkout).toEqual(expect.objectContaining({ amountPaise: 99_900 }));
+  });
+
+  it("adds and consumes a zero-price Subscription pack without Checkout", async () => {
+    const current = fakeRepository({
+      settings: { ...settings, subscriptionPricePaise: 0 },
+    });
+    const gateway = fakeGateway();
+    const result = await new DefaultBookingService(
+      current.repository,
+      fakeSlots(),
+      () => now,
+      gateway,
+    ).createBooking(userId, { astrologerId, callType: "subscription", startsAt });
+
+    expect(current.events).toEqual(["expire", "credit", "expire", "pack", "create"]);
+    expect(current.getCredits()).toBe(3);
+    expect(gateway.createOrder).not.toHaveBeenCalled();
+    expect(result).toEqual(expect.objectContaining({
+      subscriptionCredits: 3,
+      booking: expect.objectContaining({
+        pricePaise: 0,
+        status: "confirmed",
+        usedCredit: true,
+      }),
+    }));
+  });
+
+  it("never takes concurrent Subscription credit bookings below zero", async () => {
+    const current = fakeRepository({ subscriptionCredits: 1 });
+    const service = new DefaultBookingService(
+      current.repository,
+      fakeSlots(),
+      () => now,
+      fakeGateway(),
+    );
+
+    const results = await Promise.all([
+      service.createBooking(userId, { astrologerId, callType: "subscription", startsAt }),
+      service.createBooking(userId, { astrologerId, callType: "subscription", startsAt }),
+    ]);
+
+    expect(current.getCredits()).toBe(0);
+    expect(results.filter((result) => result.booking.usedCredit)).toHaveLength(1);
+    expect(results.filter((result) => result.checkout)).toHaveLength(1);
   });
 });

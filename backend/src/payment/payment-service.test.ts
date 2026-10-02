@@ -24,6 +24,8 @@ function storedPayment(): StoredPayment {
     id: "payment-record-id",
     userId,
     bookingId,
+    purpose: "urgent_call",
+    creditsPurchased: 0,
     razorpayOrderId: orderId,
     razorpayPaymentId: null,
     amountPaise: 30_000,
@@ -37,6 +39,7 @@ function storedPayment(): StoredPayment {
       endsAt: Temporal.Instant.from("2026-10-02T04:45:00Z"),
       status: "pending_payment",
       pricePaise: 30_000,
+      usedCredit: false,
     },
   };
 }
@@ -47,6 +50,7 @@ class MemoryPaymentRepository implements PaymentRepository {
   refundedWrites = 0;
   events = new Set<string>();
   overlap = false;
+  subscriptionCredits = 0;
 
   async getPayment(requestedOrderId: string) {
     return requestedOrderId === orderId ? this.payment : null;
@@ -65,7 +69,13 @@ class MemoryPaymentRepository implements PaymentRepository {
     if (this.payment.amountPaise !== input.amountPaise) return { kind: "invalid" };
     if (this.payment.status === "refunded") return { kind: "refunded" };
     if (this.payment.status === "paid") {
-      return { kind: "confirmed", booking: this.payment.booking! };
+      return {
+        kind: "confirmed",
+        booking: this.payment.booking!,
+        ...(this.payment.purpose === "subscription_pack"
+          ? { subscriptionCredits: this.subscriptionCredits }
+          : {}),
+      };
     }
     if (this.overlap) {
       throw new SqlQueryError(
@@ -78,7 +88,17 @@ class MemoryPaymentRepository implements PaymentRepository {
     this.payment.status = "paid";
     this.payment.razorpayPaymentId = input.paymentId;
     this.payment.booking!.status = "confirmed";
-    return { kind: "confirmed", booking: this.payment.booking! };
+    if (this.payment.purpose === "subscription_pack") {
+      this.subscriptionCredits += this.payment.creditsPurchased - 1;
+      this.payment.booking!.usedCredit = true;
+    }
+    return {
+      kind: "confirmed",
+      booking: this.payment.booking!,
+      ...(this.payment.purpose === "subscription_pack"
+        ? { subscriptionCredits: this.subscriptionCredits }
+        : {}),
+    };
   }
 
   async markFailed(_requestedOrderId: string, eventId: string) {
@@ -123,12 +143,12 @@ function verifySignature() {
     .digest("hex");
 }
 
-function webhook(eventId = "evt_1") {
+function webhook(eventId = "evt_1", amountPaise = 30_000) {
   const raw = Buffer.from(JSON.stringify({
     event: "payment.captured",
     payload: {
       payment: {
-        entity: { id: paymentId, order_id: orderId, amount: 30_000 },
+        entity: { id: paymentId, order_id: orderId, amount: amountPaise },
       },
     },
   }));
@@ -202,6 +222,47 @@ describe("DefaultPaymentService", () => {
 
     expect(repository.confirmedWrites).toBe(1);
     expect(repository.payment.status).toBe("paid");
+  });
+
+  it("adds a paid Subscription pack and consumes this booking exactly once", async () => {
+    const repository = new MemoryPaymentRepository();
+    repository.payment = {
+      ...repository.payment,
+      amountPaise: 99_900,
+      purpose: "subscription_pack",
+      creditsPurchased: 4,
+      booking: {
+        ...repository.payment.booking!,
+        callType: "subscription",
+        pricePaise: 99_900,
+      },
+    };
+    const current = service(repository).service;
+    const event = webhook("evt_subscription", 99_900);
+
+    const [verified] = await Promise.all([
+      current.verify(userId, {
+        bookingId,
+        razorpayOrderId: orderId,
+        razorpayPaymentId: paymentId,
+        razorpaySignature: verifySignature(),
+      }),
+      current.webhook(event.raw, event.signature, event.eventId),
+    ]);
+    await current.verify(userId, {
+      bookingId,
+      razorpayOrderId: orderId,
+      razorpayPaymentId: paymentId,
+      razorpaySignature: verifySignature(),
+    });
+
+    expect(repository.confirmedWrites).toBe(1);
+    expect(repository.subscriptionCredits).toBe(3);
+    expect(repository.payment.booking?.usedCredit).toBe(true);
+    expect(verified).toEqual(expect.objectContaining({
+      status: "confirmed",
+      subscriptionCredits: 3,
+    }));
   });
 
   it("refunds a late payment when confirming would take an occupied slot", async () => {

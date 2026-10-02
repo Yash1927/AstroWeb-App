@@ -101,6 +101,7 @@ Static usernames and passwords must not be added to frontend source or `VITE_` v
 3. Give Razorpay a public HTTPS URL ending in `/api/razorpay/webhook`. For local testing, an HTTPS tunnel to Vite can forward that `/api` path through the existing proxy. Subscribe to `payment.captured`, `order.paid` and `payment.failed`.
 4. Restart the backend. Sign in as a user with complete details and a valid phone, choose an Urgent slot, and confirm that Checkout shows the Settings price with the name, email and phone prefilled.
 5. Run one test success, close Checkout once, and use Razorpay's test failure path. Confirm History and the astrologer Bookings section show a phone call with no Join button.
+6. With a user whose Subscription balance is zero, choose Subscription and confirm Checkout charges the current pack price. After payment, History should show the pack size minus the call just booked.
 
 The backend uses the official `razorpay` Node SDK. Orders and refunds require backend keys; the browser receives only the public key id with its server-created order. The webhook must receive its untouched `application/json` body, so its Express handler remains mounted before the global JSON parser.
 
@@ -117,7 +118,7 @@ npm run seed
 npm run db:verify
 ```
 
-The second seed run should report that neither row was created. Applied migration packages are `20260930T0841_database_schema` and `20260930T1814_astrologer_profile_saved_at`. The Step 4 package was generated with `npm run migration:plan -- --name astrologer_profile_saved_at`, applied with `npm run db:migrate`, and checked with `npm run migration:check` and `npm run db:verify`.
+The second seed run should report that neither row was created. Applied migration packages are `20260930T0841_database_schema`, `20260930T1814_astrologer_profile_saved_at` and `20261002T0936_subscription_pack_credits`. The Step 13 package was generated with `npm run migration:plan -- --name subscription_pack_credits`, applied with `npm run db:migrate`, and checked with `npm run migration:check` and `npm run db:verify`.
 
 ## Testing on a phone (HTTPS tunnel)
 

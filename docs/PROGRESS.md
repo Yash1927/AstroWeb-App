@@ -20,14 +20,14 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 10 | In-app call, part 1 | Done | [10-in-app-call-part-1.md](features/10-in-app-call-part-1.md) | Authenticated booking rooms, STUN WebRTC audio and the four live call states are in place. |
 | 11 | In-app call, part 2 | Done | [11-in-app-call-part-2.md](features/11-in-app-call-part-2.md) | Countdown/end handling, transient chat, supported device controls, speaking indicators and booking-scoped TURN credentials are in place. |
 | 12 | Urgent calls with Razorpay | Done | [12-urgent-calls-razorpay.md](features/12-urgent-calls-razorpay.md) | Ten-minute holds, Razorpay verification/webhooks/refunds, Urgent phone delivery and phone cards are in place. |
-| 13 | Subscription packs | Not started | — | |
+| 13 | Subscription packs | Done | [13-subscription-packs.md](features/13-subscription-packs.md) | Existing credits confirm atomically; zero balances buy a snapshotted one-time pack through Razorpay. |
 | 14 | Blogs | Not started | — | |
 | 15 | Install as an app, policy pages | Not started | — | |
 | 16 | Security review and launch checklist | Not started | — | |
 
 ## Next up
 
-Step 13: Subscription packs.
+Step 14: Blogs.
 
 ## Known issues
 

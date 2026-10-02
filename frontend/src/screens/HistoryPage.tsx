@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { BookingSections, UserBooking } from '../api/booking-history'
+import type { UserBookingSections } from '../api/booking-history'
 import { userApi, UserApiError } from '../api/user'
 import {
   BookingLists,
@@ -13,9 +13,10 @@ type HistoryState = 'loading' | 'signed-out' | 'ready' | 'error'
 
 export default function HistoryPage() {
   const [state, setState] = useState<HistoryState>('loading')
-  const [bookings, setBookings] = useState<BookingSections<UserBooking>>({
+  const [bookings, setBookings] = useState<UserBookingSections>({
     upcoming: [],
     past: [],
+    subscriptionCredits: 0,
   })
   const [error, setError] = useState('')
 
@@ -71,7 +72,14 @@ export default function HistoryPage() {
           <Button onClick={() => void load()} variant="secondary">Try again</Button>
         </Card>
       ) : (
-        <BookingLists audience="user" bookings={bookings} />
+        <div className="stack">
+          {bookings.subscriptionCredits > 0 ? (
+            <p className="booking-notice" role="status">
+              Subscription calls left: {bookings.subscriptionCredits}
+            </p>
+          ) : null}
+          <BookingLists audience="user" bookings={bookings} />
+        </div>
       )}
     </section>
   )

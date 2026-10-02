@@ -35,7 +35,7 @@ Turn a selected free slot into a confirmed Normal booking. Recheck every server-
 
 - `POST /api/bookings` accepts `astrologerId`, `callType` and an absolute `startsAt` timestamp. Unknown body fields are discarded, so even an added browser price cannot affect the Settings-owned amount. The user guard supplies the account id from the signed user session; the browser cannot choose identity, duration, price, mode or status.
 - `backend/src/booking/booking-service.ts` requires complete user details, a phone number for phone-call types, current astrologer eligibility and an exact slot from the Step 7 slot service. It reads price and duration from the singleton `Settings` row.
-- A zero-price call skips payment and is inserted as `confirmed`. Normal is always `in_app`; zero-price Urgent or Subscription calls use `phone`. Step 12 now turns positive-price Normal/Urgent into a ten-minute hold and Razorpay order. Positive-price Subscription returns the Step 13 deferral.
+- A zero-price call skips payment and is inserted as `confirmed`. Normal is always `in_app`; zero-price Urgent or Subscription calls use `phone`. Step 12 turns positive-price Normal/Urgent into a ten-minute hold and Razorpay order; Step 13 does the same for a Subscription pack when no credit remains.
 - The booking transaction expires the selected astrologer's elapsed payment holds, enforces the user's one-upcoming-Normal limit and inserts the booking. PostgreSQL's existing `Booking_no_overlap` constraint remains the final arbiter for concurrent requests. Prisma 8's `SqlQueryError.sqlState = "23P01"` shape, including a transaction `cause`, is translated to the specified `409` response.
 - Home now moves from slot selection to a summary with server-sourced settings, then submits once and shows the animated success state with a History link. A same-slot conflict stays an error. The Normal-limit response is a calm notice and replaces the repeat confirmation action with **Go to History**.
 - The slot service starts the independent Settings, weekly-hours, exception and booking reads together after its eligibility check. A database-service regression holds all four promises open and confirms that every query has started before resolving any one of them.
@@ -49,9 +49,9 @@ Turn a selected free slot into a confirmed Normal booking. Recheck every server-
 4. Try to start another upcoming Normal booking with the same user. The summary should show “You already have an upcoming Normal call. You can book another after it ends.” as a calm notice, with **Go to History** instead of **Confirm booking**.
 5. With two different signed-in users, load the same slot in two browsers and confirm it at nearly the same time. One should succeed; the other should see “Sorry, this time was just booked. Please pick another time.”
 6. In Neon, inspect the successful row: it should be `confirmed`, `normal`, `in_app`, `pricePaise = 0`, have UTC `startsAt`/`endsAt`, and have no hold expiry.
-7. If Normal or Urgent has a price above zero, the current Step 12 flow opens Razorpay Checkout. Subscription packs remain deferred to Step 13.
+7. A positive-price call opens Razorpay Checkout when it is not covered by a Subscription credit.
 
 ## Follow-ups and known issues
 
-- Step 12 added Normal/Urgent payments and Urgent phone delivery. Steps 10 and 11 completed the Normal call room. Subscription packs remain Step 13.
+- Step 12 added Normal/Urgent payments and phone delivery, Step 13 added Subscription packs, and Steps 10 and 11 completed the Normal call room.
 - The simultaneous-request regression uses a deterministic repository for the race but throws Prisma 8's real installed `SqlQueryError` shape. The error shape was confirmed from Prisma's current transaction documentation and installed 8.0.0-rc.13 implementation without querying the main database. A two-browser check against Neon remains manual.

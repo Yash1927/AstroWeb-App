@@ -52,5 +52,5 @@ Add Google Identity Services sign-in in redirect mode, 30-day user sessions, and
 
 ## Follow-ups and known issues
 
-- Step 7 added time slots, Step 8 added free booking, and Step 12 added paid Urgent booking. Subscription packs remain Step 13.
+- Step 7 added time slots, Step 8 added free booking, Step 12 added paid Urgent booking, and Step 13 added Subscription credit/pack booking.
 - Real Google redirect behavior must be checked on desktop and in the installed app on a physical iPhone before launch, as required by README §17.

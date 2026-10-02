@@ -63,7 +63,11 @@ function ownBooking(): UserBookingCard {
 
 function fakeBookings(): BookingHistoryService {
   return {
-    listUserBookings: vi.fn(async () => ({ upcoming: [ownBooking()], past: [] })),
+    listUserBookings: vi.fn(async () => ({
+      upcoming: [ownBooking()],
+      past: [],
+      subscriptionCredits: 0,
+    })),
     getUserBooking: vi.fn(async (requestedUserId, bookingId) => (
       requestedUserId === userId && bookingId === ownBookingId ? ownBooking() : null
     )),

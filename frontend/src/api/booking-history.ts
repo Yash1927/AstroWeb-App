@@ -38,3 +38,7 @@ export type BookingSections<T extends BookingCardBase> = {
   upcoming: T[]
 }
 
+export type UserBookingSections = BookingSections<UserBooking> & {
+  subscriptionCredits: number
+}
+

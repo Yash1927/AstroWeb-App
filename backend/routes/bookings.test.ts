@@ -8,7 +8,6 @@ import type { SlotService } from "../src/availability/slot-service";
 import {
   BookingFreeNormalLimitError,
   BookingOverlapError,
-  SubscriptionBookingDeferredError,
   DefaultBookingService,
   type BookingInsert,
   type BookingRepository,
@@ -53,6 +52,7 @@ function successfulBooking(): CreatedBooking {
     status: "confirmed",
     pricePaise: 0,
     durationMin: 15,
+    usedCredit: false,
   };
 }
 
@@ -136,13 +136,6 @@ describe("POST /api/bookings", () => {
       "Sorry, this time was just booked. Please pick another time.",
     );
 
-    const paid = await bookingRequest(testApp({
-      createBooking: vi.fn(async () => {
-        throw new SubscriptionBookingDeferredError("Subscription packs come in a later step.");
-      }),
-    }));
-    expect(paid.status).toBe(409);
-    expect(paid.body.error).toBe("Subscription packs come in a later step.");
   });
 
   it("allows exactly one of two simultaneous requests for the same slot", async () => {
@@ -160,6 +153,7 @@ describe("POST /api/bookings", () => {
           birthPlace: "Jaipur",
           phone: null,
           gender: "other" as const,
+          subscriptionCredits: 0,
         };
       }
 
@@ -168,6 +162,7 @@ describe("POST /api/bookings", () => {
           normalPricePaise: 0,
           urgentPricePaise: 30_000,
           subscriptionPricePaise: 99_900,
+          subscriptionCallsPerPack: 4,
           normalDurationMin: 15,
           urgentDurationMin: 15,
           subscriptionDurationMin: 15,
@@ -176,6 +171,8 @@ describe("POST /api/bookings", () => {
 
       transaction<T>(work: (transaction: BookingTransaction) => Promise<T>) {
         const run = this.queue.then(() => work({
+          consumeSubscriptionCredit: async () => null,
+          addSubscriptionPackAndConsume: async (_userId, callsPerPack) => callsPerPack - 1,
           expireElapsedHolds: async () => undefined,
           createPayment: async () => undefined,
           hasUpcomingNormal: async (userId) => this.bookings.some((booking) => (
@@ -205,6 +202,7 @@ describe("POST /api/bookings", () => {
               endsAt: input.endsAt.toString(),
               status: input.status,
               pricePaise: input.pricePaise,
+              usedCredit: input.usedCredit,
             };
           },
         }));

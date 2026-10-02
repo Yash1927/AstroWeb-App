@@ -23,13 +23,16 @@ type StoredBooking = {
   pricePaise: number;
   startsAt: Temporal.Instant;
   status: "pending_payment" | "confirmed" | "completed" | "missed" | "expired";
+  usedCredit: boolean;
 };
 
 export type StoredPayment = {
   amountPaise: number;
   booking: StoredBooking | null;
   bookingId: string | null;
+  creditsPurchased: number;
   id: string;
+  purpose: "normal_call" | "urgent_call" | "subscription_pack";
   razorpayOrderId: string;
   razorpayPaymentId: string | null;
   status: "created" | "paid" | "failed" | "refunded";
@@ -44,7 +47,7 @@ type SettlementInput = {
 };
 
 export type SettlementResult =
-  | { kind: "confirmed"; booking: StoredBooking }
+  | { kind: "confirmed"; booking: StoredBooking; subscriptionCredits?: number }
   | { kind: "duplicate" }
   | { kind: "ignored" }
   | { kind: "invalid" }
@@ -68,8 +71,10 @@ export type ConfirmedPayment = {
     pricePaise: number;
     startsAt: string;
     status: "confirmed";
+    usedCredit: boolean;
   };
   status: "confirmed";
+  subscriptionCredits?: number;
 };
 
 export type RefundedPayment = {
@@ -118,6 +123,7 @@ function publicBooking(booking: StoredBooking): ConfirmedPayment["booking"] {
     ),
     pricePaise: booking.pricePaise,
     status: "confirmed",
+    usedCredit: booking.usedCredit,
   };
 }
 
@@ -125,9 +131,11 @@ const paymentFields = [
   "id",
   "userId",
   "bookingId",
+  "purpose",
   "razorpayOrderId",
   "razorpayPaymentId",
   "amountPaise",
+  "creditsPurchased",
   "status",
 ] as const;
 
@@ -140,6 +148,7 @@ const bookingFields = [
   "endsAt",
   "status",
   "pricePaise",
+  "usedCredit",
 ] as const;
 
 export class DatabasePaymentRepository implements PaymentRepository {
@@ -175,24 +184,101 @@ export class DatabasePaymentRepository implements PaymentRepository {
         if (payment.amountPaise !== input.amountPaise || booking.pricePaise !== input.amountPaise) {
           return { kind: "invalid" as const };
         }
+        const expectedPurpose = booking.callType === "normal"
+          ? "normal_call"
+          : booking.callType === "urgent"
+            ? "urgent_call"
+            : "subscription_pack";
+        const isSubscriptionPack = expectedPurpose === "subscription_pack";
+        if (
+          payment.purpose !== expectedPurpose
+          || (isSubscriptionPack
+            ? payment.creditsPurchased < 1
+            : payment.creditsPurchased !== 0)
+        ) {
+          return { kind: "invalid" as const };
+        }
         if (payment.status === "refunded") return { kind: "refunded" as const };
         if (payment.status === "paid") {
-          return payment.razorpayPaymentId === input.paymentId
-            ? { kind: "confirmed" as const, booking: booking as StoredBooking }
-            : { kind: "invalid" as const };
+          if (payment.razorpayPaymentId !== input.paymentId) {
+            return { kind: "invalid" as const };
+          }
+          const user = isSubscriptionPack
+            ? await transaction.orm.public.User.select("subscriptionCredits").first({
+              id: payment.userId,
+            })
+            : null;
+          return {
+            kind: "confirmed" as const,
+            booking: booking as StoredBooking,
+            ...(user ? { subscriptionCredits: user.subscriptionCredits } : {}),
+          };
+        }
+
+        const claimPlan = transaction.sql.public.Payment
+          .update({ status: "paid", razorpayPaymentId: input.paymentId })
+          .where((storedPayment, functions) => functions.and(
+            functions.eq(storedPayment.id, payment.id),
+            functions.in(storedPayment.status, ["created", "failed"]),
+          ))
+          .returning("id")
+          .build();
+        const [claimed] = await transaction.query(claimPlan);
+        if (!claimed) {
+          const current = await transaction.orm.public.Payment.select(...paymentFields).first({
+            id: payment.id,
+          });
+          if (current?.status === "refunded") return { kind: "refunded" as const };
+          if (current?.status !== "paid" || current.razorpayPaymentId !== input.paymentId) {
+            return { kind: "invalid" as const };
+          }
+          const currentBooking = await transaction.orm.public.Booking.select(...bookingFields).first({
+            id: booking.id,
+          });
+          if (!currentBooking) return { kind: "ignored" as const };
+          const user = isSubscriptionPack
+            ? await transaction.orm.public.User.select("subscriptionCredits").first({
+              id: payment.userId,
+            })
+            : null;
+          return {
+            kind: "confirmed" as const,
+            booking: currentBooking as StoredBooking,
+            ...(user ? { subscriptionCredits: user.subscriptionCredits } : {}),
+          };
+        }
+
+        let subscriptionCredits: number | undefined;
+        if (isSubscriptionPack) {
+          const creditsToAdd = payment.creditsPurchased - 1;
+          const creditPlan = transaction.sql.public.User
+            .update((user, functions) => ({
+              subscriptionCredits: functions.raw`${user.subscriptionCredits} + ${creditsToAdd}`
+                .returns("pg/int4@1"),
+            }))
+            .where((user, functions) => functions.eq(user.id, payment.userId))
+            .returning("subscriptionCredits")
+            .build();
+          const [updatedUser] = await transaction.query(creditPlan);
+          if (!updatedUser) {
+            throw new Error("User not found while settling subscription credits.");
+          }
+          subscriptionCredits = updatedUser.subscriptionCredits;
         }
 
         await transaction.orm.public.Booking.where({ id: booking.id }).update({
           status: "confirmed",
           holdExpiresAt: null,
-        });
-        await transaction.orm.public.Payment.where({ id: payment.id }).update({
-          status: "paid",
-          razorpayPaymentId: input.paymentId,
+          usedCredit: isSubscriptionPack,
         });
         return {
           kind: "confirmed" as const,
-          booking: { ...booking, status: "confirmed" } as StoredBooking,
+          booking: {
+            ...booking,
+            status: "confirmed",
+            usedCredit: isSubscriptionPack,
+          } as StoredBooking,
+          ...(subscriptionCredits === undefined ? {} : { subscriptionCredits }),
         };
       });
     } catch (error) {
@@ -207,11 +293,18 @@ export class DatabasePaymentRepository implements PaymentRepository {
     try {
       await db.transaction(async (transaction) => {
         await transaction.orm.public.WebhookEvent.create({ eventId });
-        const payment = await transaction.orm.public.Payment.select("id", "status").first({
+        const payment = await transaction.orm.public.Payment.select("id").first({
           razorpayOrderId: orderId,
         });
-        if (payment?.status === "created") {
-          await transaction.orm.public.Payment.where({ id: payment.id }).update({ status: "failed" });
+        if (payment) {
+          const plan = transaction.sql.public.Payment
+            .update({ status: "failed" })
+            .where((storedPayment, functions) => functions.and(
+              functions.eq(storedPayment.id, payment.id),
+              functions.eq(storedPayment.status, "created"),
+            ))
+            .build();
+          await transaction.execute(plan);
         }
       });
       return "recorded" as const;
@@ -295,7 +388,13 @@ export class DefaultPaymentService {
         eventId,
       });
       if (outcome.kind === "confirmed") {
-        return { status: "confirmed", booking: publicBooking(outcome.booking) };
+        return {
+          status: "confirmed",
+          booking: publicBooking(outcome.booking),
+          ...(outcome.subscriptionCredits === undefined
+            ? {}
+            : { subscriptionCredits: outcome.subscriptionCredits }),
+        };
       }
       if (outcome.kind === "refunded") {
         return { status: "refunded", message: REFUND_MESSAGE };

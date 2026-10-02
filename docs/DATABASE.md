@@ -6,7 +6,7 @@ Last updated: 2026-10-02
 
 ## Current state
 
-The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Steps 8 and 12 use the existing Booking, Payment and WebhookEvent contract for free confirmations, paid holds, provider records and webhook de-duplication; neither needs a schema change.
+The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Step 13 migration `20261002T0936_subscription_pack_credits` adds the pack-size snapshot to Payment without changing existing rows.
 
 The running app and seed use pooled `DATABASE_URL`. Migration commands use direct `DIRECT_DATABASE_URL`. Money columns are whole paise. Instants are PostgreSQL `timestamptz`; local calendar dates and availability clock times use `date` and `time`.
 
@@ -59,7 +59,7 @@ Owner creates override the database's `isListed = false` default with `true` and
 | `subscriptionCredits` | integer | No | `0` |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-Relations: bookings, payments, blog likes and blog comments. Nullable onboarding fields are recorded in `docs/DECISIONS.md`. Step 6 creates an account by the verified Google `sub`, refreshes its verified email on later sign-ins, and writes the editable details through self-only `/api/me`; birth time remains the local clock value with no timezone conversion.
+Relations: bookings, payments, blog likes and blog comments. Nullable onboarding fields are recorded in `docs/DECISIONS.md`. Step 6 creates an account by the verified Google `sub`, refreshes its verified email on later sign-ins, and writes the editable details through self-only `/api/me`; birth time remains the local clock value with no timezone conversion. Step 13 changes `subscriptionCredits` only inside booking/payment transactions. Credit use is a conditional `subscriptionCredits > 0` decrement, so concurrent bookings cannot take it below zero.
 
 ### `AvailabilityRule`
 
@@ -106,7 +106,7 @@ Step 7 uses null start/end only for a whole-date `blocked` exception. Partial bl
 
 Relations: one user, one astrologer and optional related payments.
 
-Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` intervals as occupied. Booking creation rechecks an exact slot and then, in one transaction, changes the selected astrologer's elapsed holds to `expired`, checks the user's one-upcoming-Normal limit and inserts the booking. A zero-price row is immediately `confirmed` with no hold expiry. A positive-price Normal or Urgent row is `pending_payment` with a ten-minute expiry and is inserted with its created Payment. Every row copies the Settings price in whole paise. Normal uses `in_app`; Urgent uses `phone`. Positive-price Subscription remains Step 13.
+Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` intervals as occupied. Booking creation rechecks an exact slot and then expires the selected astrologer's elapsed holds before inserting. A zero-price row is immediately `confirmed` with no hold expiry. A positive-price Normal or Urgent row is `pending_payment` with a ten-minute expiry and is inserted with its created Payment. Subscription uses `phone`: an existing credit creates a confirmed zero-price row with `usedCredit=true`; otherwise a pack Payment holds the slot and settlement marks the confirmed row as credit-backed. Every paid row preserves the Settings amount in whole paise.
 
 `Booking_no_overlap` applies to both `pending_payment` and `confirmed` rows. If simultaneous inserts target the same astrologer and overlapping time, PostgreSQL accepts one and rejects the other with exclusion error `23P01`. Prisma 8 surfaces this on `SqlQueryError.sqlState`, directly or below a transaction `cause`; the API maps that shape to a friendly `409`.
 
@@ -121,10 +121,11 @@ Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` inte
 | `razorpayOrderId` | text | No | Unique |
 | `razorpayPaymentId` | text | Yes | Unique when present |
 | `amountPaise` | integer | No | Charged amount in whole paise |
+| `creditsPurchased` | integer | No | `0`; pack-size snapshot for `subscription_pack` |
 | `status` | text enum | No | `created`, `paid`, `failed` or `refunded` |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-Step 12 inserts one created Payment with each paid hold. Verification or a captured/paid webhook changes that Payment to `paid`, stores the unique payment id and confirms the Booking in one transaction. A late provider payment that conflicts on confirmation is fully refunded, then stored as `refunded` while its Booking becomes `expired`.
+Step 12 inserts one created Payment with each paid hold. Step 13 uses `purpose=subscription_pack` and records the current `Settings.subscriptionCallsPerPack` in `creditsPurchased`; later owner edits cannot change an existing order. Verification or a captured/paid webhook conditionally claims the Payment, stores the unique payment id and confirms the Booking in one transaction. A pack claim adds `creditsPurchased` and consumes one call in that same transaction. A late provider payment that conflicts on confirmation is fully refunded, then stored as `refunded` while its Booking becomes `expired`.
 
 ### `WebhookEvent`
 
@@ -216,8 +217,9 @@ The session manager stores a random UUID as the session id and sends a signed fo
 | `20260926T0607_add_blog_relation` | Boilerplate: creates `Astro`, `User` and `Blogs` | Before Step 1 | 2026-09-26 | Existing baseline |
 | `20260930T0841_database_schema` | Replaces the boilerplate with the complete contract, extension and overlap constraint | 2 | 2026-09-30 | Applied |
 | `20260930T1814_astrologer_profile_saved_at` | Adds nullable `Astrologer.profileSavedAt` | 4 | 2026-09-30 | Applied |
+| `20261002T0936_subscription_pack_credits` | Adds `Payment.creditsPurchased` with a zero default | 13 | 2026-10-02 | Applied |
 
-The application migrations were generated and self-emitted with Prisma 8. `npm run migration:check` reports that the packages and compiled operations are valid. `npm run migration:status` and `npm run db:verify` confirm the Step 4 migration is applied and Neon matches contract hash `4d9b1a55…`.
+The application migrations were generated and self-emitted with Prisma 8. `npm run migration:check` reports that the packages and compiled operations are valid. `npm run migration:status` and `npm run db:verify` confirm the Step 13 migration is applied and Neon matches contract hash `9608a099…`.
 
 Steps 7 and 8 change no contract or migration. Step 7 begins using availability rows and booking intervals for slot filtering. Step 8 writes confirmed zero-price rows and relies on the existing exclusion constraint for concurrent conflicts.
 

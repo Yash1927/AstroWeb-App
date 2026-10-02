@@ -21,7 +21,7 @@ Last updated: 2026-10-02
 | GET | `/api/settings/public` | Public | Returns only current prices, pack size and call durations | 2 |
 | GET | `/api/astrologers` | Public | Returns only eligible Home-card fields | 5 |
 | GET | `/api/astrologers/:id/slots?type=normal\|urgent\|subscription` | Public | Returns 14 days of current free slots | 7 |
-| POST | `/api/bookings` | User | Revalidates a slot, then confirms a zero-price booking or creates a ten-minute paid hold and Razorpay order | 8, 12 |
+| POST | `/api/bookings` | User | Revalidates a slot, then confirms a free/credit booking or creates a ten-minute paid hold and Razorpay order | 8, 12, 13 |
 | POST | `/api/payments/verify` | User | Verifies one owned Checkout payment and confirms or refunds its booking | 12 |
 | POST | `/api/razorpay/webhook` | Razorpay | Processes signed payment events from the untouched raw request body | 12 |
 | GET | `/api/calls/:bookingId/ice-servers` | Booked user or astrologer | Returns STUN and short-lived TURN configuration for an active in-app call | 11 |
@@ -90,7 +90,7 @@ Both endpoints resolve the user only from the valid session. They accept no user
 
 | Endpoint | Success response |
 |---|---|
-| `GET /api/me/bookings` | `{upcoming,past}`; Upcoming is soonest first and Past is newest first |
+| `GET /api/me/bookings` | `{upcoming,past,subscriptionCredits}`; Upcoming is soonest first and Past is newest first |
 | `GET /api/me/bookings/:bookingId` | `{booking}` for one owned Normal call |
 
 Each item contains the booking id, call type/mode, UTC start/end, duration, stored price, credit flag, current status, eventual ended status, the user's current phone number and only the astrologer's id/display name. Normal status is Upcoming until the end; after the end it is Completed only when both participant join timestamps exist, otherwise Missed. A phone booking is Upcoming until its end and then has `phone-call` status. The browser keeps applying those rules at the time boundaries without fetching again. The detail endpoint remains Normal-only because only in-app Normal calls have a room.
@@ -138,17 +138,19 @@ Each item contains the booking id, call type/mode, UTC start/end, duration, stor
 - **Who:** A signed-in user whose account still exists. The user id always comes from the root-path user session cookie.
 - **Request:** JSON with `astrologerId` (UUID), `callType` (`normal`, `urgent` or `subscription`) and `startsAt` (an absolute ISO timestamp). Unknown body fields are discarded; in particular, a submitted price is ignored. The route accepts no parameters or query fields.
 - **Checks:** The user's required details must be complete, phone-call types require a saved phone, the astrologer must still be active/listed/profile-saved, and `startsAt` must exactly match a current slot from the shared 14-day slot service. Duration and price are reread from `Settings`.
-- **Zero price:** Any call type priced at zero is saved immediately as `confirmed`, with no payment hold. Normal is always `in_app`; Urgent and Subscription are `phone`. The response is `201` with `{booking}` containing id, astrologer id, call type/mode, UTC start/end, status, copied price and duration.
-- **Positive price:** Normal and Urgent create a `pending_payment` booking whose hold expires after ten minutes plus a `Payment(status=created)` linked to a server-created Razorpay INR order. The `201` response adds `checkout` with the public key id, order id, server amount/currency, expiry and the signed-in user's name/email/phone prefill. Positive-price Subscription remains Step 13 and returns its later-step message.
-- **Transaction:** Before inserting, the server changes elapsed `pending_payment` holds for that astrologer to `expired`, then checks the one-upcoming-Normal rule. PostgreSQL's `Booking_no_overlap` exclusion constraint decides a simultaneous conflict.
-- **Errors:** Malformed required input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, an invalid/missing required phone, an unavailable/overlapping slot, a second upcoming Normal booking and positive-price Subscription return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Order/database failures return `503` with a generic message.
+- **Zero price:** Any call type priced at zero is saved immediately as `confirmed`, with no payment hold. Normal is always `in_app`; Urgent and Subscription are `phone`. A zero-price Subscription pack adds the current pack size and consumes one call atomically.
+- **Subscription credit:** When the user has a credit, a conditional positive-balance update consumes exactly one and inserts a confirmed Subscription booking with `usedCredit=true` and `pricePaise=0`. The response includes the remaining `subscriptionCredits`; concurrent requests cannot reduce the balance below zero.
+- **Positive price:** Normal and Urgent create a `pending_payment` booking whose hold expires after ten minutes plus a linked `Payment(status=created)`. Subscription does the same only when no credit remains; its Payment uses `purpose=subscription_pack` and snapshots the current pack size. The `201` response adds `checkout` with the public key id, order id, server amount/currency, expiry and the signed-in user's name/email/phone prefill.
+- **Response:** `{booking}` contains id, astrologer id, call type/mode, UTC start/end, status, stored price, duration and `usedCredit`. Subscription confirmations also return the remaining `subscriptionCredits`.
+- **Transaction:** Before inserting, the server changes elapsed `pending_payment` holds for that astrologer to `expired`, then checks the one-upcoming-Normal rule where applicable. PostgreSQL's `Booking_no_overlap` exclusion constraint decides a simultaneous conflict.
+- **Errors:** Malformed required input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, an invalid/missing required phone, an unavailable/overlapping slot and a second upcoming Normal booking return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Order/database failures return `503` with a generic message.
 
 ### POST /api/payments/verify
 
 - **Who:** The signed-in user who owns both the stored Payment and Booking.
 - **Request:** Strict JSON with `bookingId`, `razorpayOrderId`, `razorpayPaymentId` and the 64-hex-character `razorpaySignature`; no params or query.
 - **Verification:** The backend computes HMAC-SHA256 over `orderId|paymentId` with `RAZORPAY_KEY_SECRET`, compares equal-length bytes with `crypto.timingSafeEqual`, then checks the stored order, user, booking and amount.
-- **Success:** One transaction changes the booking to `confirmed`, clears its hold and changes the Payment to `paid` with its unique Razorpay payment id. Repeated confirmation returns the same confirmed result without another logical confirmation.
+- **Success:** One transaction conditionally claims the Payment, changes the booking to `confirmed`, clears its hold and stores the unique Razorpay payment id. For `subscription_pack`, only the claim winner adds the snapshotted calls, consumes one for this booking, sets `usedCredit=true` and returns `subscriptionCredits`. Repeated verification or a racing webhook returns the same confirmed state without adding credits again.
 - **Late conflict:** If `Booking_no_overlap` rejects confirmation because the slot is now occupied, the backend issues a full Razorpay refund and stores Payment `refunded` plus Booking `expired`. The `200` response returns `status:"refunded"` and the specified user-facing message.
 - **Errors:** Invalid signatures return `400`, foreign/missing orders return `404`, invalid payment state returns `409`, and unavailable services return the generic `503` verification message.
 

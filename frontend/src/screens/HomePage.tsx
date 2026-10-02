@@ -78,7 +78,7 @@ type CallOption = {
   summary: string
 }
 
-function optionsFrom(settings: PublicSettings): CallOption[] {
+function optionsFrom(settings: PublicSettings, subscriptionCredits: number): CallOption[] {
   return [
     {
       callType: 'normal',
@@ -95,7 +95,9 @@ function optionsFrom(settings: PublicSettings): CallOption[] {
     {
       callType: 'subscription',
       label: 'Subscription',
-      summary: `${formatRupees(settings.subscriptionPricePaise)} for ${settings.subscriptionCallsPerPack} calls · ${settings.subscriptionDurationMin} min each`,
+      summary: subscriptionCredits > 0
+        ? `${subscriptionCredits} calls left · ${settings.subscriptionDurationMin} min each`
+        : `${formatRupees(settings.subscriptionPricePaise)} for ${settings.subscriptionCallsPerPack} calls · ${settings.subscriptionDurationMin} min each`,
       description: 'The astrologer calls your phone',
     },
   ]
@@ -177,6 +179,7 @@ export default function HomePage() {
   const [chosenCallType, setChosenCallType] = useState<CallType | null>(null)
   const [flowStep, setFlowStep] = useState<FlowStep>('options')
   const [bookingUser, setBookingUser] = useState<UserDetails | null>(null)
+  const [userPreviewLoading, setUserPreviewLoading] = useState(false)
   const [flowError, setFlowError] = useState('')
   const [savingDetails, setSavingDetails] = useState(false)
   const [phone, setPhone] = useState('')
@@ -187,10 +190,12 @@ export default function HomePage() {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
   const [creatingBooking, setCreatingBooking] = useState(false)
   const [createdBooking, setCreatedBooking] = useState<CreatedBooking | null>(null)
+  const [successCredits, setSuccessCredits] = useState<number | null>(null)
   const [pendingPayment, setPendingPayment] = useState<CreateBookingResponse | null>(null)
   const [changingPhone, setChangingPhone] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const restoredFlow = useRef(false)
+  const userPreviewRequest = useRef(0)
 
   const loadAstrologers = useCallback(async () => {
     setAstrologers(null)
@@ -326,30 +331,45 @@ export default function HomePage() {
   }, [astrologers, checkUser])
 
   const openCallOptions = (astrologer: AstrologerCardProfile) => {
+    const requestId = userPreviewRequest.current + 1
+    userPreviewRequest.current = requestId
     setSelectedAstrologer(astrologer)
     setChosenCallType(null)
     setBookingUser(null)
+    setUserPreviewLoading(true)
     setFlowError('')
     setPhoneError('')
     setSlotResult(null)
     setSelectedDate('')
     setSelectedSlot(null)
     setCreatedBooking(null)
+    setSuccessCredits(null)
     setPendingPayment(null)
     setChangingPhone(false)
     setFlowStep('options')
+    void userApi.getMe()
+      .then((user) => {
+        if (userPreviewRequest.current === requestId) setBookingUser(user)
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        if (userPreviewRequest.current === requestId) setUserPreviewLoading(false)
+      })
   }
 
   const closeFlow = () => {
+    userPreviewRequest.current += 1
     setSelectedAstrologer(null)
     setChosenCallType(null)
     setBookingUser(null)
+    setUserPreviewLoading(false)
     setFlowError('')
     setPhoneError('')
     setSlotResult(null)
     setSelectedDate('')
     setSelectedSlot(null)
     setCreatedBooking(null)
+    setSuccessCredits(null)
     setPendingPayment(null)
     setChangingPhone(false)
     setFlowStep('options')
@@ -427,6 +447,8 @@ export default function HomePage() {
     ? priceFor(settings, chosenCallType)
     : null
   const hasUpcomingNormalNotice = flowError === UPCOMING_NORMAL_NOTICE
+  const usesSubscriptionCredit = chosenCallType === 'subscription'
+    && (bookingUser?.subscriptionCredits ?? 0) > 0
 
   const completePayment = async (pending: CreateBookingResponse) => {
     if (!pending.checkout) throw new Error('Payment is unavailable. Please try again.')
@@ -452,6 +474,13 @@ export default function HomePage() {
     }
     setPendingPayment(null)
     setCreatedBooking(verified.booking)
+    const remainingCredits = verified.subscriptionCredits
+    setSuccessCredits(remainingCredits ?? null)
+    if (remainingCredits !== undefined) {
+      setBookingUser((current) => current
+        ? { ...current, subscriptionCredits: remainingCredits }
+        : current)
+    }
     setFlowStep('success')
   }
 
@@ -473,6 +502,13 @@ export default function HomePage() {
         await completePayment(result)
       } else {
         setCreatedBooking(result.booking)
+        const remainingCredits = result.subscriptionCredits
+        setSuccessCredits(remainingCredits ?? null)
+        if (remainingCredits !== undefined) {
+          setBookingUser((current) => current
+            ? { ...current, subscriptionCredits: remainingCredits }
+            : current)
+        }
         setFlowStep('success')
       }
     } catch (error) {
@@ -536,7 +572,7 @@ export default function HomePage() {
 
       <BottomSheet onClose={closeFlow} open={Boolean(selectedAstrologer)} title={sheetTitle}>
         {flowStep === 'options' ? (
-          settingsLoading ? (
+          settingsLoading || userPreviewLoading ? (
             <div aria-busy="true" className="stack">
               <Skeleton label="Loading call options" variant="title" />
               <Skeleton label="Loading call options" />
@@ -549,7 +585,7 @@ export default function HomePage() {
             </div>
           ) : settings ? (
             <div className="call-option-list">
-              {optionsFrom(settings).map((option) => (
+              {optionsFrom(settings, bookingUser?.subscriptionCredits ?? 0).map((option) => (
                 <button
                   className="call-option"
                   key={option.callType}
@@ -669,7 +705,16 @@ export default function HomePage() {
                 <div><dt>Date</dt><dd>{formatDateInIst(selectedSlot.startsAt)}</dd></div>
                 <div><dt>Time</dt><dd>{formatTimeInIst(selectedSlot.startsAt)}</dd></div>
                 <div><dt>Duration</dt><dd>{slotResult.durationMin} min</dd></div>
-                <div><dt>Price</dt><dd>{selectedPrice === 0 ? 'Free' : formatRupees(selectedPrice)}</dd></div>
+                <div>
+                  <dt>Price</dt>
+                  <dd>
+                    {usesSubscriptionCredit
+                      ? '1 subscription credit'
+                      : selectedPrice === 0
+                        ? 'Free'
+                        : formatRupees(selectedPrice)}
+                  </dd>
+                </div>
               </dl>
               {needsPhone(chosenCallType) && bookingUser?.phone ? (
                 <div className="booking-summary__phone">
@@ -701,7 +746,7 @@ export default function HomePage() {
               <Button disabled={creatingBooking} onClick={() => void confirmBooking()}>
                 {creatingBooking
                   ? 'Booking…'
-                  : selectedPrice === 0
+                  : selectedPrice === 0 || usesSubscriptionCredit
                     ? 'Confirm booking'
                     : `Pay ${formatRupees(selectedPrice)}`}
               </Button>
@@ -719,6 +764,9 @@ export default function HomePage() {
                 ? `Your call is booked for ${formatDateInIst(createdBooking.startsAt)} at ${formatTimeInIst(createdBooking.startsAt)}. You can join from History.`
                 : `Booked! ${selectedAstrologer?.displayName ?? 'The astrologer'} will call you on ${displayPhone(bookingUser?.phone ?? '')} at ${formatTimeInIst(createdBooking.startsAt)} on ${formatDateInIst(createdBooking.startsAt)}. Please keep your phone nearby.`}
             </p>
+            {createdBooking.callType === 'subscription' && successCredits !== null ? (
+              <p className="booking-notice">Subscription calls left: {successCredits}</p>
+            ) : null}
             <Link className="button button--primary" to="/history">Go to History</Link>
           </div>
         ) : flowStep === 'error' && chosenCallType ? (

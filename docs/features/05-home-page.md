@@ -39,7 +39,7 @@ Replace the Home placeholder with a public, privacy-limited astrologer list and 
 - `/` now shows an AstroWebApp header, three skeleton cards while loading, the specified empty text, a retry state, and the shared Step 4 `AstrologerCard` in a one/two/three-column responsive grid.
 - The first six cards use 40ms staggered `fade-up` delays; later cards do not animate individually. The shared reduced-motion rule collapses these animations.
 - **Call** opens the existing portaled BottomSheet for the selected astrologer. Normal, Urgent and Subscription show current Settings prices, duration, pack size where relevant, and the README call-mode description.
-- Step 6 replaced the temporary selection toast, Step 7 added the real date/time picker, Step 8 added free confirmation, and Step 12 added Razorpay Checkout and Urgent phone-call success. Positive-price Subscription remains Step 13.
+- Step 6 replaced the temporary selection toast, Step 7 added the real date/time picker, Step 8 added free confirmation, Step 12 added Razorpay Checkout and Urgent phone-call success, and Step 13 added Subscription credits and packs.
 - Astrologer cards and settings load independently. Browsing and opening Home never requires authentication.
 - No database, session, real-time, dependency or environment change was needed.
 
@@ -56,4 +56,4 @@ Replace the Home placeholder with a public, privacy-limited astrologer list and 
 ## Follow-ups and known issues
 
 - Step 6 added user login and details while Home browsing remained public.
-- Step 7 added availability and slots. Step 8 added free booking and Step 12 added paid Urgent booking. Subscription packs arrive in Step 13.
+- Steps 7, 8, 12 and 13 now carry Home through slots, free or paid confirmation, and all three call types.

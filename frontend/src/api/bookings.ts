@@ -10,6 +10,7 @@ export type CreatedBooking = {
   pricePaise: number
   startsAt: string
   status: 'confirmed' | 'pending_payment'
+  usedCredit: boolean
 }
 
 export type BookingCheckout = {
@@ -28,10 +29,15 @@ export type BookingCheckout = {
 export type CreateBookingResponse = {
   booking: CreatedBooking
   checkout?: BookingCheckout
+  subscriptionCredits?: number
 }
 
 export type PaymentVerification =
-  | { booking: CreatedBooking & { status: 'confirmed' }; status: 'confirmed' }
+  | {
+      booking: CreatedBooking & { status: 'confirmed' }
+      status: 'confirmed'
+      subscriptionCredits?: number
+    }
   | { message: string; status: 'refunded' }
 
 export class BookingApiError extends Error {

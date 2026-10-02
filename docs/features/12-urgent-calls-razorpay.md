@@ -35,7 +35,7 @@ Subscription credit packs remain outside this step.
 
 ## As built
 
-- `POST /api/bookings` still confirms zero-price calls immediately. A positive-price Normal or Urgent call now creates a server-priced Razorpay order, ten-minute `pending_payment` hold and linked created Payment. Positive-price Subscription stays deferred to Step 13.
+- `POST /api/bookings` still confirms zero-price calls immediately. A positive-price Normal or Urgent call creates a server-priced Razorpay order, ten-minute `pending_payment` hold and linked created Payment. Step 13 now extends that foundation to Subscription packs.
 - The official `razorpay` 2.9.8 SDK creates orders and issues full late-conflict refunds. Only the public key id, order details, expiry and user prefill reach the browser.
 - `POST /api/payments/verify` checks the timing-safe Checkout HMAC and stored user/booking/order ownership. `POST /api/razorpay/webhook` is mounted with a bounded raw body before JSON parsing, checks its separate HMAC, de-duplicates event ids and shares idempotent settlement with verification.
 - Home loads Standard Checkout only when payment starts, preserves the order for safe retry after dismissal/failure and shows the specified refund/success wording.
@@ -56,4 +56,4 @@ No database migration was created because the Step 2 contract already contains e
 
 ## Follow-ups and known issues
 
-Subscription packs and credits are Step 13. A real Razorpay test success/failure/webhook/refund round trip still needs manual testing; automated tests use provider mocks and cannot prove Dashboard delivery.
+Step 13 now adds Subscription packs and credits. A real Razorpay test success/failure/webhook/refund round trip still needs manual testing; automated tests use provider mocks and cannot prove Dashboard delivery.

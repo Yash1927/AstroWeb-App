@@ -50,4 +50,4 @@ Give signed-in users a private History view of their Normal calls and give each 
 ## Follow-ups and known issues
 
 - Steps 10 and 11 added the audio room, join timestamps, live controls and end-of-call finalization.
-- Step 12 added Urgent phone-call cards. Subscription bookings remain Step 13.
+- Step 12 added Urgent phone-call cards, and Step 13 now supplies Subscription phone bookings and the user's current calls-left balance.

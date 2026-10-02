@@ -6,9 +6,9 @@ Last updated: 2026-10-02
 
 ## Current state
 
-Step 12 adds ten-minute paid booking holds, official Razorpay orders/Checkout, signed verification and webhooks, idempotent settlement and automatic late-payment refunds (README §6.4, §11, §12 and §17). Urgent calls are now phone bookings; Subscription packs remain Step 13. The existing `Booking`, `Payment` and `WebhookEvent` contract already supports this flow, so no migration is needed.
+Step 13 adds one-time Subscription packs and durable call credits (README §4, §5.3, §6.1, §6.2 and §11). An existing credit confirms a phone booking immediately; otherwise the existing Razorpay hold and settlement flow buys a Settings-priced pack, consumes one call and returns the remaining balance. `Payment.creditsPurchased` snapshots the pack size for each order.
 
-- `frontend/` is a React single-page app with public Home through free or Razorpay-paid Urgent booking success, private user History, complete authenticated user/astrologer Normal-call rooms, phone-call cards, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `frontend/` is a React single-page app with public Home through Normal, Urgent and Subscription booking success, private user History with its current credit balance, complete authenticated user/astrologer Normal-call rooms, phone-call cards, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
 - `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
@@ -261,7 +261,7 @@ sequenceDiagram
 
 The service derives user id from the session and derives price, duration, call mode, end time and status on the server. Complete details are required; Urgent and Subscription also require the user's saved phone. It invokes the same slot service used by the picker so eligibility, the 14-day range, Normal-from-tomorrow and current booking conflicts are rechecked at confirmation time.
 
-Every zero-price call type is confirmed immediately. Normal is always `in_app`; the phone call types are always `phone`. Positive-price Normal or Urgent creates a ten-minute `pending_payment` booking and linked created Payment after the backend creates the server-priced Razorpay order. Positive-price Subscription remains Step 13. Inside the transaction, only elapsed holds for the selected astrologer are expired, the one-upcoming-Normal rule is checked and the new row is inserted. Prisma 8 normalizes PostgreSQL error `23P01` from `Booking_no_overlap` to `SqlQueryError.sqlState`; the mapper checks that property directly and through a transaction `cause` before returning the specified same-slot `409` response.
+Every zero-price call type is confirmed immediately. Normal is always `in_app`; the phone call types are always `phone`. Positive-price Normal or Urgent creates a ten-minute `pending_payment` booking and linked created Payment after the backend creates the server-priced Razorpay order. For Subscription, a conditional database update consumes one available credit and confirms with `usedCredit=true`; if none remains, the service creates a ten-minute pack-payment hold whose Payment snapshots the current pack size. A zero-price pack adds its calls and consumes this booking in the same transaction. Prisma 8 normalizes PostgreSQL error `23P01` from `Booking_no_overlap` to `SqlQueryError.sqlState`; the mapper checks that property directly and through a transaction `cause` before returning the specified same-slot `409` response.
 
 ## Paid booking flow
 
@@ -282,7 +282,10 @@ sequenceDiagram
     Razorpay-->>Home: payment/order/signature
     Home->>Payment: verify owned payment
     Razorpay-->>Payment: signed raw webhook (may race verification)
-    Payment->>Neon: idempotent confirm and payment record
+    Payment->>Neon: claim payment once, then confirm booking
+    opt Subscription pack
+        Payment->>Neon: add snapshotted calls and consume one
+    end
     alt held slot was taken after expiry
         Neon-->>Payment: Booking_no_overlap
         Payment->>Razorpay: full refund
@@ -290,7 +293,7 @@ sequenceDiagram
     end
 ```
 
-Only the public Razorpay key id reaches the browser. The backend owns the amount, currency, receipt and order notes. Checkout is loaded on demand and receives the user's current name, Google email and canonical phone. Verification uses a timing-safe HMAC comparison plus stored user/booking/order ownership; webhook HMAC uses the untouched raw bytes before Express JSON parsing. `WebhookEvent.eventId` and unique provider ids provide database idempotency, while an order-keyed service queue makes same-process verification/webhook races converge cleanly.
+Only the public Razorpay key id reaches the browser. The backend owns the amount, currency, receipt and order notes. Checkout is loaded on demand and receives the user's current name, Google email and canonical phone. Verification uses a timing-safe HMAC comparison plus stored user/booking/order ownership; webhook HMAC uses the untouched raw bytes before Express JSON parsing. `WebhookEvent.eventId` and unique provider ids provide database idempotency. A conditional `Payment` state change provides the cross-process winner for verification/webhook races; only that winner can add pack credits, consume the booked call and confirm the booking. An order-keyed queue also avoids duplicate work inside one process.
 
 ## Booking history flow
 
