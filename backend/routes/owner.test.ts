@@ -6,6 +6,7 @@ import type { ResolvedSession, SessionManager } from "../src/auth/session";
 import type { AstrologerProfile, OwnerService, OwnerSettings } from "../src/owner/owner-service";
 import { createOwnerRouter } from "./Owner";
 import { createOwnerAuthRouter } from "./OwnerAuth";
+import type { BlogService } from "../src/blog/blog-service";
 
 const astrologerId = "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0";
 const ownerSession: ResolvedSession = {
@@ -62,15 +63,38 @@ function fakeSessions(resolved: ResolvedSession | null = ownerSession): SessionM
   };
 }
 
-function testApp(owners = fakeOwners(), sessions = fakeSessions(), limiter = new LoginRateLimiter()) {
+function fakeBlogs(): BlogService {
+  return {
+    createComment: vi.fn(),
+    deleteAstrologerComment: vi.fn(),
+    deleteAstrologerPost: vi.fn(),
+    deleteOwnerComment: vi.fn(async () => undefined),
+    deleteUserComment: vi.fn(),
+    getPublishedPost: vi.fn(),
+    listAstrologerPosts: vi.fn(),
+    listPublishedPosts: vi.fn(),
+    listRecentComments: vi.fn(async () => [{
+      id: "8b834d55-89c3-47d2-ab28-b8373842fd40",
+      blogId: "43f7d52f-98aa-4f2d-bc32-3baa7382080f",
+      body: "A comment",
+      createdAt: "2026-10-02T08:00:00Z",
+      postTitle: "A guide",
+      authorFirstName: "Maya",
+    }]),
+    saveAstrologerPost: vi.fn(),
+    toggleLike: vi.fn(),
+  };
+}
+
+function testApp(owners = fakeOwners(), sessions = fakeSessions(), limiter = new LoginRateLimiter(), blogs = fakeBlogs()) {
   const app = express();
   app.use(express.json());
   app.use(
     "/api/auth/owner",
     createOwnerAuthRouter({ owners, rateLimiter: limiter, sessions }),
   );
-  app.use("/api/owner", createOwnerRouter({ owners, sessions }));
-  return { app, owners, sessions };
+  app.use("/api/owner", createOwnerRouter({ owners, blogs, sessions }));
+  return { app, blogs, owners, sessions };
 }
 
 describe("owner authentication", () => {
@@ -244,5 +268,17 @@ describe("protected owner routes", () => {
       ...settings,
       urgentPricePaise: 35_000,
     });
+  });
+
+  it("lists and deletes recent comments only through the owner guard", async () => {
+    const { app, blogs } = testApp();
+    const commentId = "8b834d55-89c3-47d2-ab28-b8373842fd40";
+    const list = await request(app).get("/api/owner/comments/recent");
+    const removed = await request(app).delete(`/api/owner/comments/${commentId}`);
+
+    expect(list.status).toBe(200);
+    expect(list.body.comments[0]).not.toHaveProperty("email");
+    expect(removed.status).toBe(204);
+    expect(blogs.deleteOwnerComment).toHaveBeenCalledWith(commentId);
   });
 });

@@ -44,7 +44,13 @@ Public Home shows only the astrologer's initials, display name, expertise, langu
 
 The note “Changes apply to new bookings only.” means existing booking history keeps the amount originally charged. A Subscription pack order also keeps the number of calls offered when that order was created; changing the pack price or size affects later purchases only.
 
-Deleting blog comments arrives in Step 14. The app automatically refunds a late payment if its held time has already been taken; other payment refunds are handled in the Razorpay Dashboard under the current policy.
+The app automatically refunds a late payment if its held time has already been taken; other payment refunds are handled in the Razorpay Dashboard under the current policy.
+
+### Review recent blog comments
+
+1. Open **Recent comments**.
+2. The newest comments show the commenter's first name, post title, text and time. Email and full account details are never shown.
+3. Choose **Delete**, review the confirmation, then choose **Delete comment**. This permanently removes the comment.
 
 ## For astrologers
 
@@ -86,7 +92,18 @@ On a wider screen, date-exception controls wrap into as many rows as they need. 
 3. For a Normal call, choose **Join** before the start to see the waiting time. From the start until the end, choose the glowing **Join now** button. After the end there is no Join button; it is Completed only after both people joined, otherwise Missed.
 4. An Urgent or Subscription phone booking says **Phone call · date · time**. Its phone number is a tap-to-call link. It never has a Join button; call the user at the booked time. Past phone calls keep the **Phone call** label.
 
-The cards change as the start and end times pass without reloading the page. **Blogs** still says “Coming in a later step” until Step 14.
+The cards change as the start and end times pass without reloading the page.
+
+### Write and manage blogs
+
+1. Open **Blogs** and choose **Write a post**.
+2. Enter a title of up to 120 characters and a plain-text body.
+3. Choose **Save draft** to keep it private, or **Publish** to make it appear on the user Blogs tab.
+4. Choose **Edit** on an existing post. A published post can be updated with **Publish changes** or returned to a private draft with **Unpublish**.
+5. Comments on the selected post appear below the editor. Choose **Delete** to remove a comment from your post.
+6. To remove a post, choose **Delete**, then confirm **Delete post**. Its likes and comments are removed with it.
+
+The editor never treats the body as HTML. Paragraph breaks remain visible, and text that looks like a script stays ordinary text.
 
 ### Join a Normal call
 

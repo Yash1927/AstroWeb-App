@@ -150,3 +150,10 @@ Use this format:
 - **Context:** README §4 says changes to the pack price or size affect new purchases only. `Payment.amountPaise` already preserves price, but the README §11 fields did not say where to preserve the number of calls bought by an order that settles later.
 - **Decision:** Add `Payment.creditsPurchased`, defaulting to zero. A `subscription_pack` Payment stores the current `Settings.subscriptionCallsPerPack`; other payment purposes store zero. Settlement adds that stored number and consumes one call for the linked booking.
 - **Consequences:** An owner edit made after order creation cannot change what that purchase delivers. The schema needs one additive Step 13 migration, and payment settlement can remain idempotent without trusting current Settings or provider-supplied notes.
+
+## D-019: Blog moderation bounds and public commenter identity
+- **Date:** 2026-10-02
+- **Status:** Accepted
+- **Context:** README §5.4 and §16.2 question 11 define who can comment and delete, but do not define the comment rate, the size of the owner's “Recent comments” list, or how to keep avatar colours stable without exposing a user's database id.
+- **Decision:** Accept five comment attempts per minute per signed-in user and IP in one backend process. Show the newest 50 comments to the owner. Public comments contain the first name and a SHA-256-derived avatar key, not the user id or full name.
+- **Consequences:** Normal conversation remains easy while simple bursts are throttled. A multi-instance deployment needs a shared limiter in Step 16. The owner list is bounded, and one commenter keeps a stable avatar colour without exposing a profile identifier.

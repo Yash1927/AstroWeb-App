@@ -16,6 +16,7 @@ import {
 import {
   AstrologerCard,
   AstrologerBookings,
+  AstrologerBlogs,
   AvailabilityEditor,
   Button,
   Card,
@@ -455,8 +456,9 @@ export default function AstrologerPage() {
           <AstrologerBookings onSignedOut={handleSessionEnded} />
         </section>
       ) : (
-        <section className="astrologer-section">
-          <Card><h2>{section[0].toLocaleUpperCase()}{section.slice(1)}</h2><p>Coming in a later step.</p></Card>
+        <section aria-labelledby="blogs-heading" className="astrologer-section">
+          <div className="owner-section__heading"><div><h2 id="blogs-heading">Blogs</h2><p className="screen__intro">Write and manage your posts.</p></div></div>
+          <AstrologerBlogs onSignedOut={handleSessionEnded} />
         </section>
       )}
 

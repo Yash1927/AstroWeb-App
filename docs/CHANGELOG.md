@@ -16,6 +16,16 @@ Last updated: 2026-10-02
 
 ---
 
+## 2026-10-02: Step 14, Blogs
+- **Added:** public 20-post blog pagination and post pages; Google-gated like/comment actions; plain-text comments with throttling; astrologer draft/publish/unpublish/edit/delete workflows; commenter, author and owner comment deletion; and the owner's Recent comments list
+- **Changed:** the user Blogs tab and astrologer Blogs section now contain their real Step 14 interfaces; the existing heart-pop animation drives the like toggle; published/draft access and every mutation are scoped on the server
+- **Files:** `backend/src/blog/`, `backend/routes/Blogs.ts`, `backend/routes/Astrologer.ts`, `backend/routes/Owner.ts`, `frontend/src/api/blogs.ts`, `frontend/src/screens/BlogsPage.tsx`, `frontend/src/screens/BlogPostPage.tsx`, `frontend/src/components/AstrologerBlogs.tsx`, `frontend/src/components/OwnerRecentComments.tsx`, `frontend/src/design.css`, and related tests
+- **Database:** none; Step 14 uses the existing `Blog`, `BlogLike` and `BlogComment` tables
+- **Env vars:** none
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/04-astrologer-login-profile.md`, `docs/features/14-blogs.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/DESIGN_SYSTEM.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 113 tests pass; frontend lint, all 42 tests and production build pass; a read-only live Neon public-list query also passes. Real Google and three-role browser moderation remain manual
+
 ## 2026-10-02: Step 13, Subscription packs and credits
 - **Added:** atomic Subscription credit booking; one-time Settings-priced Razorpay pack orders; pack-size snapshots; zero-price pack handling; remaining-call responses; and calls-left displays in the Home flow, success screen and History
 - **Changed:** payment settlement now conditionally claims a Payment before confirming, so verification/webhook races can add a pack only once; Subscription bookings use phone delivery, `usedCredit=true` and the Step 12 phone cards; the call-type sheet and summary switch from pack price to an existing credit when available

@@ -7,9 +7,9 @@ import {
   type AstrologerProfile,
   type OwnerSettings,
 } from '../api/owner'
-import { Avatar, Button, Card, Dialog, Skeleton, Toast } from '../components'
+import { Avatar, Button, Card, Dialog, OwnerRecentComments, Skeleton, Toast } from '../components'
 
-type OwnerSection = 'astrologers' | 'settings'
+type OwnerSection = 'astrologers' | 'settings' | 'comments'
 type ToastState = { kind: 'success' | 'error'; message: string } | null
 
 type SettingsForm = {
@@ -98,6 +98,11 @@ export default function OwnerPage() {
   const [settingsBusy, setSettingsBusy] = useState(false)
   const [settingsError, setSettingsError] = useState('')
   const [settingsFieldErrors, setSettingsFieldErrors] = useState<SettingsFieldErrors>({})
+
+  const handleSessionEnded = useCallback(() => {
+    setAuthState('logged-out')
+    setAstrologers([])
+  }, [])
 
   const loadData = useCallback(async () => {
     setLoadingData(true)
@@ -478,6 +483,14 @@ export default function OwnerPage() {
         >
           Pricing &amp; call settings
         </button>
+        <button
+          aria-pressed={section === 'comments'}
+          className="chip"
+          onClick={() => setSection('comments')}
+          type="button"
+        >
+          Recent comments
+        </button>
       </nav>
 
       {pageError ? (
@@ -567,7 +580,7 @@ export default function OwnerPage() {
             </div>
           )}
         </section>
-      ) : !pageError ? (
+      ) : !pageError && section === 'settings' ? (
         <section aria-labelledby="settings-heading" className="owner-section">
           <div className="owner-section__heading">
             <div>
@@ -678,6 +691,11 @@ export default function OwnerPage() {
             </form>
           </Card>
           )}
+        </section>
+      ) : !pageError ? (
+        <section aria-labelledby="comments-heading" className="owner-section">
+          <div className="owner-section__heading"><div><h2 id="comments-heading">Recent comments</h2><p className="screen__intro">Review the latest comments across published posts.</p></div></div>
+          <OwnerRecentComments onSignedOut={handleSessionEnded} />
         </section>
       ) : null}
 

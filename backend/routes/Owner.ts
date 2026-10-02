@@ -23,9 +23,12 @@ import {
   OwnerStateError,
   type OwnerService,
 } from "../src/owner/owner-service";
+import { blogService, BlogNotFoundError, type BlogService } from "../src/blog/blog-service";
+import { ownerCommentParamsSchema } from "../src/blog/blog-schemas";
 
 type OwnerRouterDependencies = {
   owners: OwnerService;
+  blogs?: BlogService;
   sessions: SessionManager;
 };
 
@@ -43,7 +46,7 @@ function respondWithOwnerError(error: unknown, response: Response) {
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
-export function createOwnerRouter({ owners, sessions }: OwnerRouterDependencies) {
+export function createOwnerRouter({ owners, blogs = blogService, sessions }: OwnerRouterDependencies) {
   const router = Router();
 
   router.use(requireOwner(sessions, owners));
@@ -192,7 +195,32 @@ export function createOwnerRouter({ owners, sessions }: OwnerRouterDependencies)
     }
   });
 
+  router.get("/comments/recent", async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+    try {
+      response.json({ comments: await blogs.listRecentComments() });
+    } catch {
+      response.status(503).json({ error: "Comments are unavailable. Please try again." });
+    }
+  });
+
+  router.delete("/comments/:commentId", async (request, response) => {
+    const params = parseOrRespond(ownerCommentParamsSchema, request.params, response);
+    if (!params) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+    try {
+      await blogs.deleteOwnerComment(params.commentId);
+      response.status(204).end();
+    } catch (error) {
+      if (error instanceof BlogNotFoundError) response.status(404).json({ error: error.message });
+      else response.status(503).json({ error: "The comment could not be deleted. Please try again." });
+    }
+  });
+
   return router;
 }
 
-export default createOwnerRouter({ owners: ownerService, sessions: sessionManager });
+export default createOwnerRouter({ owners: ownerService, blogs: blogService, sessions: sessionManager });

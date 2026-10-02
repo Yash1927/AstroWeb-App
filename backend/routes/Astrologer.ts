@@ -28,11 +28,14 @@ import {
   type AstrologerService,
 } from "../src/astrologer/astrologer-service";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { blogService, BlogNotFoundError, type BlogService } from "../src/blog/blog-service";
+import { blogCommentParamsSchema, blogIdParamsSchema, blogWriteSchema } from "../src/blog/blog-schemas";
 
 type Dependencies = {
   astrologers: AstrologerService;
   availability: AvailabilityService;
   bookings: BookingHistoryService;
+  blogs?: BlogService;
   sessions: SessionManager;
 };
 
@@ -50,7 +53,7 @@ function respondWithAstrologerError(error: unknown, response: Response) {
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
-export function createAstrologerRouter({ astrologers, availability, bookings, sessions }: Dependencies) {
+export function createAstrologerRouter({ astrologers, availability, bookings, blogs = blogService, sessions }: Dependencies) {
   const router = Router();
   router.use(requireAstrologer(sessions, astrologers));
 
@@ -230,6 +233,71 @@ export function createAstrologerRouter({ astrologers, availability, bookings, se
     }
   });
 
+  router.get("/blogs", async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+    try {
+      response.json({ posts: await blogs.listAstrologerPosts(response.locals.astrologerSession.subjectId) });
+    } catch {
+      response.status(503).json({ error: "Blogs are unavailable. Please try again." });
+    }
+  });
+
+  router.post("/blogs", async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    const body = parseOrRespond(blogWriteSchema, request.body, response);
+    if (!body) return;
+    try {
+      response.status(201).json({ post: await blogs.saveAstrologerPost(response.locals.astrologerSession.subjectId, null, body) });
+    } catch {
+      response.status(503).json({ error: "The post could not be saved. Please try again." });
+    }
+  });
+
+  router.put("/blogs/:id", async (request, response) => {
+    const params = parseOrRespond(blogIdParamsSchema, request.params, response);
+    if (!params) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    const body = parseOrRespond(blogWriteSchema, request.body, response);
+    if (!body) return;
+    try {
+      response.json({ post: await blogs.saveAstrologerPost(response.locals.astrologerSession.subjectId, params.id, body) });
+    } catch (error) {
+      if (error instanceof BlogNotFoundError) response.status(404).json({ error: error.message });
+      else response.status(503).json({ error: "The post could not be saved. Please try again." });
+    }
+  });
+
+  router.delete("/blogs/:id", async (request, response) => {
+    const params = parseOrRespond(blogIdParamsSchema, request.params, response);
+    if (!params) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+    try {
+      await blogs.deleteAstrologerPost(response.locals.astrologerSession.subjectId, params.id);
+      response.status(204).end();
+    } catch (error) {
+      if (error instanceof BlogNotFoundError) response.status(404).json({ error: error.message });
+      else response.status(503).json({ error: "The post could not be deleted. Please try again." });
+    }
+  });
+
+  router.delete("/blogs/:id/comments/:commentId", async (request, response) => {
+    const params = parseOrRespond(blogCommentParamsSchema, request.params, response);
+    if (!params) return;
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+    try {
+      await blogs.deleteAstrologerComment(response.locals.astrologerSession.subjectId, params.id, params.commentId);
+      response.status(204).end();
+    } catch (error) {
+      if (error instanceof BlogNotFoundError) response.status(404).json({ error: error.message });
+      else response.status(503).json({ error: "The comment could not be deleted. Please try again." });
+    }
+  });
+
   return router;
 }
 
@@ -237,5 +305,6 @@ export default createAstrologerRouter({
   astrologers: astrologerService,
   availability: availabilityService,
   bookings: bookingHistoryService,
+  blogs: blogService,
   sessions: sessionManager,
 });

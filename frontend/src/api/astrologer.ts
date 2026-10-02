@@ -37,6 +37,24 @@ export type SavedAvailability = AvailabilityInput & {
   displacedBookingCount: number
 }
 
+export type AstrologerBlogPost = {
+  body: string
+  commentCount: number
+  comments: Array<{
+    authorFirstName: string
+    body: string
+    createdAt: string
+    id: string
+  }>
+  createdAt: string
+  id: string
+  likeCount: number
+  publishedAt: string | null
+  status: 'draft' | 'published'
+  title: string
+  updatedAt: string
+}
+
 export class AstrologerApiError extends Error {
   status: number
 
@@ -117,4 +135,23 @@ export const astrologerApi = {
       `/api/astrologer/bookings/${bookingId}`,
     )
   ).booking,
+  getBlogs: async () => (
+    await astrologerRequest<{ posts: AstrologerBlogPost[] }>('/api/astrologer/blogs')
+  ).posts,
+  saveBlog: async (
+    id: string | null,
+    input: { body: string; status: 'draft' | 'published'; title: string },
+  ) => (
+    await astrologerRequest<{ post: AstrologerBlogPost }>(
+      id ? `/api/astrologer/blogs/${id}` : '/api/astrologer/blogs',
+      { method: id ? 'PUT' : 'POST', body: JSON.stringify(input) },
+    )
+  ).post,
+  deleteBlog: (id: string) => astrologerRequest<void>(`/api/astrologer/blogs/${id}`, {
+    method: 'DELETE',
+  }),
+  deleteBlogComment: (id: string, commentId: string) => astrologerRequest<void>(
+    `/api/astrologer/blogs/${id}/comments/${commentId}`,
+    { method: 'DELETE' },
+  ),
 }

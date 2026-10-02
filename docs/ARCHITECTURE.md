@@ -6,9 +6,9 @@ Last updated: 2026-10-02
 
 ## Current state
 
-Step 13 adds one-time Subscription packs and durable call credits (README §4, §5.3, §6.1, §6.2 and §11). An existing credit confirms a phone booking immediately; otherwise the existing Razorpay hold and settlement flow buys a Settings-priced pack, consumes one call and returns the remaining balance. `Payment.creditsPurchased` snapshots the pack size for each order.
+Step 14 adds the complete plain-text blog flow (README §2, §5.4 and §8.5). Public readers see published posts only; user reactions use the existing Google session, while author and owner moderation use their existing protected panels.
 
-- `frontend/` is a React single-page app with public Home through Normal, Urgent and Subscription booking success, private user History with its current credit balance, complete authenticated user/astrologer Normal-call rooms, phone-call cards, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `frontend/` is a React single-page app with public Home and Blogs, Normal/Urgent/Subscription booking, History, Settings, authenticated Normal-call rooms, and protected owner and astrologer workflows. Blog reading is public; liking and commenting use the existing Google sign-in without requiring booking details. `frontend/src/design.css` is the only app stylesheet.
 - `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
@@ -110,11 +110,13 @@ backend/
   routes/Owner.ts           Protected owner account and settings handlers
   routes/AstrologerAuth.ts  Astrologer credential login
   routes/Astrologer.ts      Protected astrologer session, profile, availability and booking handlers
+  routes/Blogs.ts           Public published posts and protected user likes/comments
   src/availability/         Availability validation/storage and the shared slot engine
   src/astrologer/           Astrologer validation and database service
   src/auth/                 Session cookies, role guards and login throttling
   src/booking/              Booking input validation and transactional service
   src/booking-history/      Subject-scoped booking reads and response shaping
+  src/blog/                 Blog validation, persistence, response shaping and comment throttling
   src/dev/                  Production-blocked development data helper
   src/http/                 Shared Zod response helper
   src/owner/                Owner validation schemas and database service
@@ -134,6 +136,7 @@ frontend/
   src/api/user.ts           Typed user account/details/logout client
   src/api/bookings.ts       Typed booking-creation client
   src/api/booking-history.ts Shared booking-card response types
+  src/api/blogs.ts          Public reading and signed-in reaction client
   src/components/           Shared UI components
   src/components/AvailabilityEditor.tsx Protected weekly and exception editor
   src/screens/DesignPage.tsx Development-only component and motion gallery
@@ -141,6 +144,8 @@ frontend/
   src/screens/AstrologerPage.tsx Astrologer login, profile, availability and bookings interface
   src/screens/HomePage.tsx   Public Home list and call-type picker
   src/screens/HistoryPage.tsx Private user booking history
+  src/screens/BlogsPage.tsx Public paged blog list
+  src/screens/BlogPostPage.tsx Public post, like and comment interface
   src/screens/CallRoomPage.tsx Authenticated user/astrologer call-room states and controls
   src/screens/SettingsPage.tsx User profile, editable details, policies and logout
   src/razorpay-checkout.ts  On-demand Standard Checkout loader and browser outcome adapter
@@ -201,7 +206,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | Private booking history | 9 | [Booking history flow](#booking-history-flow) |
 | In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | [In-app call flow](#in-app-call-flow) |
 | Urgent payment (Razorpay orders, verification, webhooks, refunds) | 12 | [Paid booking flow](#paid-booking-flow) |
-| Blogs | 14 | — |
+| Blogs | 14 | [Blog flow](#blog-flow) |
 | Install and offline support (service worker) | 15 | — |
 
 ## Public Home flow
@@ -424,6 +429,12 @@ Replacing a temporary password deletes all of that astrologer's sessions inside 
 Cookie configurations for user, astrologer and owner roles live together with separate names. User and astrologer cookies use path `/` so shared APIs and `/ws` receive them; the owner cookie remains scoped to `/api/owner`. User sessions last 30 days; panel sessions last 12 hours.
 
 The login limiter is held in the backend process. It is correct for the current single-process development setup. A multi-instance production topology needs a shared rate-limit store in Step 16.
+
+## Blog flow
+
+`GET /api/blogs` reads only published rows, orders them by publication time and returns 20 summaries plus a next-page marker. The detail route shapes author and commenter identities for public display and optionally marks the current user's like and deletable comments when a valid user cookie is present.
+
+Likes use the `BlogLike` composite key, so one user can have at most one like per post. Comments are stored as plain text and returned oldest first. Protected mutations take the user or astrologer identity from the session: users delete only their own comments, astrologers mutate only their own posts and their posts' comments, and the owner can review the newest 50 comments. The browser renders every title, body and comment through React text nodes; no blog path accepts HTML.
 
 ## Differences from the spec
 

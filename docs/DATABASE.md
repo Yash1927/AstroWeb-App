@@ -164,6 +164,8 @@ The server reads this row for the public settings endpoint, slot duration and ev
 | `createdAt` | timestamptz(3) | No | Current time |
 | `updatedAt` | timestamptz | No | Set on create and each non-empty ORM update |
 
+Step 14 writes only through the signed-in astrologer's id. Public queries require `status = published` and non-null `publishedAt`, order newest first and never return draft rows. Unpublishing clears `publishedAt`; publishing a draft sets it to the current UTC instant.
+
 ### `BlogLike`
 
 | Column | Type | Nullable | Default / notes |
@@ -174,6 +176,8 @@ The server reads this row for the public settings endpoint, slot duration and ev
 
 The composite key makes `(blogId, userId)` unique.
 
+Step 14 uses the composite row as the like state. Toggling removes an existing row or creates one; the browser cannot submit a user id.
+
 ### `BlogComment`
 
 | Column | Type | Nullable | Default / notes |
@@ -183,6 +187,8 @@ The composite key makes `(blogId, userId)` unique.
 | `userId` | text | No | Foreign key to `User.id` |
 | `body` | text | No | — |
 | `createdAt` | timestamptz(3) | No | Current time |
+
+Comments are stored exactly as trimmed plain text, up to 500 characters at the API boundary. Deleting a post removes its like and comment rows in the same transaction before removing the post. Step 14 uses the existing Step 2 tables, so it adds no migration.
 
 ### `Session`
 

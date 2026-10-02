@@ -21,13 +21,13 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 11 | In-app call, part 2 | Done | [11-in-app-call-part-2.md](features/11-in-app-call-part-2.md) | Countdown/end handling, transient chat, supported device controls, speaking indicators and booking-scoped TURN credentials are in place. |
 | 12 | Urgent calls with Razorpay | Done | [12-urgent-calls-razorpay.md](features/12-urgent-calls-razorpay.md) | Ten-minute holds, Razorpay verification/webhooks/refunds, Urgent phone delivery and phone cards are in place. |
 | 13 | Subscription packs | Done | [13-subscription-packs.md](features/13-subscription-packs.md) | Existing credits confirm atomically; zero balances buy a snapshotted one-time pack through Razorpay. |
-| 14 | Blogs | Not started | — | |
+| 14 | Blogs | Done | [14-blogs.md](features/14-blogs.md) | Public reading, Google-gated reactions, own authoring and scoped comment moderation are in place. |
 | 15 | Install as an app, policy pages | Not started | — | |
 | 16 | Security review and launch checklist | Not started | — | |
 
 ## Next up
 
-Step 14: Blogs.
+Step 15: Install as an app and policy pages.
 
 ## Known issues
 
@@ -36,4 +36,5 @@ Bugs, limitations and loose ends that aren't fixed yet. When one is fixed, remov
 | Issue | Where | Found | Plan |
 |---|---|---|---|
 | Owner and astrologer login throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/auth/login-rate-limit.ts` | Step 3 | Choose the production topology or a shared limiter store in Step 16 |
+| Blog comment throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/blog/comment-rate-limit.ts` | Step 14 | Choose the production topology or a shared limiter store in Step 16 |
 | `npm audit` reports 5 moderate and 8 high issues in the backend development dependency tree; the production-only audit reports 0 | `backend/package-lock.json` | Step 1 | Review dependency upgrades with the Prisma stable upgrade before launch |

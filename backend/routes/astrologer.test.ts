@@ -15,6 +15,7 @@ import {
 } from "../src/astrologer/astrologer-service";
 import { createAstrologerRouter } from "./Astrologer";
 import { createAstrologerAuthRouter } from "./AstrologerAuth";
+import type { BlogService } from "../src/blog/blog-service";
 
 const astrologerId = "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0";
 const ownBookingId = "4090cd52-cb14-4167-834d-ee7024fd9bda";
@@ -109,12 +110,38 @@ function fakeBookings(): BookingHistoryService {
   };
 }
 
+function fakeBlogs(): BlogService {
+  return {
+    createComment: vi.fn(),
+    deleteAstrologerComment: vi.fn(async () => undefined),
+    deleteAstrologerPost: vi.fn(async () => undefined),
+    deleteOwnerComment: vi.fn(),
+    deleteUserComment: vi.fn(),
+    getPublishedPost: vi.fn(),
+    listAstrologerPosts: vi.fn(async () => []),
+    listPublishedPosts: vi.fn(),
+    listRecentComments: vi.fn(),
+    saveAstrologerPost: vi.fn(async (_astrologerId, id, input) => ({
+      id: id ?? "43f7d52f-98aa-4f2d-bc32-3baa7382080f",
+      ...input,
+      publishedAt: input.status === "published" ? "2026-10-02T08:00:00Z" : null,
+      createdAt: "2026-10-02T08:00:00Z",
+      updatedAt: "2026-10-02T08:00:00Z",
+      likeCount: 0,
+      commentCount: 0,
+      comments: [],
+    })),
+    toggleLike: vi.fn(),
+  };
+}
+
 function testApp(
   astrologers = fakeAstrologers(),
   sessions = fakeSessions(),
   limiter = new LoginRateLimiter(),
   availability = fakeAvailability(),
   bookings = fakeBookings(),
+  blogs = fakeBlogs(),
 ) {
   const app = express();
   app.use(express.json());
@@ -124,9 +151,9 @@ function testApp(
   );
   app.use(
     "/api/astrologer",
-    createAstrologerRouter({ astrologers, availability, bookings, sessions }),
+    createAstrologerRouter({ astrologers, availability, bookings, blogs, sessions }),
   );
-  return { app, astrologers, availability, bookings, sessions };
+  return { app, astrologers, availability, bookings, blogs, sessions };
 }
 
 describe("astrologer authentication", () => {
@@ -249,7 +276,7 @@ describe("protected astrologer routes", () => {
     expect(response.body.error).toBe("Set a new password before continuing.");
   });
 
-  it("keeps availability and bookings behind the temporary-password gate", async () => {
+  it("keeps availability, bookings and blogs behind the temporary-password gate", async () => {
     const astrologers = fakeAstrologers();
     astrologers.getSessionState = vi.fn(async () => ({
       id: astrologerId,
@@ -257,21 +284,26 @@ describe("protected astrologer routes", () => {
     }));
     const availability = fakeAvailability();
     const bookings = fakeBookings();
+    const blogs = fakeBlogs();
     const { app } = testApp(
       astrologers,
       fakeSessions(),
       new LoginRateLimiter(),
       availability,
       bookings,
+      blogs,
     );
 
     const availabilityResponse = await request(app).get("/api/astrologer/availability");
     const bookingsResponse = await request(app).get("/api/astrologer/bookings");
+    const blogsResponse = await request(app).get("/api/astrologer/blogs");
 
     expect(availabilityResponse.status).toBe(409);
     expect(bookingsResponse.status).toBe(409);
+    expect(blogsResponse.status).toBe(409);
     expect(availability.getAvailability).not.toHaveBeenCalled();
     expect(bookings.listAstrologerBookings).not.toHaveBeenCalled();
+    expect(blogs.listAstrologerPosts).not.toHaveBeenCalled();
   });
 
   it("validates and saves only the signed-in astrologer's profile", async () => {
@@ -347,5 +379,34 @@ describe("protected astrologer routes", () => {
     expect(someoneElses.status).toBe(404);
     expect(bookings.listAstrologerBookings).toHaveBeenCalledWith(astrologerId);
     expect(bookings.getAstrologerBooking).toHaveBeenCalledWith(astrologerId, otherBookingId);
+  });
+
+  it("scopes blog writes and comment deletion to the signed-in astrologer", async () => {
+    const blogs = fakeBlogs();
+    const { app } = testApp(
+      fakeAstrologers(),
+      fakeSessions(),
+      new LoginRateLimiter(),
+      fakeAvailability(),
+      fakeBookings(),
+      blogs,
+    );
+    const blogId = "43f7d52f-98aa-4f2d-bc32-3baa7382080f";
+    const commentId = "8b834d55-89c3-47d2-ab28-b8373842fd40";
+    const created = await request(app).post("/api/astrologer/blogs").send({
+      title: " A gentle guide ",
+      body: " Plain text only. ",
+      status: "draft",
+    });
+    const removed = await request(app).delete(`/api/astrologer/blogs/${blogId}/comments/${commentId}`);
+
+    expect(created.status).toBe(201);
+    expect(removed.status).toBe(204);
+    expect(blogs.saveAstrologerPost).toHaveBeenCalledWith(astrologerId, null, {
+      title: "A gentle guide",
+      body: "Plain text only.",
+      status: "draft",
+    });
+    expect(blogs.deleteAstrologerComment).toHaveBeenCalledWith(astrologerId, blogId, commentId);
   });
 });

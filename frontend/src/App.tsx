@@ -12,6 +12,8 @@ import HomePage from './screens/HomePage'
 import HistoryPage from './screens/HistoryPage'
 import SettingsPage from './screens/SettingsPage'
 import CallRoomPage from './screens/CallRoomPage'
+import BlogsPage from './screens/BlogsPage'
+import BlogPostPage from './screens/BlogPostPage'
 
 const DesignPage = import.meta.env.DEV
   ? lazy(() => import('./screens/DesignPage'))
@@ -90,20 +92,6 @@ function UserShell() {
   )
 }
 
-type PlaceholderProps = {
-  description: string
-  title: string
-}
-
-function Placeholder({ description, title }: PlaceholderProps) {
-  return (
-    <section className="screen">
-      <h1>{title}</h1>
-      <p className="screen__intro">{description}</p>
-    </section>
-  )
-}
-
 function LaterStep({ title }: { title: string }) {
   return (
     <section className="screen">
@@ -143,16 +131,8 @@ function App() {
       <Route element={<UserShell />}>
         <Route index element={<HomePage />} />
         <Route path="history" element={<HistoryPage />} />
-        <Route
-          path="blogs"
-          element={
-            <Placeholder
-              description="Articles from astrologers will appear here in Step 14."
-              title="Blogs"
-            />
-          }
-        />
-        <Route path="blogs/:id" element={<LaterStep title="Blog post" />} />
+        <Route path="blogs" element={<BlogsPage />} />
+        <Route path="blogs/:id" element={<BlogPostPage />} />
         <Route path="settings" element={<SettingsPage />} />
         {policyPages.map(([path, title]) => (
           <Route key={path} path={path} element={<LaterStep title={title} />} />

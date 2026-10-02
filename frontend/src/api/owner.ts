@@ -22,6 +22,15 @@ export type OwnerSettings = {
   urgentPricePaise: number
 }
 
+export type RecentComment = {
+  authorFirstName: string
+  blogId: string
+  body: string
+  createdAt: string
+  id: string
+  postTitle: string
+}
+
 export class OwnerApiError extends Error {
   status: number
 
@@ -116,6 +125,13 @@ export const ownerApi = {
         body: JSON.stringify(settings),
       })
     ).settings,
+  getRecentComments: async () => (
+    await ownerRequest<{ comments: RecentComment[] }>('/api/owner/comments/recent')
+  ).comments,
+  deleteComment: (commentId: string) => ownerRequest<void>(
+    `/api/owner/comments/${commentId}`,
+    { method: 'DELETE' },
+  ),
 }
 
 export function paiseToRupees(paise: number) {

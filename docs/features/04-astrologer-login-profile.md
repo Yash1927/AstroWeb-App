@@ -34,14 +34,14 @@ Add the protected astrologer panel and complete the reusable email/password sess
 
 ## As built
 
-- `/astrologer` checks its own 12-hour server session, shows email/password login, forces temporary-password replacement, and then opens a four-section panel. Availability and Bookings now contain their later-step implementations; Blogs remains a placeholder.
+- `/astrologer` checks its own 12-hour server session, shows email/password login, forces temporary-password replacement, and then opens a four-section panel. Availability, Bookings and Blogs now contain their later-step implementations.
 - `POST /api/auth/astrologer/login` uses the same five-failures-per-15-minutes email-plus-IP policy and indistinguishable credential error as owner login. The protected `/api/astrologer/*` router checks the astrologer role and the live account's active state.
 - Password replacement uses Argon2id, deletes every earlier astrologer session in the same transaction, and issues a fresh session to the current browser. Logout deletes its Session row.
 - The Profile screen edits display name, expertise tags, language tags and 0–60 years of experience. Preview renders unsaved values with the same `AstrologerCard` that Home will use; its Call button has no action in preview.
 - The first successful save sets `profileSavedAt`; later saves preserve it. Migration `20260930T1814_astrologer_profile_saved_at` is applied on Neon and the live schema matches the contract.
 - Owner profile details include the saved-profile state. Owner deactivation unlists the astrologer and revokes every astrologer session atomically; password reset also revokes every astrologer session and restores the forced-password gate.
 - User and astrologer cookie paths are `/`, while the owner cookie stays scoped to `/api/owner`. Separate cookie names keep the roles isolated.
-- Step 4 itself added no availability, booking, blog, public Home query or real-time behavior; later feature docs record the first three areas as they are built.
+- Step 4 itself added no availability, booking, blog, public Home query or real-time behavior; later feature docs record the first four areas as they are built.
 
 ## How to try it
 

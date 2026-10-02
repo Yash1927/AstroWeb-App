@@ -7,8 +7,8 @@ Last updated: 2026-10-02
 ## Conventions
 
 - HTTP endpoints are mounted below `/api` (README §1).
-- Health, public settings, public astrologer cards and eligible astrologer slots need no session. Owner, astrologer and Google callback endpoints are public; protected endpoints run the matching role guard.
-- Current account, profile, public-card and booking bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Booking creation discards unrecognized body fields so a browser-supplied price cannot affect the server-owned Settings amount. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
+- Health, public settings, public astrologer cards, eligible astrologer slots and published blogs need no session. Login/callback endpoints are public; protected endpoints run the matching role guard.
+- Current account, profile, blog, public-card and booking bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Booking creation discards unrecognized body fields so a browser-supplied price cannot affect the server-owned Settings amount. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
 - Owner authentication uses `astrowebapp_owner_session` scoped to `/api/owner`. Astrologer and user authentication use separate cookies scoped to `/` so shared APIs and `/ws` receive them. All three are httpOnly, use SameSite=Lax and are Secure when `NODE_ENV=production`; the owner and astrologer last 12 hours and the user lasts 30 days.
 - Missing or invalid authentication returns `401`. Missing records return `404`; duplicate email, password-gate failures and invalid state transitions return `409`; database/service failures return a generic `503`.
 
@@ -31,6 +31,11 @@ Last updated: 2026-10-02
 | GET | `/api/me/bookings` | User | Returns the signed-in user's own confirmed Normal and phone bookings as Upcoming and Past | 9, 12 |
 | GET | `/api/me/bookings/:bookingId` | User | Returns one owned Normal booking for protected call-room navigation | 9 |
 | POST | `/api/auth/logout` | User | Deletes the current user session and clears its cookie | 6 |
+| GET | `/api/blogs?page=N` | Public | Returns 20 published post summaries, newest first | 14 |
+| GET | `/api/blogs/:id` | Public | Returns one published plain-text post and oldest-first comments; a valid user cookie adds viewer state | 14 |
+| PUT | `/api/blogs/:id/like` | User | Toggles the signed-in user's one like | 14 |
+| POST | `/api/blogs/:id/comments` | User | Adds a rate-limited plain-text comment of up to 500 characters | 14 |
+| DELETE | `/api/blogs/:id/comments/:commentId` | Commenter | Deletes only that user's own comment | 14 |
 | POST | `/api/auth/owner/login` | Public | Verifies owner credentials and creates an owner session | 3 |
 | POST | `/api/auth/astrologer/login` | Public | Verifies an active astrologer and creates an astrologer session | 4 |
 | GET | `/api/owner/session` | Owner | Confirms that the owner session is valid | 3 |
@@ -44,6 +49,8 @@ Last updated: 2026-10-02
 | POST | `/api/owner/astrologers/:id/reset-password` | Owner | Stores a new temporary password | 3 |
 | GET | `/api/owner/settings` | Owner | Returns all owner-editable settings | 3 |
 | PUT | `/api/owner/settings` | Owner | Replaces all seven owner-editable settings | 3 |
+| GET | `/api/owner/comments/recent` | Owner | Returns the newest 50 blog comments with post titles | 14 |
+| DELETE | `/api/owner/comments/:commentId` | Owner | Deletes one blog comment | 14 |
 | GET | `/api/astrologer/session` | Astrologer | Confirms the session and reports whether password replacement is required | 4 |
 | POST | `/api/astrologer/logout` | Astrologer | Deletes the session and clears the astrologer cookie | 4 |
 | PUT | `/api/astrologer/password` | Astrologer | Replaces a temporary password and rotates all astrologer sessions | 4 |
@@ -53,6 +60,11 @@ Last updated: 2026-10-02
 | PUT | `/api/astrologer/availability` | Astrologer | Atomically replaces only the signed-in astrologer's availability | 7 |
 | GET | `/api/astrologer/bookings` | Astrologer | Returns only that astrologer's confirmed Normal/phone bookings and booked-user details | 9, 12 |
 | GET | `/api/astrologer/bookings/:bookingId` | Astrologer | Returns one booking owned by that astrologer for protected call-room navigation | 9 |
+| GET | `/api/astrologer/blogs` | Astrologer | Returns that astrologer's drafts and published posts with comments | 14 |
+| POST | `/api/astrologer/blogs` | Astrologer | Creates an own draft or published post | 14 |
+| PUT | `/api/astrologer/blogs/:id` | Astrologer | Edits, publishes or unpublishes an own post | 14 |
+| DELETE | `/api/astrologer/blogs/:id` | Astrologer | Deletes an own post, its likes and comments | 14 |
+| DELETE | `/api/astrologer/blogs/:id/comments/:commentId` | Astrologer | Deletes a comment only from an own post | 14 |
 
 ### GET /api/health
 
@@ -245,6 +257,14 @@ Saving deletes and recreates only this astrologer's availability inside one tran
 `GET /api/astrologer/bookings` returns `{upcoming,past}` with the same time ordering and mode-specific status rules as user History. Every database read is filtered by the astrologer id from the valid session. Each item contains the booked user's id, name, birth date, local birth time, birth place, gender and optional phone number. The query does not select or return user email. Phone bookings never expose a call-room action; the UI renders the saved number as `tel:`.
 
 `GET /api/astrologer/bookings/:bookingId` supports direct protected navigation to `/astrologer/call/:bookingId`. It accepts a UUID and returns `{booking}` only for an owned Normal booking; another astrologer's id, a phone booking or a missing row returns the same `404 Booking not found` response. Both endpoints reject extra body or query data.
+
+## Blogs
+
+Public list pagination accepts only an integer `page` from 1 through 10,000. It returns `{posts,nextPage}`; each summary contains the title, two-line-ready excerpt, public astrologer identity, publication time and current counts. Drafts and unpublished posts return no public row. The detail response contains the plain-text body and oldest-first comments with only a first name and stable public avatar key.
+
+User mutations use the user session subject and never accept a user id. Like is an empty `PUT`. Comment creation accepts `{body}` after trimming, with 1–500 characters, and allows five accepted attempts per minute for one user and IP in the current backend process. A limited request returns `429` and `Retry-After`. User comment deletion combines the session user, post id and comment id; foreign comments return `404`.
+
+Astrologer routes sit behind both the active-account guard and the temporary-password gate. Write bodies are `{title,body,status}` with a trimmed 1–120 character title, a non-empty plain-text body, and `draft` or `published`. Every read, update and delete includes the session astrologer id. The owner routes use the owner guard and expose no user email or full name.
 
 ## WebSocket messages
 

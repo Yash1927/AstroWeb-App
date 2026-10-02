@@ -1558,6 +1558,226 @@ svg {
   font-weight: 700;
 }
 
+.blog-screen,
+.blog-list,
+.blog-card__link,
+.blog-post,
+.blog-post__body,
+.blog-comments,
+.blog-comment-list,
+.blog-comment-form,
+.astrologer-blogs,
+.astrologer-blog-list,
+.owner-comment-list,
+.author-comments {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.blog-header h1,
+.blog-header p,
+.blog-card h2,
+.blog-card p,
+.blog-author p,
+.blog-post header h1,
+.blog-post__body p,
+.blog-comment p,
+.astrologer-blog-row h3,
+.astrologer-blog-row p,
+.author-comment p,
+.owner-comment p {
+  margin: 0;
+}
+
+.blog-card__link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.blog-card__link:focus-visible {
+  border-radius: var(--radius-md);
+}
+
+.blog-author {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.blog-author > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-1);
+}
+
+.blog-author time,
+.blog-counts,
+.blog-comment__meta time,
+.author-comment time,
+.owner-comment time {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}
+
+.blog-card__excerpt {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.blog-counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+
+.blog-post__back {
+  width: fit-content;
+  padding-inline: 0;
+}
+
+.blog-post__body {
+  padding-block: var(--space-4);
+  border-block: 1px solid var(--color-border);
+}
+
+.blog-post__body p,
+.blog-comment p,
+.author-comment p,
+.owner-comment p {
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.blog-post__reaction {
+  display: flex;
+}
+
+.blog-like-button {
+  display: inline-flex;
+  min-height: var(--tap-min);
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+}
+
+.blog-like-button[aria-pressed="true"] {
+  border-color: var(--color-danger);
+  color: var(--color-danger);
+}
+
+.blog-like-button__heart {
+  display: inline-block;
+  color: var(--color-danger);
+  font-size: var(--text-xl);
+  line-height: 1;
+}
+
+.blog-like-button__heart--popping {
+  animation: heart-pop var(--dur-slow) var(--ease-out);
+}
+
+.blog-comment-list {
+  gap: 0;
+}
+
+.blog-comment {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-3);
+  padding-block: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.blog-comment > div,
+.blog-comment__meta {
+  display: grid;
+  gap: var(--space-1);
+}
+
+.blog-comment__meta {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+}
+
+.blog-comment .button--text,
+.author-comment .button--text,
+.owner-comment .button--text {
+  width: fit-content;
+  padding-inline: 0;
+}
+
+.blog-comment-form {
+  padding-block-start: var(--space-4);
+}
+
+.blog-textarea {
+  min-height: 7rem;
+  resize: vertical;
+}
+
+.blog-comment-form__footer,
+.astrologer-blog-actions,
+.dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.blog-editor__body {
+  min-height: 18rem;
+  resize: vertical;
+}
+
+.astrologer-blog-row,
+.author-comment,
+.owner-comment {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.astrologer-blog-row > div,
+.author-comment > div,
+.owner-comment > div {
+  display: grid;
+  min-width: 0;
+  gap: var(--space-2);
+}
+
+.author-comments {
+  padding-block-start: var(--space-4);
+  border-top: 1px solid var(--color-border);
+}
+
+.author-comment {
+  padding-block: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+@media (min-width: 48rem) {
+  .blog-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .blog-list > .button,
+  .blog-list > .field__error {
+    grid-column: 1 / -1;
+  }
+}
+
 @media (min-width: 42rem) {
   .home-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));

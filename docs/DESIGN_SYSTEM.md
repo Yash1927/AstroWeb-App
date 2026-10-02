@@ -39,7 +39,7 @@ Last updated: 2026-10-02
 | Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour; initials skip words that do not start with a letter | Settings, astrologer cards, owner list/profile and design page |
 | AstrologerCard | `frontend/src/components/AstrologerCard.tsx` | 56px avatar, name, non-empty expertise/language rows, experience, full-width Call action and desktop hover | Home, astrologer preview and design page |
 | BottomSheet | `frontend/src/components/BottomSheet.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Home call-type picker and design page |
-| Dialog | `frontend/src/components/Dialog.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Owner forms, astrologer preview and design page |
+| Dialog | `frontend/src/components/Dialog.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Owner forms, astrologer preview, blog sign-in/delete confirmations and design page |
 | Toast | `frontend/src/components/Toast.tsx` | Body portal; success or error; live region; closes after four seconds | Panel action feedback; design page |
 | Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Home cards, panel authentication/data loading and design page |
 | StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Booking cards and design page |
@@ -54,6 +54,9 @@ Last updated: 2026-10-02
 | Bottom tab bar | `frontend/src/App.tsx` | Home, History, Blogs and Settings; gold active tab | User app shell and design preview |
 | Call-room controls | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Large labelled Mute/Unmute, Chat and Leave controls; capability-gated Speaker; track-backed mute state across rejoins; current remote-muted badge; two-person layout; timer/notice and full-width end action | User and astrologer call rooms |
 | Call chat | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Portalled BottomSheet, 500-character textarea/counter, once-per-second send state, local/remote message bubbles and polite additions | Connected user and astrologer call rooms |
+| Blog cards and comments | `frontend/src/screens/BlogsPage.tsx`, `BlogPostPage.tsx`, `frontend/src/design.css` | Two-line excerpts, 40px author avatars, 32px commenter avatars, counts, plain-text paragraphs, 500-character comment form and responsive one/two-column list | Public Blogs and post pages |
+| AstrologerBlogs | `frontend/src/components/AstrologerBlogs.tsx` | Own draft/published list, title counter, plain-text editor, publishing controls, comments and delete confirmation | Astrologer Blogs |
+| OwnerRecentComments | `frontend/src/components/OwnerRecentComments.tsx` | Newest comments, post context and delete confirmation | Owner Recent comments |
 
 ## Animations
 
@@ -70,7 +73,7 @@ Last updated: 2026-10-02
 | `speak-ring` | 1.2s loop | Live speaking avatars and design example | Runs once for 1ms |
 | Icon cross-fade | 150ms | Call control | Transition reduced to 1ms |
 | `message-in` | 180ms | Live chat messages and design example | Reduced to 1ms once |
-| `heart-pop` | 300ms | Like example | Reduced to 1ms once |
+| `heart-pop` | 300ms | Blog like toggle and design example | Reduced to 1ms once |
 | Toast in / out | 220ms / 180ms | Toast component | Reduced to 1ms once |
 | `check-draw` | 450ms after 300ms scale-in | Booking success and design example | Reduced to 1ms once |
 | `soft-glow` | 2.4s loop | Live Join now example | Runs once for 1ms |
@@ -81,14 +84,14 @@ Last updated: 2026-10-02
 |---|---|---|---|
 | Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary; free confirmation or on-demand Razorpay Checkout; dismissal/failure/refund; Normal/Urgent success | 5–8, 12 |
 | History | `/history` | Booking skeleton/error, signed-out Google screen, Upcoming/Past Normal and phone cards, empty sections, live Join states and phone-call/number guidance | 6, 9, 12 |
-| Blogs | `/blogs` | Placeholder | 1 |
-| Blog post | `/blogs/:id` | Later-step placeholder | 1 |
+| Blogs | `/blogs` | Public skeleton/error/empty/list states, 20-post pages and Load more | 14 |
+| Blog post | `/blogs/:id` | Public loading/not-found/full-text states, viewer-aware like, Google gate, oldest-first comments and commenter deletion | 14 |
 | Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, upcoming-phone-call removal error, policy links, save toast and logout | 6, 12 |
 | Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; countdown/notice; mute, conditional Speaker, transient chat, device-change feedback, speaking rings, leave and rejoin | 9–11 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
-| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile and availability workflows, private Upcoming/Past Normal and phone bookings; Blogs placeholder | 4, 7, 9, 12 |
+| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile, availability, bookings, and own draft/published blog authoring and moderation | 4, 7, 9, 12, 14 |
 | Astrologer call | `/astrologer/call/:bookingId` | The same four call states and complete controls, with caller-first-name waiting text and astrologer session protection | 9–11 |
-| Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management and pricing/settings | 3 |
+| Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management, pricing/settings and Recent comments moderation | 3, 14 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
 | Not found | Any unmatched path | Link back to Home | 1 |
 
@@ -98,7 +101,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 
 | Situation | Text | Where |
 |---|---|---|
-| Later feature route or panel section | “Coming in a later step.” | Blog post, policies and astrologer Blogs |
+| Later feature route or panel section | “Coming in a later step.” | Policy pages only |
 | Unknown route | “This page does not exist.” | Not-found screen |
 | Design success toast | “Your changes were saved.” | Development design page |
 | Owner login error | “The email or password is incorrect.” | Owner login |
