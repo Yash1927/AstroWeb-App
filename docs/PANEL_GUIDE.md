@@ -44,7 +44,7 @@ Public Home shows only the astrologer's initials, display name, expertise, langu
 
 The note “Changes apply to new bookings only.” means existing booking history keeps the amount originally charged.
 
-Deleting blog comments arrives in Step 14. Payment refunds are handled in the Razorpay dashboard after payments are built.
+Deleting blog comments arrives in Step 14. The app automatically refunds a late payment if its held time has already been taken; other payment refunds are handled in the Razorpay Dashboard under the current policy.
 
 ## For astrologers
 
@@ -82,9 +82,9 @@ On a wider screen, date-exception controls wrap into as many rows as they need. 
 ### Review bookings
 
 1. Open **Bookings** to see Upcoming calls soonest first and Past calls newest first.
-2. Each Normal call shows the user's name, birth date, birth time, birth place, gender and phone number when one was saved. The user's email is never shown.
-3. Before the start, choose **Join** to see the waiting time. From the start until the end, choose the glowing **Join now** button.
-4. After the end there is no Join button. The call is Completed only after both people have joined; otherwise it is Missed.
+2. Every call shows the user's name, birth date, birth time, birth place, gender and phone number when one was saved. The user's email is never shown.
+3. For a Normal call, choose **Join** before the start to see the waiting time. From the start until the end, choose the glowing **Join now** button. After the end there is no Join button; it is Completed only after both people joined, otherwise Missed.
+4. An Urgent phone booking says **Phone call · date · time**. Its phone number is a tap-to-call link. It never has a Join button; call the user at the booked time. Past phone calls keep the **Phone call** label.
 
 The cards change as the start and end times pass without reloading the page. **Blogs** still says “Coming in a later step” until Step 14.
 

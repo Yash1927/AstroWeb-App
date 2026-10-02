@@ -22,7 +22,9 @@ type UserDetailsFormProps = {
   busy?: boolean
   initial: UserDetailsDraft
   onSubmit: (details: UserDetailsInput) => Promise<void> | void
+  onFieldChange?: (field: keyof UserDetailsDraft) => void
   serverError?: string
+  serverFieldErrors?: UserDetailsFieldErrors
   submitLabel?: string
 }
 
@@ -30,7 +32,9 @@ export function UserDetailsForm({
   busy = false,
   initial,
   onSubmit,
+  onFieldChange,
   serverError = '',
+  serverFieldErrors = {},
   submitLabel = 'Save details',
 }: UserDetailsFormProps) {
   const [draft, setDraft] = useState(initial)
@@ -40,6 +44,7 @@ export function UserDetailsForm({
   const update = (field: keyof UserDetailsDraft, value: string) => {
     setDraft((current) => ({ ...current, [field]: value }))
     setErrors((current) => ({ ...current, [field]: undefined }))
+    onFieldChange?.(field)
   }
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
@@ -118,7 +123,7 @@ export function UserDetailsForm({
       </label>
 
       <PhoneNumberField
-        error={errors.phone}
+        error={errors.phone ?? serverFieldErrors.phone}
         errorId={`${formId}-phone-error`}
         hint="Optional for Normal calls"
         onChange={(value) => update('phone', value)}

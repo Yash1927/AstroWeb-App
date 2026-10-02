@@ -15,6 +15,7 @@ import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
 import { userDetailsSchema } from "../src/user/user-schemas";
 import {
   UserNotFoundError,
+  UserPhoneRemovalBlockedError,
   userService,
   type UserService,
 } from "../src/user/user-service";
@@ -28,6 +29,10 @@ type Dependencies = {
 function respondWithUserError(error: unknown, response: Response) {
   if (error instanceof UserNotFoundError) {
     response.status(404).json({ error: error.message });
+    return;
+  }
+  if (error instanceof UserPhoneRemovalBlockedError) {
+    response.status(409).json({ error: error.message, field: "phone" });
     return;
   }
   response.status(503).json({ error: "The service is unavailable. Please try again." });

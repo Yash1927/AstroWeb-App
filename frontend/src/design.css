@@ -1185,6 +1185,24 @@ svg {
   width: 100%;
 }
 
+.booking-card__phone-call {
+  align-items: flex-start;
+  background: var(--color-surface-soft);
+  border-radius: var(--radius-md);
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: auto 1fr;
+  padding: var(--space-3);
+}
+
+.booking-card__phone-call p {
+  margin: 0;
+}
+
+.booking-card__phone-call a {
+  grid-column: 2;
+}
+
 .booking-card--skeleton .booking-card__person > div {
   display: grid;
   flex: 1;

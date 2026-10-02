@@ -1,7 +1,8 @@
-export type BookingStatus = 'upcoming' | 'completed' | 'missed'
+export type BookingStatus = 'upcoming' | 'completed' | 'missed' | 'phone-call'
 
 export type BookingCardBase = {
-  callType: 'normal'
+  callMode: 'in_app' | 'phone'
+  callType: 'normal' | 'urgent' | 'subscription'
   durationMin: number
   endedStatus: Exclude<BookingStatus, 'upcoming'>
   endsAt: string
@@ -17,6 +18,7 @@ export type UserBooking = BookingCardBase & {
     displayName: string
     id: string
   }
+  phone: string | null
 }
 
 export type AstrologerBooking = BookingCardBase & {

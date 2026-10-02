@@ -4,7 +4,7 @@
 - **Spec:** README §2, §5.2, §5.5, §5.6, §12 and §17
 - **Started:** 2026-10-01
 - **Finished:** 2026-10-01
-- **Last updated:** 2026-10-01
+- **Last updated:** 2026-10-02
 
 ## Goal
 
@@ -37,7 +37,8 @@ Add Google Identity Services sign-in in redirect mode, 30-day user sessions, and
 - `backend/routes/User.ts`, `backend/src/auth/require-user.ts` and `backend/src/user/` implement self-only `GET /api/me`, `PUT /api/me` and user logout. Required details, local birth time, non-future birth date, gender and the optional Indian phone format are validated on the server.
 - `frontend/src/components/GoogleSignInButton.tsx` renders Google's standard **Continue with Google** button with `ux_mode: "redirect"`, `/api/auth/google` as the callback and the current local flow as button state.
 - `frontend/src/components/UserDetailsForm.tsx` supplies the shared field-level validated details form and privacy link. Its phone control shows a fixed `+91` prefix, accepts local digits with spaces/dashes ignored, and submits the canonical number. Empty date of birth has a specific message. `frontend/src/screens/SettingsPage.tsx` adds the avatar, read-only Google email, editable details, policy links, Saved toast and logout. `HistoryPage.tsx` adds the signed-out gate.
-- `frontend/src/screens/HomePage.tsx` continues from call type through session check, Google sign-in, missing details and a phone-only Urgent/Subscription step. Step 7 added the real date/time picker and Step 8 added summary and zero-price booking success. The astrologer id and call type survive redirect and are removed from the URL after restoration.
+- `frontend/src/screens/HomePage.tsx` continues from call type through session check, Google sign-in, missing details and a phone-only Urgent/Subscription step. Step 7 added date/time selection, Step 8 added free confirmation, and Step 12 added paid Urgent Checkout. The astrologer id and call type survive redirect and are removed from the URL after restoration.
+- Step 12 prevents the saved phone from being cleared while a confirmed future phone call exists. The server returns the README message at the phone field; changing the number remains allowed and updates later phone-call cards.
 - The current `User` and `Session` tables support the implementation without a schema or migration change. See [D-012 and D-013](../DECISIONS.md) for redirect-state and Google-claim reconciliation choices.
 
 ## How to try it
@@ -51,5 +52,5 @@ Add Google Identity Services sign-in in redirect mode, 30-day user sessions, and
 
 ## Follow-ups and known issues
 
-- Step 7 added time slots and Step 8 added zero-price booking creation. Paid booking work remains later.
+- Step 7 added time slots, Step 8 added free booking, and Step 12 added paid Urgent booking. Subscription packs remain Step 13.
 - Real Google redirect behavior must be checked on desktop and in the installed app on a physical iPhone before launch, as required by README §17.

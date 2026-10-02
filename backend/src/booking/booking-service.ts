@@ -8,6 +8,10 @@ import {
   type SlotService,
 } from "../availability/slot-service";
 import type { CreateBookingInput } from "./booking-schemas";
+import {
+  razorpayGateway,
+  type RazorpayGateway,
+} from "../payment/razorpay-gateway";
 
 type CallType = CreateBookingInput["callType"];
 type CallMode = "in_app" | "phone";
@@ -16,6 +20,7 @@ type BookingUser = {
   birthDate: unknown | null;
   birthPlace: string | null;
   birthTime: unknown | null;
+  email: string;
   gender: "male" | "female" | "other" | null;
   id: string;
   name: string;
@@ -36,11 +41,11 @@ export type BookingInsert = {
   callMode: CallMode;
   callType: CallType;
   endsAt: Temporal.Instant;
-  holdExpiresAt: null;
+  holdExpiresAt: Temporal.Instant | null;
   id: string;
   pricePaise: number;
   startsAt: Temporal.Instant;
-  status: "confirmed";
+  status: "confirmed" | "pending_payment";
   usedCredit: false;
   userId: string;
 };
@@ -54,11 +59,40 @@ export type CreatedBooking = {
   id: string;
   pricePaise: number;
   startsAt: string;
-  status: "confirmed";
+  status: "confirmed" | "pending_payment";
+};
+
+export type BookingCheckout = {
+  amountPaise: number;
+  currency: "INR";
+  expiresAt: string;
+  keyId: string;
+  orderId: string;
+  prefill: {
+    contact: string;
+    email: string;
+    name: string;
+  };
+};
+
+export type CreateBookingResult = {
+  booking: CreatedBooking;
+  checkout?: BookingCheckout;
+};
+
+export type PaymentInsert = {
+  amountPaise: number;
+  bookingId: string;
+  id: string;
+  purpose: "normal_call" | "urgent_call";
+  razorpayOrderId: string;
+  status: "created";
+  userId: string;
 };
 
 export interface BookingTransaction {
   createBooking(input: BookingInsert): Promise<Omit<CreatedBooking, "durationMin">>;
+  createPayment(input: PaymentInsert): Promise<void>;
   expireElapsedHolds(astrologerId: string, now: Temporal.Instant): Promise<void>;
   hasUpcomingNormal(userId: string, now: Temporal.Instant): Promise<boolean>;
 }
@@ -70,7 +104,7 @@ export interface BookingRepository {
 }
 
 export interface BookingService {
-  createBooking(userId: string, input: CreateBookingInput): Promise<CreatedBooking>;
+  createBooking(userId: string, input: CreateBookingInput): Promise<CreateBookingResult>;
 }
 
 export class BookingUserDetailsIncompleteError extends Error {}
@@ -79,7 +113,7 @@ export class BookingAstrologerNotFoundError extends Error {}
 export class BookingSlotUnavailableError extends Error {}
 export class BookingOverlapError extends Error {}
 export class BookingFreeNormalLimitError extends Error {}
-export class PaidBookingDeferredError extends Error {}
+export class SubscriptionBookingDeferredError extends Error {}
 
 function completeDetails(user: BookingUser) {
   return user.name.trim().length >= 2
@@ -104,6 +138,10 @@ function priceAndDuration(settings: BookingSettings, callType: CallType) {
 
 function callModeFor(callType: CallType): CallMode {
   return callType === "normal" ? "in_app" : "phone";
+}
+
+function purposeFor(callType: Exclude<CallType, "subscription">) {
+  return callType === "normal" ? "normal_call" as const : "urgent_call" as const;
 }
 
 export function isBookingOverlapConstraintError(error: unknown) {
@@ -131,6 +169,7 @@ export class DatabaseBookingRepository implements BookingRepository {
   async getUser(userId: string) {
     return db.orm.public.User.select(
       "id",
+      "email",
       "name",
       "birthDate",
       "birthTime",
@@ -192,8 +231,11 @@ export class DatabaseBookingRepository implements BookingRepository {
           ...created,
           startsAt: created.startsAt.toString(),
           endsAt: created.endsAt.toString(),
-          status: created.status as "confirmed",
+          status: created.status as "confirmed" | "pending_payment",
         };
+      },
+      async createPayment(input) {
+        await transaction.orm.public.Payment.create(input);
       },
     }));
   }
@@ -204,6 +246,7 @@ export class DefaultBookingService implements BookingService {
     private readonly repository: BookingRepository,
     private readonly slots: SlotService,
     private readonly now: () => Temporal.Instant = () => Temporal.Now.instant(),
+    private readonly payments: RazorpayGateway = razorpayGateway,
   ) {}
 
   async createBooking(userId: string, input: CreateBookingInput) {
@@ -219,7 +262,7 @@ export class DefaultBookingService implements BookingService {
     }
 
     const callMode = callModeFor(input.callType);
-    if (callMode === "phone" && !user.phone) {
+    if (callMode === "phone" && !/^\+91[6-9]\d{9}$/.test(user.phone ?? "")) {
       throw new BookingPhoneRequiredError(
         "Add your phone number before booking this call.",
       );
@@ -256,12 +299,20 @@ export class DefaultBookingService implements BookingService {
         "Sorry, this time was just booked. Please pick another time.",
       );
     }
-    if (pricePaise > 0) {
-      throw new PaidBookingDeferredError("Paid bookings come in a later step.");
+    if (input.callType === "subscription" && pricePaise > 0) {
+      throw new SubscriptionBookingDeferredError(
+        "Subscription packs come in a later step.",
+      );
     }
 
+    const id = randomUUID();
+    const holdExpiresAt = pricePaise > 0 ? now.add({ minutes: 10 }) : null;
+    const order = pricePaise > 0
+      ? await this.payments.createOrder({ amountPaise: pricePaise, bookingId: id, userId })
+      : null;
+
     try {
-      return await this.repository.transaction(async (transaction) => {
+      const booking = await this.repository.transaction(async (transaction) => {
         await transaction.expireElapsedHolds(input.astrologerId, now);
 
         if (input.callType === "normal" && await transaction.hasUpcomingNormal(userId, now)) {
@@ -271,20 +322,49 @@ export class DefaultBookingService implements BookingService {
         }
 
         const created = await transaction.createBooking({
-          id: randomUUID(),
+          id,
           userId,
           astrologerId: input.astrologerId,
           callType: input.callType,
           callMode,
           startsAt: requestedStart,
           endsAt: Temporal.Instant.from(slot.endsAt),
-          status: "confirmed",
-          holdExpiresAt: null,
+          status: order ? "pending_payment" : "confirmed",
+          holdExpiresAt,
           pricePaise,
           usedCredit: false,
         });
+        if (order && input.callType !== "subscription") {
+          await transaction.createPayment({
+            id: randomUUID(),
+            userId,
+            bookingId: id,
+            purpose: purposeFor(input.callType),
+            razorpayOrderId: order.id,
+            amountPaise: pricePaise,
+            status: "created",
+          });
+        }
         return { ...created, durationMin };
       });
+
+      return {
+        booking,
+        ...(order && holdExpiresAt ? {
+          checkout: {
+            keyId: this.payments.getCheckoutKeyId(),
+            orderId: order.id,
+            amountPaise: pricePaise,
+            currency: "INR" as const,
+            expiresAt: holdExpiresAt.toString(),
+            prefill: {
+              name: user.name,
+              email: user.email,
+              contact: user.phone ?? "",
+            },
+          },
+        } : {}),
+      };
     } catch (error) {
       if (error instanceof BookingFreeNormalLimitError) throw error;
       if (isBookingOverlapConstraintError(error)) {

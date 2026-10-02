@@ -6,9 +6,9 @@ Last updated: 2026-10-02
 
 ## Current state
 
-Step 11 completes the current Normal-call room with its countdown/end behavior, transient chat, speaker and microphone-device handling, speaking detection and short-lived TURN access (README §7.1–§7.3, §10.4, §12 and §17). The existing contract already contains participant join timestamps and booking statuses, so this step needs no migration.
+Step 12 adds ten-minute paid booking holds, official Razorpay orders/Checkout, signed verification and webhooks, idempotent settlement and automatic late-payment refunds (README §6.4, §11, §12 and §17). Urgent calls are now phone bookings; Subscription packs remain Step 13. The existing `Booking`, `Payment` and `WebhookEvent` contract already supports this flow, so no migration is needed.
 
-- `frontend/` is a React single-page app with public Home through zero-price booking success, private user History, complete authenticated user/astrologer Normal-call rooms, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
+- `frontend/` is a React single-page app with public Home through free or Razorpay-paid Urgent booking success, private user History, complete authenticated user/astrologer Normal-call rooms, phone-call cards, Google sign-in gates, user details and Settings, a four-tab user shell, protected owner and astrologer profile/availability/booking workflows, and later-step placeholders. `frontend/src/design.css` is the only app stylesheet.
 - `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
 - `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
@@ -37,6 +37,8 @@ flowchart LR
     UserAuth[Google callback]
     User[Protected user routes]
     Booking[Protected booking route]
+    Payments[Payment verification and raw webhook]
+    Razorpay[Razorpay Orders, Checkout and Refunds]
     Session[Session manager and role guards]
     Prisma[Prisma 8 runtime]
     Neon[(Neon Postgres)]
@@ -59,6 +61,7 @@ flowchart LR
     UserAuth --> Express
     Express --> User
     Express --> Booking
+    Express --> Payments
     Express --> Ice
     OwnerAuth --> Session
     Owner --> Session
@@ -76,11 +79,16 @@ flowchart LR
     UserAuth --> Prisma
     User --> Prisma
     Booking --> Prisma
+    Payments --> Prisma
     Ice --> Prisma
     Public --> Prisma
     Prisma -->|pooled DATABASE_URL| Neon
     Ice -->|short-lived credentials| Turn
     WebRTC -. restrictive networks .-> Turn
+    Booking -->|server order| Razorpay
+    Browser -->|Checkout| Razorpay
+    Razorpay -->|signed webhook| Payments
+    Payments -->|late refund| Razorpay
 ```
 
 Production hosting is not built yet. README §1 requires the frontend, API and WebSocket endpoint to use one HTTPS domain.
@@ -89,13 +97,14 @@ Production hosting is not built yet. README §1 requires the frontend, API and W
 
 ```text
 backend/
-  app.ts                    Express setup, CORS and router mounting
+  app.ts                    Express setup, raw Razorpay webhook, JSON, CORS and router mounting
   index.ts                  Environment loading and shared HTTP/WebSocket listener
   routes/Public.ts          Public database health and settings handlers
   routes/Astrologers.ts     Public privacy-limited Home-card handler
   routes/UserAuth.ts        Google redirect callback and user-session creation
   routes/User.ts            Protected self-only user details, booking history and logout
-  routes/Bookings.ts        Protected zero-price booking creation
+  routes/Bookings.ts        Protected free confirmation or paid hold/order creation
+  routes/Payments.ts        Protected verification and public signed webhook handlers
   routes/Calls.ts           Protected booking-scoped ICE server configuration
   routes/OwnerAuth.ts       Owner credential login
   routes/Owner.ts           Protected owner account and settings handlers
@@ -109,6 +118,7 @@ backend/
   src/dev/                  Production-blocked development data helper
   src/http/                 Shared Zod response helper
   src/owner/                Owner validation schemas and database service
+  src/payment/              Razorpay gateway, signatures and idempotent settlement/refund service
   src/public/               Public Home-card database service
   src/user/                 Google verification, user validation and database service
   src/prisma/               Contract, generated artifacts, runtime client and seed
@@ -133,6 +143,7 @@ frontend/
   src/screens/HistoryPage.tsx Private user booking history
   src/screens/CallRoomPage.tsx Authenticated user/astrologer call-room states and controls
   src/screens/SettingsPage.tsx User profile, editable details, policies and logout
+  src/razorpay-checkout.ts  On-demand Standard Checkout loader and browser outcome adapter
   src/user-details.ts       Shared browser-side detail validation and form shaping
   src/design.css             Tokens, base styles, components and animation
   src/main.tsx               Fonts, global CSS, router and React root
@@ -163,6 +174,7 @@ docs/
 | `supertest` and `@types/supertest` | HTTP authorization, privacy-boundary and route tests | 3 (development only) |
 | Testing Library, user-event and jsdom | Frontend component interaction tests in a browser-like DOM | After 3 (development only) |
 | `ws` | Authenticated upgrade handling and booking-room signalling | Boilerplate; implemented in 10 |
+| `razorpay` | Official server-side order creation, payment lookup and refunds | 12 |
 
 ## External services
 
@@ -172,6 +184,7 @@ docs/
 | Google Identity Services | Redirect-mode user identity and verified Google account claims | `GOOGLE_CLIENT_ID`, `VITE_GOOGLE_CLIENT_ID` | 6 |
 | Google public STUN | WebRTC host/server-reflexive ICE candidates; no account or secret | None | 10 |
 | coturn or compatible TURN service | Relayed WebRTC audio on restrictive and mobile networks | `TURN_URLS`, `TURN_SECRET` | 11 |
+| Razorpay | INR Orders API, Standard Checkout, signed webhooks and full late-payment refunds | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | 12 |
 
 ## Main flows
 
@@ -187,7 +200,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | Zero-price booking creation | 8 | [Booking creation flow](#booking-creation-flow) |
 | Private booking history | 9 | [Booking history flow](#booking-history-flow) |
 | In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | [In-app call flow](#in-app-call-flow) |
-| Payments (Razorpay orders, verification, webhooks, refunds) | 12, 13 | — |
+| Urgent payment (Razorpay orders, verification, webhooks, refunds) | 12 | [Paid booking flow](#paid-booking-flow) |
 | Blogs | 14 | — |
 | Install and offline support (service worker) | 15 | — |
 
@@ -238,17 +251,46 @@ sequenceDiagram
     API->>Guard: resolve signed user and live account
     API->>Neon: read own details and current Settings
     API->>Slots: recheck eligible astrologer and exact slot
-    API->>Tx: begin zero-price confirmation
+    API->>Tx: begin free confirmation or paid hold
     Tx->>Neon: expire selected astrologer's elapsed holds
     Tx->>Neon: check user's upcoming Normal booking
-    Tx->>Neon: insert confirmed booking
+    Tx->>Neon: insert confirmed booking, or active hold plus Payment
     Neon-->>Tx: enforce Booking_no_overlap
     Tx-->>Home: 201 booking, or friendly 409 conflict
 ```
 
 The service derives user id from the session and derives price, duration, call mode, end time and status on the server. Complete details are required; Urgent and Subscription also require the user's saved phone. It invokes the same slot service used by the picker so eligibility, the 14-day range, Normal-from-tomorrow and current booking conflicts are rechecked at confirmation time.
 
-Every zero-price call type is confirmed immediately. Normal is always `in_app`; the phone call types are always `phone`. A positive settings price is rejected before the transaction with the Step 8 deferred-payment message. Inside the transaction, only elapsed holds for the selected astrologer are expired, the one-upcoming-Normal rule is checked and the new row is inserted. Prisma 8 normalizes PostgreSQL error `23P01` from `Booking_no_overlap` to `SqlQueryError.sqlState`; the mapper checks that property directly and through a transaction `cause` before returning the specified same-slot `409` response.
+Every zero-price call type is confirmed immediately. Normal is always `in_app`; the phone call types are always `phone`. Positive-price Normal or Urgent creates a ten-minute `pending_payment` booking and linked created Payment after the backend creates the server-priced Razorpay order. Positive-price Subscription remains Step 13. Inside the transaction, only elapsed holds for the selected astrologer are expired, the one-upcoming-Normal rule is checked and the new row is inserted. Prisma 8 normalizes PostgreSQL error `23P01` from `Booking_no_overlap` to `SqlQueryError.sqlState`; the mapper checks that property directly and through a transaction `cause` before returning the specified same-slot `409` response.
+
+## Paid booking flow
+
+```mermaid
+sequenceDiagram
+    participant Home
+    participant Booking as Booking service
+    participant Razorpay
+    participant Payment as Payment service
+    participant Neon
+
+    Home->>Booking: chosen astrologer, type and UTC start
+    Booking->>Neon: read Settings price and duration
+    Booking->>Razorpay: create INR order with booking receipt
+    Booking->>Neon: insert 10-minute hold and created Payment
+    Booking-->>Home: public key, order, amount, expiry and prefill
+    Home->>Razorpay: Standard Checkout
+    Razorpay-->>Home: payment/order/signature
+    Home->>Payment: verify owned payment
+    Razorpay-->>Payment: signed raw webhook (may race verification)
+    Payment->>Neon: idempotent confirm and payment record
+    alt held slot was taken after expiry
+        Neon-->>Payment: Booking_no_overlap
+        Payment->>Razorpay: full refund
+        Payment->>Neon: mark refunded and expired
+    end
+```
+
+Only the public Razorpay key id reaches the browser. The backend owns the amount, currency, receipt and order notes. Checkout is loaded on demand and receives the user's current name, Google email and canonical phone. Verification uses a timing-safe HMAC comparison plus stored user/booking/order ownership; webhook HMAC uses the untouched raw bytes before Express JSON parsing. `WebhookEvent.eventId` and unique provider ids provide database idempotency, while an order-keyed service queue makes same-process verification/webhook races converge cleanly.
 
 ## Booking history flow
 
@@ -273,7 +315,7 @@ flowchart LR
 
 List and detail reads receive the authenticated subject id from the route guard. The repository includes that id in the Booking predicate, so a caller cannot select another account through a path or query value. User responses join only the astrologer's id and display name. Astrologer responses select the booked user's permitted details and do not select email.
 
-The server splits Normal calls by their current end time and derives Completed only when both join timestamps exist. The browser keeps the UTC start/end and ended result, schedules updates at the next boundary, re-splits Upcoming/Past, and changes Join to Join now without polling or a page refresh. Direct user and astrologer call routes reload one subject-scoped booking before showing the Step 10 room.
+The server splits all confirmed calls by their current end time. Normal derives Completed only when both join timestamps exist; phone calls become Phone call after the end. The browser keeps the UTC start/end and ended result, schedules updates at the next boundary, re-splits Upcoming/Past, and changes Normal Join to Join now without polling or a page refresh. Phone calls never have a room link: user cards show the call message/current number and astrologer cards expose that number as `tel:`. Direct user and astrologer call routes remain Normal-only and reload one subject-scoped booking before showing the room.
 
 ## In-app call flow
 

@@ -69,5 +69,28 @@ describe('SettingsPage', () => {
     await user.click(screen.getByRole('button', { name: 'Log out' }))
     expect(await screen.findByRole('heading', { name: 'Continue with Google' })).toBeDefined()
   })
+
+  it('shows the upcoming phone-call removal rule at the phone field', async () => {
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method === 'PUT') {
+        return response({
+          error: 'You have an upcoming phone call, so we need your number.',
+          field: 'phone',
+        }, 409)
+      }
+      return response({ user: { ...userDetails, phone: '+919876543210' } })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const user = userEvent.setup()
+    render(<MemoryRouter><SettingsPage /></MemoryRouter>)
+
+    const phone = await screen.findByLabelText('Phone number')
+    await user.clear(phone)
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    const error = await screen.findByText('You have an upcoming phone call, so we need your number.')
+    expect(phone.getAttribute('aria-invalid')).toBe('true')
+    expect(phone.getAttribute('aria-describedby')).toContain(error.id)
+  })
 })
 

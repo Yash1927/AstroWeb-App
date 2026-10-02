@@ -9,13 +9,20 @@ import bookingsRouter from "./routes/Bookings";
 import callsRouter from "./routes/Calls";
 import ownerRouter from "./routes/Owner";
 import ownerAuthRouter from "./routes/OwnerAuth";
+import paymentsRouter, { createRazorpayWebhookHandler } from "./routes/Payments";
 import publicRouter from "./routes/Public";
 import userRouter from "./routes/User";
 import userAuthRouter from "./routes/UserAuth";
+import { paymentService } from "./src/payment/payment-service";
 
 export function createApp() {
   const app = express();
 
+  app.post(
+    "/api/razorpay/webhook",
+    express.raw({ type: "application/json", limit: "64kb" }),
+    createRazorpayWebhookHandler(paymentService),
+  );
   app.use(express.json());
   app.use(
     cors({
@@ -35,6 +42,7 @@ export function createApp() {
   app.use("/api/astrologer", astrologerRouter);
   app.use("/api/astrologers", publicAstrologerRouter);
   app.use("/api/bookings", bookingsRouter);
+  app.use("/api/payments", paymentsRouter);
   app.use("/api", callsRouter);
   app.use("/api", publicRouter);
   app.use("/api", userRouter);

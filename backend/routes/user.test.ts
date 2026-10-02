@@ -49,6 +49,7 @@ function ownBooking(): UserBookingCard {
     id: ownBookingId,
     astrologer: { id: "fd0059ad-79e4-435f-b5bf-7e11ef5cfd55", displayName: "Anika Rao" },
     callType: "normal",
+    callMode: "in_app",
     startsAt: "2026-10-02T04:30:00Z",
     endsAt: "2026-10-02T04:45:00Z",
     durationMin: 15,
@@ -56,6 +57,7 @@ function ownBooking(): UserBookingCard {
     usedCredit: false,
     status: "upcoming",
     endedStatus: "missed",
+    phone: null,
   };
 }
 

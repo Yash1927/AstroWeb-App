@@ -8,7 +8,7 @@ Last updated: 2026-10-02
 
 - HTTP endpoints are mounted below `/api` (README §1).
 - Health, public settings, public astrologer cards and eligible astrologer slots need no session. Owner, astrologer and Google callback endpoints are public; protected endpoints run the matching role guard.
-- Current account, profile, public-card and booking bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
+- Current account, profile, public-card and booking bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Booking creation discards unrecognized body fields so a browser-supplied price cannot affect the server-owned Settings amount. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
 - Owner authentication uses `astrowebapp_owner_session` scoped to `/api/owner`. Astrologer and user authentication use separate cookies scoped to `/` so shared APIs and `/ws` receive them. All three are httpOnly, use SameSite=Lax and are Secure when `NODE_ENV=production`; the owner and astrologer last 12 hours and the user lasts 30 days.
 - Missing or invalid authentication returns `401`. Missing records return `404`; duplicate email, password-gate failures and invalid state transitions return `409`; database/service failures return a generic `503`.
 
@@ -21,12 +21,14 @@ Last updated: 2026-10-02
 | GET | `/api/settings/public` | Public | Returns only current prices, pack size and call durations | 2 |
 | GET | `/api/astrologers` | Public | Returns only eligible Home-card fields | 5 |
 | GET | `/api/astrologers/:id/slots?type=normal\|urgent\|subscription` | Public | Returns 14 days of current free slots | 7 |
-| POST | `/api/bookings` | User | Revalidates and creates one zero-price confirmed booking | 8 |
+| POST | `/api/bookings` | User | Revalidates a slot, then confirms a zero-price booking or creates a ten-minute paid hold and Razorpay order | 8, 12 |
+| POST | `/api/payments/verify` | User | Verifies one owned Checkout payment and confirms or refunds its booking | 12 |
+| POST | `/api/razorpay/webhook` | Razorpay | Processes signed payment events from the untouched raw request body | 12 |
 | GET | `/api/calls/:bookingId/ice-servers` | Booked user or astrologer | Returns STUN and short-lived TURN configuration for an active in-app call | 11 |
 | POST | `/api/auth/google` | Public Google redirect | Verifies a Google credential and creates a user session | 6 |
 | GET | `/api/me` | User | Returns the signed-in user's own account and details | 6 |
 | PUT | `/api/me` | User | Replaces the signed-in user's own editable details | 6 |
-| GET | `/api/me/bookings` | User | Returns the signed-in user's own Normal bookings as Upcoming and Past | 9 |
+| GET | `/api/me/bookings` | User | Returns the signed-in user's own confirmed Normal and phone bookings as Upcoming and Past | 9, 12 |
 | GET | `/api/me/bookings/:bookingId` | User | Returns one owned Normal booking for protected call-room navigation | 9 |
 | POST | `/api/auth/logout` | User | Deletes the current user session and clears its cookie | 6 |
 | POST | `/api/auth/owner/login` | Public | Verifies owner credentials and creates an owner session | 3 |
@@ -49,7 +51,7 @@ Last updated: 2026-10-02
 | PUT | `/api/astrologer/profile` | Astrologer | Saves only the signed-in astrologer's profile | 4 |
 | GET | `/api/astrologer/availability` | Astrologer | Returns only the signed-in astrologer's hours and exceptions | 7 |
 | PUT | `/api/astrologer/availability` | Astrologer | Atomically replaces only the signed-in astrologer's availability | 7 |
-| GET | `/api/astrologer/bookings` | Astrologer | Returns only that astrologer's Normal bookings and booked-user details | 9 |
+| GET | `/api/astrologer/bookings` | Astrologer | Returns only that astrologer's confirmed Normal/phone bookings and booked-user details | 9, 12 |
 | GET | `/api/astrologer/bookings/:bookingId` | Astrologer | Returns one booking owned by that astrologer for protected call-room navigation | 9 |
 
 ### GET /api/health
@@ -80,7 +82,7 @@ Both routes resolve the record id only from the valid user session. They do not 
 | `GET /api/me` | No body, params or query | `{user}` with id, Google email, editable details, credits and computed `detailsComplete` |
 | `PUT /api/me` | Name 2–60 chars; non-future `YYYY-MM-DD` birth date; `HH:mm` local birth time; birth place 1–100 chars; optional null or `+91` mobile; `male`, `female` or `other` gender | `{user}` after replacing those editable fields |
 
-The email, Google subject and credits cannot be changed through `PUT`. Birth time is stored as the local clock time entered, without timezone conversion. `POST /api/auth/logout` deletes the current Session row, clears the root-path user cookie and returns `204`.
+The email, Google subject and credits cannot be changed through `PUT`. Birth time is stored as the local clock time entered, without timezone conversion. Removing an existing phone number returns `409` with `field:"phone"` while the user has a confirmed phone booking whose end is still in the future. `POST /api/auth/logout` deletes the current Session row, clears the root-path user cookie and returns `204`.
 
 ### User booking history
 
@@ -91,9 +93,7 @@ Both endpoints resolve the user only from the valid session. They accept no user
 | `GET /api/me/bookings` | `{upcoming,past}`; Upcoming is soonest first and Past is newest first |
 | `GET /api/me/bookings/:bookingId` | `{booking}` for one owned Normal call |
 
-Each item contains the booking id, Normal call type, UTC start/end, duration, stored price, credit flag, current status, eventual ended status, and only the astrologer's id/display name. Status is Upcoming until the end; after the end it is Completed only when both participant join timestamps exist, otherwise Missed. The browser keeps applying that same rule at the time boundaries without fetching again.
-
-Step 9 returns confirmed/completed/missed Normal bookings only. Urgent and Subscription phone-call history is added in Step 12.
+Each item contains the booking id, call type/mode, UTC start/end, duration, stored price, credit flag, current status, eventual ended status, the user's current phone number and only the astrologer's id/display name. Normal status is Upcoming until the end; after the end it is Completed only when both participant join timestamps exist, otherwise Missed. A phone booking is Upcoming until its end and then has `phone-call` status. The browser keeps applying those rules at the time boundaries without fetching again. The detail endpoint remains Normal-only because only in-app Normal calls have a room.
 
 ### GET /api/health/db
 
@@ -136,12 +136,21 @@ Step 9 returns confirmed/completed/missed Normal bookings only. Urgent and Subsc
 ### POST /api/bookings
 
 - **Who:** A signed-in user whose account still exists. The user id always comes from the root-path user session cookie.
-- **Request:** JSON with exactly `astrologerId` (UUID), `callType` (`normal`, `urgent` or `subscription`) and `startsAt` (an absolute ISO timestamp). The route accepts no price, duration, mode, status, user id, parameters or query fields.
+- **Request:** JSON with `astrologerId` (UUID), `callType` (`normal`, `urgent` or `subscription`) and `startsAt` (an absolute ISO timestamp). Unknown body fields are discarded; in particular, a submitted price is ignored. The route accepts no parameters or query fields.
 - **Checks:** The user's required details must be complete, phone-call types require a saved phone, the astrologer must still be active/listed/profile-saved, and `startsAt` must exactly match a current slot from the shared 14-day slot service. Duration and price are reread from `Settings`.
 - **Zero price:** Any call type priced at zero is saved immediately as `confirmed`, with no payment hold. Normal is always `in_app`; Urgent and Subscription are `phone`. The response is `201` with `{booking}` containing id, astrologer id, call type/mode, UTC start/end, status, copied price and duration.
+- **Positive price:** Normal and Urgent create a `pending_payment` booking whose hold expires after ten minutes plus a `Payment(status=created)` linked to a server-created Razorpay INR order. The `201` response adds `checkout` with the public key id, order id, server amount/currency, expiry and the signed-in user's name/email/phone prefill. Positive-price Subscription remains Step 13 and returns its later-step message.
 - **Transaction:** Before inserting, the server changes elapsed `pending_payment` holds for that astrologer to `expired`, then checks the one-upcoming-Normal rule. PostgreSQL's `Booking_no_overlap` exclusion constraint decides a simultaneous conflict.
-- **Errors:** Malformed input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, a missing required phone, an unavailable/overlapping slot, a second upcoming Normal booking and a currently paid call type return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Other service failures return `503` with a generic message.
-- **Deferred work:** A price above zero returns `409` with `{"error":"Paid bookings come in a later step."}` and creates no booking. Payment holds arrive in Step 12.
+- **Errors:** Malformed required input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, an invalid/missing required phone, an unavailable/overlapping slot, a second upcoming Normal booking and positive-price Subscription return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Order/database failures return `503` with a generic message.
+
+### POST /api/payments/verify
+
+- **Who:** The signed-in user who owns both the stored Payment and Booking.
+- **Request:** Strict JSON with `bookingId`, `razorpayOrderId`, `razorpayPaymentId` and the 64-hex-character `razorpaySignature`; no params or query.
+- **Verification:** The backend computes HMAC-SHA256 over `orderId|paymentId` with `RAZORPAY_KEY_SECRET`, compares equal-length bytes with `crypto.timingSafeEqual`, then checks the stored order, user, booking and amount.
+- **Success:** One transaction changes the booking to `confirmed`, clears its hold and changes the Payment to `paid` with its unique Razorpay payment id. Repeated confirmation returns the same confirmed result without another logical confirmation.
+- **Late conflict:** If `Booking_no_overlap` rejects confirmation because the slot is now occupied, the backend issues a full Razorpay refund and stores Payment `refunded` plus Booking `expired`. The `200` response returns `status:"refunded"` and the specified user-facing message.
+- **Errors:** Invalid signatures return `400`, foreign/missing orders return `404`, invalid payment state returns `409`, and unavailable services return the generic `503` verification message.
 
 ### GET /api/calls/:bookingId/ice-servers
 
@@ -231,9 +240,9 @@ Saving deletes and recreates only this astrologer's availability inside one tran
 
 ### Own booking history
 
-`GET /api/astrologer/bookings` returns `{upcoming,past}` with the same time ordering and Normal-call status rules as user History. Every database read is filtered by the astrologer id from the valid session. Each item contains the booked user's id, name, birth date, local birth time, birth place, gender and optional phone number. The query does not select or return user email.
+`GET /api/astrologer/bookings` returns `{upcoming,past}` with the same time ordering and mode-specific status rules as user History. Every database read is filtered by the astrologer id from the valid session. Each item contains the booked user's id, name, birth date, local birth time, birth place, gender and optional phone number. The query does not select or return user email. Phone bookings never expose a call-room action; the UI renders the saved number as `tel:`.
 
-`GET /api/astrologer/bookings/:bookingId` supports direct protected navigation to `/astrologer/call/:bookingId`. It accepts a UUID and returns `{booking}` only when the booking belongs to the signed-in astrologer; another astrologer's id returns the same `404 Booking not found` response as a missing row. Both endpoints reject extra body or query data. Phone-call bookings remain deferred to Step 12.
+`GET /api/astrologer/bookings/:bookingId` supports direct protected navigation to `/astrologer/call/:bookingId`. It accepts a UUID and returns `{booking}` only for an owned Normal booking; another astrologer's id, a phone booking or a missing row returns the same `404 Booking not found` response. Both endpoints reject extra body or query data.
 
 ## WebSocket messages
 
@@ -264,3 +273,6 @@ Chat is relay-only: the server does not store or replay it. The first admitted j
 
 | Source | Path | Events handled | How it's verified | Step |
 |---|---|---|---|---|
+| Razorpay | `POST /api/razorpay/webhook` | `payment.captured`, `order.paid`, `payment.failed` | HMAC-SHA256 of the untouched raw bytes with `RAZORPAY_WEBHOOK_SECRET`; `x-razorpay-event-id` is inserted once | 12 |
+
+The raw-body handler is mounted before `express.json()`. Captured/paid events use the same idempotent settlement/refund path as browser verification. Failed events change a still-created Payment to `failed` but leave its booking hold to expire normally. A duplicate event id returns `204` without applying the event again; invalid signatures or payloads return `400`.

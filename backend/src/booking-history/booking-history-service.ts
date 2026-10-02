@@ -1,12 +1,13 @@
 import "temporal-polyfill/global";
 import { db } from "../prisma/db";
 
-type BookingStatus = "upcoming" | "completed" | "missed";
+type BookingStatus = "upcoming" | "completed" | "missed" | "phone-call";
 
 type BookingRow = {
   astrologerId: string;
   astrologerJoinedAt: Temporal.Instant | null;
-  callType: "normal";
+  callMode: "in_app" | "phone";
+  callType: "normal" | "urgent" | "subscription";
   endsAt: Temporal.Instant;
   id: string;
   pricePaise: number;
@@ -32,7 +33,8 @@ type UserRow = {
 };
 
 export type BookingCardBase = {
-  callType: "normal";
+  callMode: "in_app" | "phone";
+  callType: "normal" | "urgent" | "subscription";
   durationMin: number;
   endedStatus: Exclude<BookingStatus, "upcoming">;
   endsAt: string;
@@ -45,6 +47,7 @@ export type BookingCardBase = {
 
 export type UserBookingCard = BookingCardBase & {
   astrologer: AstrologerRow;
+  phone: string | null;
 };
 
 export type AstrologerBookingCard = BookingCardBase & {
@@ -84,6 +87,7 @@ const bookingFields = [
   "id",
   "userId",
   "astrologerId",
+  "callMode",
   "callType",
   "startsAt",
   "endsAt",
@@ -96,18 +100,18 @@ const bookingFields = [
 export class DatabaseBookingHistoryRepository implements BookingHistoryRepository {
   async listUserBookings(userId: string) {
     const rows = await db.orm.public.Booking.select(...bookingFields)
-      .where({ userId, callType: "normal" })
+      .where({ userId })
       .where((booking) => booking.status.in(["confirmed", "completed", "missed"]))
       .all();
-    return rows.map((row) => ({ ...row, callType: "normal" as const }));
+    return rows as BookingRow[];
   }
 
   async listAstrologerBookings(astrologerId: string) {
     const rows = await db.orm.public.Booking.select(...bookingFields)
-      .where({ astrologerId, callType: "normal" })
+      .where({ astrologerId })
       .where((booking) => booking.status.in(["confirmed", "completed", "missed"]))
       .all();
-    return rows.map((row) => ({ ...row, callType: "normal" as const }));
+    return rows as BookingRow[];
   }
 
   async getUserBooking(userId: string, bookingId: string) {
@@ -115,7 +119,7 @@ export class DatabaseBookingHistoryRepository implements BookingHistoryRepositor
       .where({ userId, id: bookingId, callType: "normal" })
       .where((booking) => booking.status.in(["confirmed", "completed", "missed"]))
       .first();
-    return row ? { ...row, callType: "normal" as const } : null;
+    return row ? { ...row, callType: "normal" as const, callMode: "in_app" as const } : null;
   }
 
   async getAstrologerBooking(astrologerId: string, bookingId: string) {
@@ -123,7 +127,7 @@ export class DatabaseBookingHistoryRepository implements BookingHistoryRepositor
       .where({ astrologerId, id: bookingId, callType: "normal" })
       .where((booking) => booking.status.in(["confirmed", "completed", "missed"]))
       .first();
-    return row ? { ...row, callType: "normal" as const } : null;
+    return row ? { ...row, callType: "normal" as const, callMode: "in_app" as const } : null;
   }
 
   async findAstrologers(ids: string[]) {
@@ -155,16 +159,20 @@ function unique(values: string[]) {
 
 function statusFor(booking: BookingRow, now: Temporal.Instant): BookingStatus {
   if (Temporal.Instant.compare(now, booking.endsAt) < 0) return "upcoming";
+  if (booking.callMode === "phone") return "phone-call";
   return booking.userJoinedAt && booking.astrologerJoinedAt ? "completed" : "missed";
 }
 
 function baseCard(booking: BookingRow, now: Temporal.Instant): BookingCardBase {
-  const endedStatus = booking.userJoinedAt && booking.astrologerJoinedAt
-    ? "completed"
-    : "missed";
+  const endedStatus = booking.callMode === "phone"
+    ? "phone-call"
+    : booking.userJoinedAt && booking.astrologerJoinedAt
+      ? "completed"
+      : "missed";
   return {
     id: booking.id,
     callType: booking.callType,
+    callMode: booking.callMode,
     startsAt: booking.startsAt.toString(),
     endsAt: booking.endsAt.toString(),
     durationMin: Math.round(
@@ -207,7 +215,10 @@ export class DefaultBookingHistoryService implements BookingHistoryService {
   ) {}
 
   async listUserBookings(userId: string) {
-    const bookings = await this.repository.listUserBookings(userId);
+    const [bookings, currentUsers] = await Promise.all([
+      this.repository.listUserBookings(userId),
+      this.repository.findUsers([userId]),
+    ]);
     const astrologers = await this.repository.findAstrologers(
       unique(bookings.map((booking) => booking.astrologerId)),
     );
@@ -215,7 +226,11 @@ export class DefaultBookingHistoryService implements BookingHistoryService {
     const now = this.now();
     return sections(bookings.flatMap((booking) => {
       const astrologer = byId.get(booking.astrologerId);
-      return astrologer ? [{ ...baseCard(booking, now), astrologer }] : [];
+      return astrologer ? [{
+        ...baseCard(booking, now),
+        astrologer,
+        phone: currentUsers[0]?.phone ?? null,
+      }] : [];
     }));
   }
 
@@ -234,7 +249,12 @@ export class DefaultBookingHistoryService implements BookingHistoryService {
     const booking = await this.repository.getUserBooking(userId, bookingId);
     if (!booking) return null;
     const [astrologer] = await this.repository.findAstrologers([booking.astrologerId]);
-    return astrologer ? { ...baseCard(booking, this.now()), astrologer } : null;
+    const [user] = await this.repository.findUsers([userId]);
+    return astrologer ? {
+      ...baseCard(booking, this.now()),
+      astrologer,
+      phone: user?.phone ?? null,
+    } : null;
   }
 
   async getAstrologerBooking(astrologerId: string, bookingId: string) {

@@ -31,11 +31,11 @@ Give signed-in users a private History view of their Normal calls and give each 
 
 ## As built
 
-- `backend/src/booking-history/booking-history-service.ts` reads confirmed/completed/missed Normal bookings, derives Upcoming/Completed/Missed from the current time and both join timestamps, and sorts both sections. Its repository scopes every booking query to the authenticated user or astrologer.
+- `backend/src/booking-history/booking-history-service.ts` reads confirmed/completed/missed bookings and sorts both sections. Normal calls derive Upcoming/Completed/Missed from current time and join timestamps; Step 12 adds Upcoming/Phone call for phone mode. Every repository query remains scoped to the authenticated user or astrologer.
 - `GET /api/me/bookings` and `GET /api/astrologer/bookings` return the two booking sections. Matching detail endpoints protect direct call-room navigation without accepting a user or astrologer id from the browser. Astrologer responses select the booked user's details but never select email.
 - The astrologer router now applies the existing temporary-password gate to profile, availability and booking routes, while leaving session, logout and password replacement available.
-- History and the astrologer Bookings section share responsive cards with avatar, Normal call facts, price, status and time-driven Join states. Astrologer cards also show the permitted birth, gender and phone details.
-- `/call/:bookingId` and `/astrologer/call/:bookingId` load only an owned booking and show the Step 9 before/after-start placeholder. The room implementation remains Step 10.
+- History and the astrologer Bookings section share responsive cards with avatar, call facts, price and status. Normal cards have time-driven Join states. Step 12 phone cards never have Join: users see who will call, the current number and a Settings link; astrologers see **Phone call · date · time** with a `tel:` number.
+- `/call/:bookingId` and `/astrologer/call/:bookingId` still load only an owned Normal booking. Steps 10 and 11 replaced the placeholders with the complete authenticated in-app audio room.
 - `npm run dev:make-booking` creates a confirmed Normal test booking from two email arguments, an offset and a duration. It refuses production.
 - Automated access tests cover cross-user and cross-astrologer detail requests. Service and component tests cover sorting, privacy shaping, Completed/Missed rules, and automatic Join transitions.
 
@@ -45,9 +45,9 @@ Give signed-in users a private History view of their Normal calls and give each 
 2. Sign in as that user and open `/history`. The booking appears under Upcoming, with **Join** before its start.
 3. Leave the page open. At the start it changes to **Join now** with a soft glow. At the end it moves to Past and shows Completed only if both join timestamps exist; otherwise it shows Missed.
 4. Sign in as the booked astrologer, choose **Bookings**, and check the same call plus the user's permitted details. No user email is shown.
-5. Open each side's Join link. Before the start the placeholder gives the IST start time; from the start onward it says “Coming in the next step”.
+5. Open each side's Join link. Before the start the room gives the IST start time; during the window it offers the complete in-app audio call.
 
 ## Follow-ups and known issues
 
-- The actual audio call room and join-timestamp writes are Step 10.
-- Urgent and Subscription phone-call cards are Step 12, so Step 9 lists only Normal calls.
+- Steps 10 and 11 added the audio room, join timestamps, live controls and end-of-call finalization.
+- Step 12 added Urgent phone-call cards. Subscription bookings remain Step 13.

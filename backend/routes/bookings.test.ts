@@ -8,7 +8,7 @@ import type { SlotService } from "../src/availability/slot-service";
 import {
   BookingFreeNormalLimitError,
   BookingOverlapError,
-  PaidBookingDeferredError,
+  SubscriptionBookingDeferredError,
   DefaultBookingService,
   type BookingInsert,
   type BookingRepository,
@@ -75,8 +75,8 @@ function bookingRequest(app: express.Express, subjectId = userA) {
 }
 
 describe("POST /api/bookings", () => {
-  it("requires a user session and strictly validates the request", async () => {
-    const bookings: BookingService = { createBooking: vi.fn(async () => successfulBooking()) };
+  it("requires a user session, validates booking fields and ignores a browser price", async () => {
+    const bookings: BookingService = { createBooking: vi.fn(async () => ({ booking: successfulBooking() })) };
     const app = testApp(bookings);
     const signedOut = await request(app).post("/api/bookings").send({
       astrologerId,
@@ -94,15 +94,20 @@ describe("POST /api/bookings", () => {
 
     expect(signedOut.status).toBe(401);
     expect(invalid.status).toBe(400);
-    expect(browserPrice.status).toBe(400);
-    expect(bookings.createBooking).not.toHaveBeenCalled();
+    expect(browserPrice.status).toBe(201);
+    expect(bookings.createBooking).toHaveBeenCalledTimes(1);
+    expect(bookings.createBooking).toHaveBeenCalledWith(userA, {
+      astrologerId,
+      callType: "normal",
+      startsAt,
+    });
   });
 
   it("creates only for the session user and maps booking conflicts", async () => {
     const bookings: BookingService = {
       createBooking: vi.fn(async (userId) => {
         expect(userId).toBe(userA);
-        return successfulBooking();
+        return { booking: successfulBooking() };
       }),
     };
     const created = await bookingRequest(testApp(bookings));
@@ -133,11 +138,11 @@ describe("POST /api/bookings", () => {
 
     const paid = await bookingRequest(testApp({
       createBooking: vi.fn(async () => {
-        throw new PaidBookingDeferredError("Paid bookings come in a later step.");
+        throw new SubscriptionBookingDeferredError("Subscription packs come in a later step.");
       }),
     }));
     expect(paid.status).toBe(409);
-    expect(paid.body.error).toBe("Paid bookings come in a later step.");
+    expect(paid.body.error).toBe("Subscription packs come in a later step.");
   });
 
   it("allows exactly one of two simultaneous requests for the same slot", async () => {
@@ -148,6 +153,7 @@ describe("POST /api/bookings", () => {
       async getUser(userId: string) {
         return {
           id: userId,
+          email: "user@example.com",
           name: "Test User",
           birthDate: {},
           birthTime: {},
@@ -171,6 +177,7 @@ describe("POST /api/bookings", () => {
       transaction<T>(work: (transaction: BookingTransaction) => Promise<T>) {
         const run = this.queue.then(() => work({
           expireElapsedHolds: async () => undefined,
+          createPayment: async () => undefined,
           hasUpcomingNormal: async (userId) => this.bookings.some((booking) => (
             booking.userId === userId
             && booking.callType === "normal"
@@ -196,7 +203,7 @@ describe("POST /api/bookings", () => {
               callMode: input.callMode,
               startsAt: input.startsAt.toString(),
               endsAt: input.endsAt.toString(),
-              status: "confirmed" as const,
+              status: input.status,
               pricePaise: input.pricePaise,
             };
           },

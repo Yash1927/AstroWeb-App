@@ -11,6 +11,7 @@ Last updated: 2026-10-02
 - A Neon Postgres project for database commands
 - A Google Cloud OAuth client of type **Web application** for user sign-in
 - A coturn server or compatible managed TURN service with a REST shared secret for reliable in-app calls
+- A Razorpay account with test API keys and a test webhook secret
 - An HTTPS tunnel to the Vite server for real-phone microphone, earbuds and mobile-data checks
 
 ## Install
@@ -93,6 +94,16 @@ The call room fetches Google's public STUN address and configured TURN values fr
 
 Static usernames and passwords must not be added to frontend source or `VITE_` variables. If a managed provider supplies only fixed credentials instead of a REST shared secret, it does not match the current short-lived credential integration.
 
+## Razorpay test setup
+
+1. In the Razorpay Dashboard, switch to test mode and create API keys. Put the test key id in `RAZORPAY_KEY_ID` and its secret in `RAZORPAY_KEY_SECRET` in `backend/.env`.
+2. Create a separate webhook secret and put it in `RAZORPAY_WEBHOOK_SECRET`. Do not reuse or expose either secret in `frontend/.env`.
+3. Give Razorpay a public HTTPS URL ending in `/api/razorpay/webhook`. For local testing, an HTTPS tunnel to Vite can forward that `/api` path through the existing proxy. Subscribe to `payment.captured`, `order.paid` and `payment.failed`.
+4. Restart the backend. Sign in as a user with complete details and a valid phone, choose an Urgent slot, and confirm that Checkout shows the Settings price with the name, email and phone prefilled.
+5. Run one test success, close Checkout once, and use Razorpay's test failure path. Confirm History and the astrologer Bookings section show a phone call with no Join button.
+
+The backend uses the official `razorpay` Node SDK. Orders and refunds require backend keys; the browser receives only the public key id with its server-created order. The webhook must receive its untouched `application/json` body, so its Express handler remains mounted before the global JSON parser.
+
 ## Database setup
 
 1. In Neon, copy the pooled connection string into `DATABASE_URL` and the direct connection string into `DIRECT_DATABASE_URL`. Keep `sslmode=require` in both. The direct hostname does not contain `-pooler`.
@@ -117,7 +128,7 @@ The second seed run should report that neither row was created. Applied migratio
 5. If Google sign-in is needed, add the exact HTTPS origin to the OAuth client's authorised JavaScript origins and `<origin>/api/auth/google` to its authorised redirect URIs.
 6. Open the HTTPS address on the phone. Join an active Normal call and test permission, mobile data, Speaker where the browser exposes it, and connecting/disconnecting wired or Bluetooth earbuds.
 
-Vite continues to proxy `/api` and `/ws` to the one backend listener, so the browser cookies stay first-party. Razorpay webhook tunnel setup arrives with Step 12.
+Vite continues to proxy `/api` and `/ws` to the one backend listener, so the browser cookies stay first-party. A Razorpay webhook can use the same HTTPS tunnel's `/api/razorpay/webhook` path while Step 12 is tested locally.
 
 ## Production
 
@@ -142,4 +153,6 @@ _Write in Step 16:_ building and starting the app, production env vars, HTTPS an
 | A call works normally but fails with `VITE_FORCE_RELAY="true"` | The TURN relay is unreachable or its URL/shared secret does not match. Check coturn/provider logs without copying credentials into application logs. |
 | Vite rejects the HTTPS tunnel host | Add only the tunnel's exact hostname to `server.allowedHosts` in `frontend/vite.config.ts`, then restart Vite. Do not enable every host. |
 | Two peers cannot establish audio on a restrictive or mobile network | Confirm TURN is configured, then repeat with the development relay-only flag. A successful relay-only call proves media is not falling back to direct STUN. |
+| Checkout says payment is unavailable | Confirm all three Razorpay backend variables use test-mode values, restart the backend, and allow `https://checkout.razorpay.com` in any local browser/content blocker. Never put the key secret in the frontend. |
+| Razorpay shows a paid order but the booking stays pending | Confirm the browser called `/api/payments/verify`; also check that the Dashboard webhook points to the exact public `/api/razorpay/webhook` URL and uses the same webhook secret configured in the backend. |
 | Prisma reports `RUNTIME.TEMPORAL_UNAVAILABLE` | Run `npm install`; `temporal-polyfill` must be installed and is loaded by `src/prisma/db.ts`. |

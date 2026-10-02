@@ -8,7 +8,7 @@ import {
   BookingPhoneRequiredError,
   BookingSlotUnavailableError,
   BookingUserDetailsIncompleteError,
-  PaidBookingDeferredError,
+  SubscriptionBookingDeferredError,
   bookingService,
   type BookingService,
 } from "../src/booking/booking-service";
@@ -33,7 +33,7 @@ function respondWithBookingError(error: unknown, response: Response) {
     || error instanceof BookingFreeNormalLimitError
     || error instanceof BookingSlotUnavailableError
     || error instanceof BookingOverlapError
-    || error instanceof PaidBookingDeferredError
+    || error instanceof SubscriptionBookingDeferredError
   ) {
     response.status(409).json({ error: error.message });
     return;
@@ -52,11 +52,11 @@ export function createBookingsRouter({ bookings, sessions, users }: Dependencies
     if (!body) return;
 
     try {
-      const booking = await bookings.createBooking(
+      const result = await bookings.createBooking(
         response.locals.userSession.subjectId,
         body,
       );
-      response.status(201).json({ booking });
+      response.status(201).json(result);
     } catch (error) {
       respondWithBookingError(error, response);
     }

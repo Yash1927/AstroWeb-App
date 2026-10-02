@@ -9,8 +9,30 @@ export type CreatedBooking = {
   id: string
   pricePaise: number
   startsAt: string
-  status: 'confirmed'
+  status: 'confirmed' | 'pending_payment'
 }
+
+export type BookingCheckout = {
+  amountPaise: number
+  currency: 'INR'
+  expiresAt: string
+  keyId: string
+  orderId: string
+  prefill: {
+    contact: string
+    email: string
+    name: string
+  }
+}
+
+export type CreateBookingResponse = {
+  booking: CreatedBooking
+  checkout?: BookingCheckout
+}
+
+export type PaymentVerification =
+  | { booking: CreatedBooking & { status: 'confirmed' }; status: 'confirmed' }
+  | { message: string; status: 'refunded' }
 
 export class BookingApiError extends Error {
   status: number
@@ -48,9 +70,18 @@ export const bookingApi = {
     callType: CallType
     startsAt: string
   }) => (
-    await bookingRequest<{ booking: CreatedBooking }>('/api/bookings', {
+    await bookingRequest<CreateBookingResponse>('/api/bookings', {
       method: 'POST',
       body: JSON.stringify(input),
     })
-  ).booking,
+  ),
+  verifyPayment: (input: {
+    bookingId: string
+    razorpayOrderId: string
+    razorpayPaymentId: string
+    razorpaySignature: string
+  }) => bookingRequest<PaymentVerification>('/api/payments/verify', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  }),
 }

@@ -1,13 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import "temporal-polyfill/global";
 
 const mocks = vi.hoisted(() => {
   const first = vi.fn();
   const create = vi.fn();
   const update = vi.fn();
+  const bookingFirst = vi.fn();
+  const bookingWhereRange = vi.fn(() => ({ first: bookingFirst }));
+  const bookingWhere = vi.fn(() => ({ where: bookingWhereRange }));
   const query = { first, create };
   const select = vi.fn(() => query);
   const where = vi.fn(() => ({ update }));
-  return { create, first, query, select, update, where };
+  return { bookingFirst, bookingWhere, create, first, query, select, update, where };
 });
 
 vi.mock("../prisma/db", () => ({
@@ -15,12 +19,13 @@ vi.mock("../prisma/db", () => ({
     orm: {
       public: {
         User: { select: mocks.select, where: mocks.where },
+        Booking: { select: () => ({ where: mocks.bookingWhere }) },
       },
     },
   },
 }));
 
-import { DatabaseUserService } from "./user-service";
+import { DatabaseUserService, UserPhoneRemovalBlockedError } from "./user-service";
 
 describe("DatabaseUserService Google identity matching", () => {
   beforeEach(() => {
@@ -62,5 +67,31 @@ describe("DatabaseUserService Google identity matching", () => {
       name: "Maya Shah",
     });
     expect(result).toEqual({ id: "new-user-id" });
+  });
+
+  it("blocks removing the phone number while a future phone call exists", async () => {
+    mocks.first.mockResolvedValue({
+      id: "user-id",
+      email: "maya@example.com",
+      name: "Maya Shah",
+      birthDate: Temporal.PlainDate.from("1991-08-17"),
+      birthTime: Temporal.PlainTime.from("05:30"),
+      birthPlace: "Jaipur",
+      phone: "+919876543210",
+      gender: "female",
+      subscriptionCredits: 0,
+    });
+    mocks.bookingFirst.mockResolvedValue({ id: "booking-id" });
+
+    await expect(new DatabaseUserService().updateUser("user-id", {
+      name: "Maya Shah",
+      birthDate: "1991-08-17",
+      birthTime: "05:30",
+      birthPlace: "Jaipur",
+      phone: null,
+      gender: "female",
+    })).rejects.toBeInstanceOf(UserPhoneRemovalBlockedError);
+
+    expect(mocks.update).not.toHaveBeenCalled();
   });
 });

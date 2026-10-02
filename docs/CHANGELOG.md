@@ -16,6 +16,16 @@ Last updated: 2026-10-02
 
 ---
 
+## 2026-10-02: Step 12, Urgent calls with Razorpay
+- **Added:** ten-minute paid booking holds; official Razorpay order and refund calls; on-demand Standard Checkout with name/email/phone prefill; timing-safe owned-payment verification; raw signed, de-duplicated webhooks; idempotent confirmation; and automatic full refund when a late payment's slot is gone
+- **Changed:** positive-price Urgent calls now book as phone calls; Home shows payment dismissal/failure/refund and phone success states; user History and astrologer Bookings show phone-specific cards with no Join action; Settings prevents removing the phone number while a future confirmed phone call exists; browser price fields are discarded and Settings remains authoritative
+- **Files:** `backend/routes/Payments.ts`, `backend/src/payment/`, `backend/src/booking/`, `backend/src/booking-history/`, `backend/src/user/user-service.ts`, `backend/app.ts`, `frontend/src/razorpay-checkout.ts`, `frontend/src/screens/HomePage.tsx`, `frontend/src/components/BookingLists.tsx`, `frontend/src/screens/SettingsPage.tsx`, `frontend/src/design.css`, and related tests
+- **Database:** no migration; the existing `Booking`, `Payment`, `WebhookEvent`, Settings fields, unique provider ids and `Booking_no_overlap` constraint are used
+- **Env vars:** no new names; existing `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET` and `RAZORPAY_WEBHOOK_SECRET` placeholders are now active
+- **Dependencies:** added official backend `razorpay` 2.9.8
+- **Docs updated:** `docs/PROGRESS.md`, `docs/features/05-home-page.md`, `docs/features/06-google-login-details-settings.md`, `docs/features/08-booking-free-normal-calls.md`, `docs/features/09-history-and-astrologer-bookings.md`, `docs/features/12-urgent-calls-razorpay.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and all 102 tests pass; frontend lint, all 39 tests and the production build pass. Subscription packs remain Step 13. Real Razorpay test-mode success/failure/webhook/refund delivery remains a manual check
+
 ## 2026-10-02: Step 11, complete in-app calls
 - **Added:** connected-call countdown and two-minute notice; transient, 500-character, rate-limited WebSocket chat; capability-gated Speaker output switching; automatic default-microphone replacement with the “Audio device changed.” toast; analyser-driven speaking rings; and participant-only `GET /api/calls/:bookingId/ice-servers` with short-lived coturn REST credentials
 - **Changed:** WebRTC now consumes server-authorized STUN/TURN configuration and supports a development-only relay policy; the authoritative server timer closes both room sockets at the booking end; realtime schemas and isolation cover chat as well as signalling and mute state

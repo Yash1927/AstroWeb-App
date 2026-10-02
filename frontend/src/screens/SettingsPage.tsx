@@ -11,6 +11,7 @@ import {
   UserSignIn,
 } from '../components'
 import { detailsDraftFrom } from '../user-details'
+import type { UserDetailsFieldErrors } from '../user-details'
 
 function messageFrom(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
@@ -23,6 +24,7 @@ export default function SettingsPage() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
+  const [saveFieldErrors, setSaveFieldErrors] = useState<UserDetailsFieldErrors>({})
   const [savedToast, setSavedToast] = useState(false)
 
   const load = useCallback(async () => {
@@ -72,11 +74,16 @@ export default function SettingsPage() {
   const save = async (details: UserDetailsInput) => {
     setSaving(true)
     setSaveError('')
+    setSaveFieldErrors({})
     try {
       setUser(await userApi.updateMe(details))
       setSavedToast(true)
     } catch (saveFailure) {
-      setSaveError(messageFrom(saveFailure))
+      if (saveFailure instanceof UserApiError && saveFailure.field === 'phone') {
+        setSaveFieldErrors({ phone: saveFailure.message })
+      } else {
+        setSaveError(messageFrom(saveFailure))
+      }
     } finally {
       setSaving(false)
     }
@@ -134,7 +141,11 @@ export default function SettingsPage() {
               busy={saving}
               initial={initialDetails}
               onSubmit={save}
+              onFieldChange={(field) => {
+                setSaveFieldErrors((current) => ({ ...current, [field]: undefined }))
+              }}
               serverError={saveError}
+              serverFieldErrors={saveFieldErrors}
               submitLabel="Save"
             />
           </Card>

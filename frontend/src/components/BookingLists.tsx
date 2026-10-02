@@ -10,6 +10,7 @@ import {
   formatBirthDate,
   formatBirthTime,
   formatBookingDateTime,
+  formatBookingTime,
   formatPhone,
   formatPrice,
 } from '../booking-display'
@@ -51,7 +52,14 @@ function UserDetails({ booking }: { booking: AstrologerBooking }) {
       <div><dt>Place of birth</dt><dd>{booking.user.birthPlace ?? 'Not provided'}</dd></div>
       <div><dt>Gender</dt><dd>{gender}</dd></div>
       {booking.user.phone ? (
-        <div><dt>Phone number</dt><dd>{formatPhone(booking.user.phone)}</dd></div>
+        <div>
+          <dt>Phone number</dt>
+          <dd>
+            {booking.callMode === 'phone' ? (
+              <a href={`tel:${booking.user.phone}`}>{formatPhone(booking.user.phone)}</a>
+            ) : formatPhone(booking.user.phone)}
+          </dd>
+        </div>
       ) : null}
     </dl>
   )
@@ -73,6 +81,8 @@ function BookingCard({
   const callPath = audience === 'user'
     ? `/call/${booking.id}`
     : `/astrologer/call/${booking.id}`
+  const isPhoneCall = booking.callMode === 'phone'
+  const userBooking = booking as UserBooking
 
   return (
     <Card className="booking-card">
@@ -81,7 +91,11 @@ function BookingCard({
           <Avatar id={personId(booking, audience)} name={name} size={40} />
           <div>
             <h3>{name}</h3>
-            <p>Normal call</p>
+            <p>
+              {isPhoneCall && audience === 'astrologer'
+                ? `Phone call · ${formatBookingDateTime(booking.startsAt)}`
+                : `${booking.callType[0].toLocaleUpperCase()}${booking.callType.slice(1)} call`}
+            </p>
           </div>
         </div>
         <StatusBadge status={status} />
@@ -94,7 +108,17 @@ function BookingCard({
       {audience === 'astrologer' ? (
         <UserDetails booking={booking as AstrologerBooking} />
       ) : null}
-      {!hasEnded ? (
+      {isPhoneCall && audience === 'user' && !hasEnded && userBooking.phone ? (
+        <div className="booking-card__phone-call">
+          <span aria-hidden="true">☎</span>
+          <p>
+            {name} will call you at {formatBookingTime(booking.startsAt)} on{' '}
+            {formatPhone(userBooking.phone)}. Please keep your phone nearby.
+          </p>
+          <Link to="/settings">Wrong number? Update it in Settings.</Link>
+        </div>
+      ) : null}
+      {!isPhoneCall && !hasEnded ? (
         <Link
           className={`button ${hasStarted ? 'button--primary button--soft-glow' : 'button--secondary'} booking-card__action`}
           to={callPath}

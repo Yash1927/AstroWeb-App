@@ -19,7 +19,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 9 | History and astrologer bookings | Done | [09-history-and-astrologer-bookings.md](features/09-history-and-astrologer-bookings.md) | Private History, astrologer Bookings and protected call placeholders are in place. |
 | 10 | In-app call, part 1 | Done | [10-in-app-call-part-1.md](features/10-in-app-call-part-1.md) | Authenticated booking rooms, STUN WebRTC audio and the four live call states are in place. |
 | 11 | In-app call, part 2 | Done | [11-in-app-call-part-2.md](features/11-in-app-call-part-2.md) | Countdown/end handling, transient chat, supported device controls, speaking indicators and booking-scoped TURN credentials are in place. |
-| 12 | Urgent calls with Razorpay | Not started | — | |
+| 12 | Urgent calls with Razorpay | Done | [12-urgent-calls-razorpay.md](features/12-urgent-calls-razorpay.md) | Ten-minute holds, Razorpay verification/webhooks/refunds, Urgent phone delivery and phone cards are in place. |
 | 13 | Subscription packs | Not started | — | |
 | 14 | Blogs | Not started | — | |
 | 15 | Install as an app, policy pages | Not started | — | |
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Step 12: Urgent calls with Razorpay.
+Step 13: Subscription packs.
 
 ## Known issues
 

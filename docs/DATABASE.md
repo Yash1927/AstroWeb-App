@@ -2,11 +2,11 @@
 
 Neon Postgres, accessed through Prisma 8. The source contract is `backend/src/prisma/contract.prisma`, and the product model is README §11.
 
-Last updated: 2026-10-01
+Last updated: 2026-10-02
 
 ## Current state
 
-The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Step 8 begins inserting confirmed zero-price bookings through the existing contract and needs no schema change.
+The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Steps 8 and 12 use the existing Booking, Payment and WebhookEvent contract for free confirmations, paid holds, provider records and webhook de-duplication; neither needs a schema change.
 
 The running app and seed use pooled `DATABASE_URL`. Migration commands use direct `DIRECT_DATABASE_URL`. Money columns are whole paise. Instants are PostgreSQL `timestamptz`; local calendar dates and availability clock times use `date` and `time`.
 
@@ -106,7 +106,7 @@ Step 7 uses null start/end only for a whole-date `blocked` exception. Partial bl
 
 Relations: one user, one astrologer and optional related payments.
 
-Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` intervals as occupied. Step 8 rechecks an exact slot and then, in one transaction, changes the selected astrologer's elapsed `pending_payment` holds to `expired`, checks the user's one-upcoming-Normal limit and inserts the zero-price booking. The inserted row is immediately `confirmed`, has no hold expiry and copies the Settings price into whole paise. Normal uses `in_app`; zero-price Urgent or Subscription uses `phone`.
+Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` intervals as occupied. Booking creation rechecks an exact slot and then, in one transaction, changes the selected astrologer's elapsed holds to `expired`, checks the user's one-upcoming-Normal limit and inserts the booking. A zero-price row is immediately `confirmed` with no hold expiry. A positive-price Normal or Urgent row is `pending_payment` with a ten-minute expiry and is inserted with its created Payment. Every row copies the Settings price in whole paise. Normal uses `in_app`; Urgent uses `phone`. Positive-price Subscription remains Step 13.
 
 `Booking_no_overlap` applies to both `pending_payment` and `confirmed` rows. If simultaneous inserts target the same astrologer and overlapping time, PostgreSQL accepts one and rejects the other with exclusion error `23P01`. Prisma 8 surfaces this on `SqlQueryError.sqlState`, directly or below a transaction `cause`; the API maps that shape to a friendly `409`.
 
@@ -124,12 +124,16 @@ Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` inte
 | `status` | text enum | No | `created`, `paid`, `failed` or `refunded` |
 | `createdAt` | timestamptz(3) | No | Current time |
 
+Step 12 inserts one created Payment with each paid hold. Verification or a captured/paid webhook changes that Payment to `paid`, stores the unique payment id and confirms the Booking in one transaction. A late provider payment that conflicts on confirmation is fully refunded, then stored as `refunded` while its Booking becomes `expired`.
+
 ### `WebhookEvent`
 
 | Column | Type | Nullable | Default / notes |
 |---|---|---|---|
 | `eventId` | text | No | Primary key; de-duplicates Razorpay deliveries |
 | `receivedAt` | timestamptz(3) | No | Current time |
+
+The raw Razorpay webhook transaction inserts the provider's `x-razorpay-event-id` before applying an event. The primary key makes a replay a no-op. A transaction that must be retried, including the path that discovers a late slot conflict, rolls back the event marker before refund handling records the final outcome.
 
 ### `Settings`
 
@@ -145,7 +149,7 @@ Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` inte
 | `subscriptionDurationMin` | integer | No | `15` |
 | `updatedAt` | timestamptz | No | Set on create and each non-empty ORM update |
 
-The server reads this row for the public settings endpoint, Step 7 slot duration and Step 8 booking price/duration. The browser does not supply those booking values. Payment creation is built in later steps.
+The server reads this row for the public settings endpoint, slot duration and every booking price/duration. Razorpay order amounts use the copied Settings value; a price field sent by a browser is discarded and cannot change it.
 
 ### `Blog`
 

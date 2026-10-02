@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import {
   bookingApi,
   BookingApiError,
+  type CreateBookingResponse,
   type CreatedBooking,
 } from '../api/bookings'
 import {
@@ -31,10 +32,13 @@ import {
   type AstrologerCardProfile,
 } from '../components'
 import { detailsDraftFrom } from '../user-details'
+import { openRazorpayCheckout } from '../razorpay-checkout'
 
 type FlowStep = 'options' | 'checking' | 'sign-in' | 'details' | 'phone' | 'slots' | 'summary' | 'success' | 'error'
 
 const UPCOMING_NORMAL_NOTICE = 'You already have an upcoming Normal call. You can book another after it ends.'
+const PAYMENT_DISMISSED_MESSAGE = 'Payment was not completed. You can try again.'
+const PAYMENT_FAILED_MESSAGE = "Payment didn't go through. If any money was deducted, it will be returned automatically."
 
 function messageFrom(error: unknown) {
   return error instanceof Error ? error.message : 'Something went wrong. Please try again.'
@@ -183,6 +187,7 @@ export default function HomePage() {
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null)
   const [creatingBooking, setCreatingBooking] = useState(false)
   const [createdBooking, setCreatedBooking] = useState<CreatedBooking | null>(null)
+  const [pendingPayment, setPendingPayment] = useState<CreateBookingResponse | null>(null)
   const [changingPhone, setChangingPhone] = useState(false)
   const [toastMessage, setToastMessage] = useState('')
   const restoredFlow = useRef(false)
@@ -330,6 +335,7 @@ export default function HomePage() {
     setSelectedDate('')
     setSelectedSlot(null)
     setCreatedBooking(null)
+    setPendingPayment(null)
     setChangingPhone(false)
     setFlowStep('options')
   }
@@ -344,6 +350,7 @@ export default function HomePage() {
     setSelectedDate('')
     setSelectedSlot(null)
     setCreatedBooking(null)
+    setPendingPayment(null)
     setChangingPhone(false)
     setFlowStep('options')
   }
@@ -391,6 +398,13 @@ export default function HomePage() {
     try {
       const updated = await userApi.updateMe({ ...details, phone })
       setBookingUser(updated)
+      setPendingPayment((current) => current?.checkout ? {
+        ...current,
+        checkout: {
+          ...current.checkout,
+          prefill: { ...current.checkout.prefill, contact: updated.phone ?? '' },
+        },
+      } : current)
       if (changingPhone && selectedSlot) {
         setChangingPhone(false)
         setFlowStep('summary')
@@ -414,18 +428,53 @@ export default function HomePage() {
     : null
   const hasUpcomingNormalNotice = flowError === UPCOMING_NORMAL_NOTICE
 
+  const completePayment = async (pending: CreateBookingResponse) => {
+    if (!pending.checkout) throw new Error('Payment is unavailable. Please try again.')
+    const outcome = await openRazorpayCheckout(pending.checkout)
+    if (outcome.kind === 'dismissed') {
+      setFlowError(PAYMENT_DISMISSED_MESSAGE)
+      return
+    }
+    if (outcome.kind === 'failed') {
+      setFlowError(PAYMENT_FAILED_MESSAGE)
+      return
+    }
+    const verified = await bookingApi.verifyPayment({
+      bookingId: pending.booking.id,
+      razorpayOrderId: outcome.response.razorpay_order_id,
+      razorpayPaymentId: outcome.response.razorpay_payment_id,
+      razorpaySignature: outcome.response.razorpay_signature,
+    })
+    if (verified.status === 'refunded') {
+      setPendingPayment(null)
+      setFlowError(verified.message)
+      return
+    }
+    setPendingPayment(null)
+    setCreatedBooking(verified.booking)
+    setFlowStep('success')
+  }
+
   const confirmBooking = async () => {
     if (!selectedAstrologer || !chosenCallType || !selectedSlot) return
     setCreatingBooking(true)
     setFlowError('')
     try {
-      const booking = await bookingApi.create({
-        astrologerId: selectedAstrologer.id,
-        callType: chosenCallType,
-        startsAt: selectedSlot.startsAt,
-      })
-      setCreatedBooking(booking)
-      setFlowStep('success')
+      let result = pendingPayment
+      if (!result?.checkout || Date.parse(result.checkout.expiresAt) <= Date.now()) {
+        result = await bookingApi.create({
+          astrologerId: selectedAstrologer.id,
+          callType: chosenCallType,
+          startsAt: selectedSlot.startsAt,
+        })
+        setPendingPayment(result.checkout ? result : null)
+      }
+      if (result.checkout) {
+        await completePayment(result)
+      } else {
+        setCreatedBooking(result.booking)
+        setFlowStep('success')
+      }
     } catch (error) {
       if (error instanceof BookingApiError && error.status === 401) {
         setFlowStep('sign-in')

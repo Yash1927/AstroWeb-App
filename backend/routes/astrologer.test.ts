@@ -68,6 +68,7 @@ function ownBooking(): AstrologerBookingCard {
   return {
     id: ownBookingId,
     callType: "normal",
+    callMode: "in_app",
     startsAt: "2026-10-02T04:30:00Z",
     endsAt: "2026-10-02T04:45:00Z",
     durationMin: 15,

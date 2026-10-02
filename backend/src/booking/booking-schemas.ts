@@ -14,6 +14,6 @@ export const createBookingSchema = z.object({
   astrologerId: z.string().uuid(),
   callType: z.enum(["normal", "urgent", "subscription"]),
   startsAt: z.string().refine(isInstant),
-}).strict();
+});
 
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;

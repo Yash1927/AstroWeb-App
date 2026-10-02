@@ -25,11 +25,13 @@ export type UserDetailsInput = {
 }
 
 export class UserApiError extends Error {
+  field?: string
   status: number
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, field?: string) {
     super(message)
     this.status = status
+    this.field = field
   }
 }
 
@@ -43,12 +45,13 @@ async function userRequest<T>(path: string, init?: RequestInit) {
   })
   const body = (response.status === 204
     ? {}
-    : await response.json().catch(() => ({}))) as { error?: string } & T
+    : await response.json().catch(() => ({}))) as { error?: string; field?: string } & T
 
   if (!response.ok) {
     throw new UserApiError(
       body.error ?? 'Something went wrong. Please try again.',
       response.status,
+      body.field,
     )
   }
 

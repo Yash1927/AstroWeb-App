@@ -16,6 +16,7 @@ const userBooking: UserBooking = {
     displayName: 'Anika Rao',
   },
   callType: 'normal',
+  callMode: 'in_app',
   startsAt: start,
   endsAt: end,
   durationMin: 15,
@@ -23,6 +24,7 @@ const userBooking: UserBooking = {
   usedCredit: false,
   status: 'upcoming',
   endedStatus: 'missed',
+  phone: null,
 }
 
 afterEach(() => {
@@ -89,6 +91,55 @@ describe('BookingLists', () => {
     expect(screen.getByText('5:30 AM')).toBeDefined()
     expect(screen.getByText('+91 98765 43210')).toBeDefined()
     expect(container.textContent).not.toContain('Email')
+  })
+
+  it('shows an upcoming phone call without a Join button', () => {
+    const phoneBooking: UserBooking = {
+      ...userBooking,
+      callMode: 'phone',
+      callType: 'urgent',
+      phone: '+919876543210',
+    }
+
+    render(
+      <MemoryRouter>
+        <BookingLists audience="user" bookings={{ upcoming: [phoneBooking], past: [] }} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.queryByRole('link', { name: /Join/u })).toBeNull()
+    expect(screen.getByText(/Anika Rao will call you at 3:30 PM on \+91 98765 43210/)).toBeDefined()
+    expect(screen.getByRole('link', { name: 'Wrong number? Update it in Settings.' }).getAttribute('href'))
+      .toBe('/settings')
+  })
+
+  it('gives the astrologer a tap-to-call number and no room link for phone bookings', () => {
+    const phoneBooking: AstrologerBooking = {
+      ...userBooking,
+      callMode: 'phone',
+      callType: 'urgent',
+      user: {
+        id: '32e5cc0b-a027-4fc2-88cf-5b9af87656dc',
+        name: 'Maya Shah',
+        birthDate: '1991-08-17',
+        birthTime: '05:30',
+        birthPlace: 'Jaipur',
+        gender: 'female',
+        phone: '+919876543210',
+      },
+    }
+    delete (phoneBooking as Partial<UserBooking>).astrologer
+
+    render(
+      <MemoryRouter>
+        <BookingLists audience="astrologer" bookings={{ upcoming: [phoneBooking], past: [] }} />
+      </MemoryRouter>,
+    )
+
+    expect(screen.getByText(/Phone call · Thu, 1 Oct · 3:30 PM/)).toBeDefined()
+    expect(screen.getByRole('link', { name: '+91 98765 43210' }).getAttribute('href'))
+      .toBe('tel:+919876543210')
+    expect(screen.queryByRole('link', { name: /Join/u })).toBeNull()
   })
 })
 

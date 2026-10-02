@@ -10,12 +10,14 @@ function booking(
   startsAt: string,
   endsAt: string,
   joined: "both" | "one" | "none" = "none",
+  callMode: "in_app" | "phone" = "in_app",
 ) {
   return {
     id,
     userId: "user-1",
     astrologerId: "astrologer-1",
-    callType: "normal" as const,
+    callType: callMode === "phone" ? "urgent" as const : "normal" as const,
+    callMode,
     startsAt: Temporal.Instant.from(startsAt),
     endsAt: Temporal.Instant.from(endsAt),
     pricePaise: 0,
@@ -81,6 +83,22 @@ describe("DefaultBookingHistoryService", () => {
       phone: "+919876543210",
     });
     expect(JSON.stringify(result)).not.toContain("email");
+  });
+
+  it("labels ended phone bookings as Phone call and includes the user's current number", async () => {
+    const service = new DefaultBookingHistoryService(repository([
+      booking("phone-past", "2026-10-01T08:00:00Z", "2026-10-01T08:15:00Z", "none", "phone"),
+    ]), () => Temporal.Instant.from("2026-10-01T10:00:00Z"));
+
+    const result = await service.listUserBookings("user-1");
+
+    expect(result.past[0]).toEqual(expect.objectContaining({
+      callMode: "phone",
+      callType: "urgent",
+      status: "phone-call",
+      endedStatus: "phone-call",
+      phone: "+919876543210",
+    }));
   });
 });
 

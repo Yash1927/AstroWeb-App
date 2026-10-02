@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import "temporal-polyfill/global";
 import { db } from "../prisma/db";
 import type { UserDetailsInput } from "./user-schemas";
 
@@ -34,6 +35,7 @@ type UserRecord = {
 };
 
 export class UserNotFoundError extends Error {}
+export class UserPhoneRemovalBlockedError extends Error {}
 
 export interface UserService {
   findOrCreateGoogleUser(identity: GoogleIdentity): Promise<{ id: string }>;
@@ -130,7 +132,20 @@ export class DatabaseUserService implements UserService {
   }
 
   async updateUser(id: string, details: UserDetailsInput) {
-    if (!(await this.userExists(id))) throw new UserNotFoundError("User not found.");
+    const current = await db.orm.public.User.select(...userFields).first({ id });
+    if (!current) throw new UserNotFoundError("User not found.");
+
+    if (current.phone && details.phone === null) {
+      const upcomingPhoneBooking = await db.orm.public.Booking.select("id")
+        .where({ userId: id, callMode: "phone", status: "confirmed" })
+        .where((booking) => booking.endsAt.gt(Temporal.Now.instant()))
+        .first();
+      if (upcomingPhoneBooking) {
+        throw new UserPhoneRemovalBlockedError(
+          "You have an upcoming phone call, so we need your number.",
+        );
+      }
+    }
 
     await db.orm.public.User.where({ id }).update({
       ...details,

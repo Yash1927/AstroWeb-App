@@ -43,11 +43,11 @@ Last updated: 2026-10-02
 | Toast | `frontend/src/components/Toast.tsx` | Body portal; success or error; live region; closes after four seconds | Panel action feedback; design page |
 | Skeleton | `frontend/src/components/Skeleton.tsx` | Text, title and avatar | Home cards, panel authentication/data loading and design page |
 | StatusBadge | `frontend/src/components/StatusBadge.tsx` | Upcoming, Completed, Missed, Phone call | Booking cards and design page |
-| BookingLists | `frontend/src/components/BookingLists.tsx` | User/astrologer views, Upcoming/Past sections, live Join states and participant details | History and astrologer Bookings |
+| BookingLists | `frontend/src/components/BookingLists.tsx` | User/astrologer views, Upcoming/Past sections, live Normal Join states, phone-call notice/Settings link, astrologer `tel:` number and participant details | History and astrologer Bookings |
 | BookingListSkeleton | `frontend/src/components/BookingListSkeleton.tsx` | Card-shaped title, avatar and fact placeholders | History, astrologer Bookings and call-room loading |
 | GoogleSignInButton / UserSignIn | `frontend/src/components/GoogleSignInButton.tsx`, `UserSignIn.tsx` | GIS standard “Continue with Google” button in redirect mode plus a calm sign-in card | Home booking flow, History and Settings |
 | PhoneNumberField | `frontend/src/components/PhoneNumberField.tsx` | Fixed `+91` prefix, 10-digit local input, linked hint/error and canonical value output | First booking, phone-only booking step and Settings |
-| UserDetailsForm | `frontend/src/components/UserDetailsForm.tsx` | Name, date, local time with 12-hour reading, place, optional fixed-prefix phone, gender, field errors and privacy line | First booking and Settings |
+| UserDetailsForm | `frontend/src/components/UserDetailsForm.tsx` | Name, date, local time with 12-hour reading, place, optional fixed-prefix phone, gender, client/server field errors and privacy line | First booking and Settings |
 | AvailabilityEditor | `frontend/src/components/AvailabilityEditor.tsx` | Seven day/day-off groups, repeatable time ranges, responsive date exceptions, field errors, first-error focus and save warning | Astrologer Availability |
 | Inputs, selects and tags | `frontend/src/design.css` | Label, hint, linked error, input, read-only input, rupee input, select, tag editor and removable tags | User forms, panel forms and design page |
 | Chips | `frontend/src/design.css` | Default, selected, horizontal date/time and disabled-empty states | Panel navigation, Home slot picker and design page |
@@ -79,14 +79,14 @@ Last updated: 2026-10-02
 
 | Screen | Route | States (loading, empty, error, …) | Built in step |
 |---|---|---|---|
-| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary/error/submitting/success states | 5–8 |
-| History | `/history` | Booking skeleton/error, signed-out Google screen, Upcoming/Past Normal cards, empty sections and live Join states | 6, 9 |
+| Home | `/` | Public skeleton/error/empty/list states; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary; free confirmation or on-demand Razorpay Checkout; dismissal/failure/refund; Normal/Urgent success | 5–8, 12 |
+| History | `/history` | Booking skeleton/error, signed-out Google screen, Upcoming/Past Normal and phone cards, empty sections, live Join states and phone-call/number guidance | 6, 9, 12 |
 | Blogs | `/blogs` | Placeholder | 1 |
 | Blog post | `/blogs/:id` | Later-step placeholder | 1 |
-| Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, policy links, save toast and logout | 6 |
+| Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, upcoming-phone-call removal error, policy links, save toast and logout | 6, 12 |
 | Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; countdown/notice; mute, conditional Speaker, transient chat, device-change feedback, speaking rings, leave and rejoin | 9–11 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Later-step placeholder | 1 |
-| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile and availability workflows, private Upcoming/Past bookings; Blogs placeholder | 4, 7, 9 |
+| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile and availability workflows, private Upcoming/Past Normal and phone bookings; Blogs placeholder | 4, 7, 9, 12 |
 | Astrologer call | `/astrologer/call/:bookingId` | The same four call states and complete controls, with caller-first-name waiting text and astrologer session protection | 9–11 |
 | Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management and pricing/settings | 3 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
@@ -112,10 +112,16 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Private-details note | “Your details are private. Only the astrologer you book can see them.” | First booking details and Settings |
 | Empty slot date | “No free times on this day. Please try another day.” | Home slot picker |
 | Free booking action | “Confirm booking” | Home booking summary |
-| Paid booking deferral | “Paid bookings come in a later step.” | Home booking summary error |
+| Subscription booking deferral | “Subscription packs come in a later step.” | Home booking summary error |
+| Checkout closed | “Payment was not completed. You can try again.” | Home booking summary error |
+| Checkout failed | “Payment didn't go through. If any money was deducted, it will be returned automatically.” | Home booking summary error |
+| Late payment refund | “This time was booked by someone else, so we've refunded your payment.” | Home booking summary error |
 | Same-slot conflict | “Sorry, this time was just booked. Please pick another time.” | Home booking summary error |
 | Normal booking limit | “You already have an upcoming Normal call. You can book another after it ends.” with **Go to History** | Home booking summary notice |
 | Normal booking success | “Your call is booked for {date} at {time}. You can join from History.” | Home booking success |
+| Phone booking success | “Booked! {astrologer} will call you on {number} at {time} on {date}. Please keep your phone nearby.” | Home booking success |
+| Phone History action | “{astrologer} will call you at {time} on {number}. Please keep your phone nearby.” with “Wrong number? Update it in Settings.” | Upcoming phone booking card |
+| Phone removal blocked | “You have an upcoming phone call, so we need your number.” | Settings phone field |
 | Availability scope | “Changes affect future free times only. Existing bookings stay booked.” | Astrologer Availability |
 | Availability validation summary | “Please fix the highlighted hours above.” | Astrologer Availability save action |
 | Empty birth date | “Enter your date of birth.” | First booking details and Settings |
@@ -145,6 +151,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 - Dialog and BottomSheet focus the close control once when they open. Re-rendering controlled form fields does not steal focus; their Escape listeners call the latest close callback.
 - Dialog, BottomSheet and Toast use React portals into `document.body`, so a transformed screen animation cannot confine their fixed positioning to the page column.
 - Owner settings validation places a specific error beside every invalid field and links it with `aria-describedby` and `aria-invalid`.
+- The Settings phone-removal rule is returned as a server field error and is linked to the fixed-prefix phone input with `aria-describedby` and `aria-invalid`.
 - Astrologer password and profile validation use visible field labels, field-linked errors and numeric limits. Tag buttons meet the 48px target and name the tag they remove.
 - User detail validation places specific messages with each invalid field. Phone controls have a visible fixed `+91` prefix and linked hints/errors; the phone-only step reports its error beside the field, and the Google email is visibly read-only.
 - Availability time/date controls have visible labels and field-linked errors. An invalid save scrolls to and focuses the first invalid control and repeats the required action beside Save. The Day off label provides the checkbox's 48px target, and repeatable ranges remain a single flexible column at the mobile baseline.

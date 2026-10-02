@@ -11,11 +11,12 @@ import {
   BookingUserDetailsIncompleteError,
   DefaultBookingService,
   isBookingOverlapConstraintError,
-  PaidBookingDeferredError,
+  SubscriptionBookingDeferredError,
   type BookingRepository,
   type BookingTransaction,
 } from "./booking-service";
 import { SlotAstrologerNotFoundError } from "../availability/slot-service";
+import type { RazorpayGateway } from "../payment/razorpay-gateway";
 
 const userId = "30f7af37-09f6-47d3-b24a-508d718f17c1";
 const astrologerId = "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0";
@@ -25,6 +26,7 @@ const now = Temporal.Instant.from("2026-10-01T00:00:00Z");
 
 const completeUser: NonNullable<Awaited<ReturnType<BookingRepository["getUser"]>>> = {
   id: userId,
+  email: "maya@example.com",
   name: "Maya Shah",
   birthDate: {},
   birthTime: {},
@@ -78,10 +80,11 @@ function fakeRepository(options?: {
         callMode: input.callMode,
         startsAt: input.startsAt.toString(),
         endsAt: input.endsAt.toString(),
-        status: "confirmed" as const,
+        status: input.status,
         pricePaise: input.pricePaise,
       };
     }),
+    createPayment: vi.fn(async () => { events.push("payment"); }),
   };
   const repository: BookingRepository = {
     getUser: vi.fn(async () => options && "user" in options ? options.user ?? null : completeUser),
@@ -91,20 +94,32 @@ function fakeRepository(options?: {
   return { events, repository, transaction };
 }
 
+function fakeGateway(): RazorpayGateway {
+  return {
+    createOrder: vi.fn(async ({ amountPaise }) => ({
+      id: "order_test",
+      amountPaise,
+      currency: "INR" as const,
+    })),
+    getCheckoutKeyId: vi.fn(() => "rzp_test_public"),
+    refundPayment: vi.fn(async () => undefined),
+  };
+}
+
 describe("DefaultBookingService", () => {
   it("expires holds then confirms a server-priced Normal slot as an in-app call", async () => {
     const { events, repository, transaction } = fakeRepository();
     const slots = fakeSlots();
     const service = new DefaultBookingService(repository, slots, () => now);
 
-    const booking = await service.createBooking(userId, {
+    const result = await service.createBooking(userId, {
       astrologerId,
       callType: "normal",
       startsAt,
     });
 
     expect(events).toEqual(["expire", "limit", "create"]);
-    expect(booking).toEqual(expect.objectContaining({
+    expect(result.booking).toEqual(expect.objectContaining({
       astrologerId,
       callType: "normal",
       callMode: "in_app",
@@ -134,18 +149,18 @@ describe("DefaultBookingService", () => {
     });
     const service = new DefaultBookingService(repository, fakeSlots(), () => now);
 
-    const booking = await service.createBooking(userId, {
+    const result = await service.createBooking(userId, {
       astrologerId,
       callType: "urgent",
       startsAt,
     });
 
-    expect(booking.callMode).toBe("phone");
-    expect(booking.pricePaise).toBe(0);
+    expect(result.booking.callMode).toBe("phone");
+    expect(result.booking.pricePaise).toBe(0);
     expect(transaction.hasUpcomingNormal).not.toHaveBeenCalled();
   });
 
-  it("rejects incomplete details, missing phone details and positive prices without writing", async () => {
+  it("rejects incomplete details and invalid phone details without writing", async () => {
     const incomplete = fakeRepository({ user: { ...completeUser, birthDate: null } });
     await expect(new DefaultBookingService(incomplete.repository, fakeSlots(), () => now)
       .createBooking(userId, { astrologerId, callType: "normal", startsAt }))
@@ -160,13 +175,10 @@ describe("DefaultBookingService", () => {
       .createBooking(userId, { astrologerId, callType: "urgent", startsAt }))
       .rejects.toBeInstanceOf(BookingPhoneRequiredError);
 
-    const paid = fakeRepository();
-    await expect(new DefaultBookingService(paid.repository, fakeSlots(), () => now)
+    const invalidPhone = fakeRepository({ user: { ...completeUser, phone: "+911234567890" } });
+    await expect(new DefaultBookingService(invalidPhone.repository, fakeSlots(), () => now)
       .createBooking(userId, { astrologerId, callType: "urgent", startsAt }))
-      .rejects.toEqual(expect.objectContaining({
-        message: "Paid bookings come in a later step.",
-      }));
-    expect(paid.repository.transaction).not.toHaveBeenCalled();
+      .rejects.toBeInstanceOf(BookingPhoneRequiredError);
   });
 
   it("enforces the upcoming Normal limit after expiring elapsed holds", async () => {
@@ -236,10 +248,50 @@ describe("DefaultBookingService", () => {
     ))).toBe(false);
   });
 
-  it("uses the explicit paid-booking error class", async () => {
+  it("ignores a browser price and creates a ten-minute server-priced hold for Urgent", async () => {
+    const { events, repository, transaction } = fakeRepository();
+    const gateway = fakeGateway();
+    const service = new DefaultBookingService(repository, fakeSlots(), () => now, gateway);
+
+    const result = await service.createBooking(userId, {
+      astrologerId,
+      callType: "urgent",
+      startsAt,
+      pricePaise: 1,
+    } as never);
+
+    expect(gateway.createOrder).toHaveBeenCalledWith(expect.objectContaining({
+      amountPaise: 30_000,
+      userId,
+    }));
+    expect(events).toEqual(["expire", "create", "payment"]);
+    expect(transaction.createBooking).toHaveBeenCalledWith(expect.objectContaining({
+      callMode: "phone",
+      pricePaise: 30_000,
+      status: "pending_payment",
+      holdExpiresAt: now.add({ minutes: 10 }),
+    }));
+    expect(transaction.createPayment).toHaveBeenCalledWith(expect.objectContaining({
+      amountPaise: 30_000,
+      purpose: "urgent_call",
+      razorpayOrderId: "order_test",
+    }));
+    expect(result.checkout).toEqual(expect.objectContaining({
+      amountPaise: 30_000,
+      orderId: "order_test",
+      expiresAt: now.add({ minutes: 10 }).toString(),
+      prefill: {
+        name: "Maya Shah",
+        email: "maya@example.com",
+        contact: "+919876543210",
+      },
+    }));
+  });
+
+  it("leaves positive-price Subscription packs for Step 13", async () => {
     const { repository } = fakeRepository();
-    await expect(new DefaultBookingService(repository, fakeSlots(), () => now)
-      .createBooking(userId, { astrologerId, callType: "urgent", startsAt }))
-      .rejects.toBeInstanceOf(PaidBookingDeferredError);
+    await expect(new DefaultBookingService(repository, fakeSlots(), () => now, fakeGateway())
+      .createBooking(userId, { astrologerId, callType: "subscription", startsAt }))
+      .rejects.toBeInstanceOf(SubscriptionBookingDeferredError);
   });
 });
