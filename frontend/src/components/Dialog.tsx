@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 
@@ -12,11 +12,19 @@ type DialogProps = {
 export function Dialog({ children, onClose, open, title }: DialogProps) {
   const titleId = useId()
   const closeButtonRef = useRef<HTMLButtonElement>(null)
+  const layerRef = useRef<HTMLDivElement>(null)
   const onCloseRef = useRef(onClose)
 
   useEffect(() => {
     onCloseRef.current = onClose
   }, [onClose])
+
+  useLayoutEffect(() => {
+    const layer = layerRef.current
+    if (!layer) return
+    if (open) layer.dataset.wasOpen = 'true'
+    layer.dataset.state = open ? 'open' : layer.dataset.wasOpen === 'true' ? 'closed' : 'idle'
+  }, [open])
 
   useEffect(() => {
     if (!open) return
@@ -35,8 +43,9 @@ export function Dialog({ children, onClose, open, title }: DialogProps) {
     <div
       aria-hidden={!open}
       className="modal-layer dialog-layer"
-      data-state={open ? 'open' : 'closed'}
+      data-state={open ? 'open' : 'idle'}
       inert={!open}
+      ref={layerRef}
     >
       <div aria-hidden="true" className="modal-backdrop" onClick={onClose} />
       <section

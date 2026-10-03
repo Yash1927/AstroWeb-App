@@ -22,6 +22,7 @@ const astrologer = {
   expertise: ['Vedic', 'Tarot'],
   languages: ['Hindi', 'English'],
   experienceYears: 8,
+  photoUrl: 'https://media.example.test/anika.webp',
 }
 
 const completeUser = {
@@ -151,6 +152,7 @@ describe('HomePage', () => {
     await user.click(within(slotDialog).getByRole('button', { name: /10:00 am/i }))
     const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
     expect(within(summary).getByText('Anika Rao')).toBeDefined()
+    expect(within(summary).getByRole('img', { name: 'Anika Rao' }).getAttribute('src')).toBe(astrologer.photoUrl)
     expect(within(summary).getByText('Normal')).toBeDefined()
     expect(within(summary).getByText('15 min')).toBeDefined()
     expect(within(summary).getByText('Free')).toBeDefined()
@@ -243,7 +245,29 @@ describe('HomePage', () => {
     await user.click(within(summary).getByRole('button', { name: 'Confirm booking' }))
 
     const success = await screen.findByRole('dialog', { name: 'Call booked' })
-    expect(within(success).getByText('Subscription calls left: 1')).toBeDefined()
+    expect(within(success).getByText('Subscription: 1 call left')).toBeDefined()
+  })
+
+  it('explains the full Settings-backed pack price when no Subscription credits remain', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      if (String(input) === '/api/astrologers') return response({ astrologers: [astrologer] })
+      if (String(input) === '/api/settings/public') return response(settings)
+      if (String(input) === '/api/me') {
+        return response({ user: { ...completeUser, phone: '+919876543210' } })
+      }
+      if (String(input) === '/api/astrologers/anika/slots?type=subscription') return response(slots)
+      throw new Error(`Unexpected request: ${String(input)}`)
+    }))
+    const user = userEvent.setup()
+    renderHome()
+
+    await user.click(await screen.findByRole('button', { name: 'Call' }))
+    await user.click(screen.getByRole('button', { name: /Subscription/ }))
+    const slotsDialog = await screen.findByRole('dialog', { name: 'Choose a time' })
+    await user.click(within(slotsDialog).getByRole('button', { name: /10:00 am/i }))
+
+    const summary = await screen.findByRole('dialog', { name: 'Booking summary' })
+    expect(within(summary).getByText('₹999 for 4 calls (this booking uses 1)')).toBeDefined()
   })
 
   it('shows the friendly conflict when the chosen time was just booked', async () => {
@@ -343,4 +367,3 @@ describe('HomePage', () => {
     ).toBeDefined()
   })
 })
-

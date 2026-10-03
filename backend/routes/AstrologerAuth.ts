@@ -9,6 +9,7 @@ import {
 import { astrologerLoginSchema } from "../src/astrologer/astrologer-schemas";
 import { astrologerService, type AstrologerService } from "../src/astrologer/astrologer-service";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 
 type Dependencies = {
   astrologers: Pick<AstrologerService, "verifyAstrologer">;
@@ -63,7 +64,8 @@ export function createAstrologerAuthRouter({ astrologers, rateLimiter, sessions 
         sessionCookieOptions("astrologer"),
       );
       response.json({ mustChangePassword: astrologer.mustChangePassword });
-    } catch {
+    } catch (error) {
+      logRouteError("astrologer.login", error);
       response.status(503).json({ error: "The service is unavailable. Please try again." });
     }
   });

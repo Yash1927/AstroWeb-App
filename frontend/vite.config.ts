@@ -6,10 +6,10 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      includeAssets: ['app-icon.svg', 'apple-touch-icon.png'],
+      includeAssets: ['logo.jpg', 'app-icon-header.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'AstroWebApp',
-        short_name: 'AstroWebApp',
+        name: 'Astromaitreyi',
+        short_name: 'Astromaitreyi',
         description: 'Book calm, private calls with astrologers.',
         start_url: '/',
         display: 'standalone',
@@ -29,7 +29,15 @@ export default defineConfig({
       registerType: 'autoUpdate',
       workbox: {
         cleanupOutdatedCaches: true,
-        globPatterns: ['**/*.{css,html,js,woff,woff2}'],
+        globPatterns: ['**/*.{css,html,js,woff2}'],
+        globIgnores: [
+          '**/RichBlogEditor-*.js',
+          '**/OwnerPage-*.js',
+          '**/AstrologerPage-*.js',
+          '**/AstrologerBlogs-*.js',
+          '**/ProfilePhotoCropper-*.js',
+          '**/astrologer-*.js',
+        ],
         navigateFallback: '/index.html',
         navigateFallbackDenylist: [
           /^\/api(?:\/|$)/,

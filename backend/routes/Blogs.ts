@@ -5,6 +5,7 @@ import { blogService, BlogNotFoundError, type BlogService } from "../src/blog/bl
 import { blogCommentParamsSchema, blogCommentSchema, blogIdParamsSchema, blogListQuerySchema } from "../src/blog/blog-schemas";
 import { commentRateLimiter, type CommentRateLimiter } from "../src/blog/comment-rate-limit";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import { userService, type UserService } from "../src/user/user-service";
 
 type Dependencies = { blogs: BlogService; comments: CommentRateLimiter; sessions: SessionManager; users: UserService };
@@ -14,6 +15,7 @@ function blogError(error: unknown, response: Response) {
     response.status(404).json({ error: error.message });
     return;
   }
+  logRouteError("public.blogs", error);
   response.status(503).json({ error: "Blogs are unavailable. Please try again." });
 }
 

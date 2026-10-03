@@ -26,6 +26,7 @@ vi.mock("../prisma/db", () => ({
     orm: {
       public: {
         Astrologer: { select: mocks.select },
+        MediaAsset: { select: vi.fn() },
       },
     },
   },
@@ -64,6 +65,7 @@ describe("DatabasePublicAstrologerService", () => {
       "expertise",
       "languages",
       "experienceYears",
+      "profileMediaId",
     );
     expect(mocks.query.where).toHaveBeenNthCalledWith(1, {
       isActive: true,
@@ -81,6 +83,7 @@ describe("DatabasePublicAstrologerService", () => {
         expertise: ["Vedic"],
         languages: ["Hindi"],
         experienceYears: 8,
+        photoUrl: null,
       },
     ]);
   });

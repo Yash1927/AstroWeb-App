@@ -48,6 +48,11 @@ enum BlogStatus {
   published
 }
 
+enum MediaKind {
+  profile_photo
+  blog_image
+}
+
 enum SessionRole {
   user
   astrologer
@@ -72,11 +77,14 @@ model Astrologer {
   isActive               Boolean                 @default(true)
   isListed               Boolean                 @default(false)
   profileSavedAt         Timestamptz(3)?
+  profileMediaId         String?                 @unique
   createdAt              Timestamptz(3)          @default(now())
   availabilityRules      AvailabilityRule[]
   availabilityExceptions AvailabilityException[]
   bookings               Booking[]
   blogs                  Blog[]
+  mediaAssets            MediaAsset[]            @relation("AstrologerMedia")
+  profileMedia           MediaAsset?             @relation("AstrologerProfilePhoto", fields: [profileMediaId], references: [id])
 }
 
 model User {
@@ -172,14 +180,32 @@ model Blog {
   id           String        @id @default(uuid())
   astrologerId String
   title        String
-  body         String
+  body         Jsonb
+  excerpt      String
+  readingMinutes Int     @default(1)
+  coverMediaId String?
   status       BlogStatus    @default(draft)
   publishedAt  Timestamptz(3)?
   createdAt    Timestamptz(3) @default(now())
   updatedAt    temporal.updatedAt()
   astrologer   Astrologer    @relation(fields: [astrologerId], references: [id])
+  coverMedia   MediaAsset?   @relation("BlogCover", fields: [coverMediaId], references: [id])
   likes        BlogLike[]
   comments     BlogComment[]
+}
+
+model MediaAsset {
+  id                  String       @id @default(uuid())
+  ownerAstrologerId   String
+  kind                MediaKind
+  storageKey          String       @unique
+  width               Int
+  height              Int
+  bytes               Int
+  createdAt           Timestamptz(3) @default(now())
+  owner               Astrologer   @relation("AstrologerMedia", fields: [ownerAstrologerId], references: [id])
+  profileFor          Astrologer?  @relation("AstrologerProfilePhoto")
+  coverFor            Blog[]       @relation("BlogCover")
 }
 
 model BlogLike {

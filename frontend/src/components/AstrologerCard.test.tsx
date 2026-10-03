@@ -67,4 +67,22 @@ describe('AstrologerCard', () => {
     expect(screen.getByText('Expertise')).toBeDefined()
     expect(screen.queryByText('Languages')).toBeNull()
   })
+
+  it('keeps the Call action in its dedicated card row when profile details are empty', () => {
+    const { container } = render(
+      <AstrologerCard
+        onCall={vi.fn()}
+        profile={{
+          id: 'new-astrologer',
+          displayName: 'New astrologer',
+          expertise: [],
+          languages: [],
+          experienceYears: 0,
+        }}
+      />,
+    )
+
+    expect(container.querySelector('.astrologer-card__details')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Call' }).classList).toContain('astrologer-card__call')
+  })
 })

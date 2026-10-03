@@ -2,6 +2,7 @@ import argon2 from "argon2";
 import { db } from "../prisma/db";
 import { hashOwnerPassword } from "../prisma/seed-helpers";
 import type { AstrologerProfileInput } from "./astrologer-schemas";
+import { publicMediaUrl } from "../media/media-service";
 
 const missingAstrologerHash =
   "$argon2id$v=19$m=65536,p=4,t=3$GeLu1IsYiyNTfvb43gtE2A$kjz/e9b0yCAsOuEpp6zuDhbutUeTiBNkhphU/hFS6e4";
@@ -10,6 +11,7 @@ export type AstrologerOwnProfile = AstrologerProfileInput & {
   email: string;
   id: string;
   profileSavedAt: string | null;
+  photoUrl?: string | null;
 };
 
 export type AstrologerSessionState = {
@@ -37,14 +39,19 @@ type ProfileRecord = {
   id: string;
   languages: readonly string[];
   profileSavedAt: { toString(): string } | null;
+  profileMediaId: string | null;
 };
 
-function toOwnProfile(astrologer: ProfileRecord): AstrologerOwnProfile {
+async function toOwnProfile(astrologer: ProfileRecord): Promise<AstrologerOwnProfile> {
+  const asset = astrologer.profileMediaId
+    ? await db.orm.public.MediaAsset.select("storageKey").first({ id: astrologer.profileMediaId })
+    : null;
   return {
     ...astrologer,
     expertise: [...astrologer.expertise],
     languages: [...astrologer.languages],
     profileSavedAt: astrologer.profileSavedAt?.toString() ?? null,
+    photoUrl: asset ? publicMediaUrl(asset.storageKey) : null,
   };
 }
 
@@ -56,6 +63,7 @@ const ownProfileFields = [
   "languages",
   "experienceYears",
   "profileSavedAt",
+  "profileMediaId",
 ] as const;
 
 export class DatabaseAstrologerService implements AstrologerService {
@@ -130,10 +138,13 @@ export class DatabaseAstrologerService implements AstrologerService {
         passwordHash,
         mustChangePassword: false,
       });
-      await transaction.orm.public.Session.where({
-        role: "astrologer",
-        subjectId: id,
-      }).delete();
+      const deleteSessions = transaction.sql.public.Session.delete()
+        .where((session, functions) => functions.and(
+          functions.eq(session.role, "astrologer"),
+          functions.eq(session.subjectId, id),
+        ))
+        .build();
+      await transaction.execute(deleteSessions);
     });
   }
 

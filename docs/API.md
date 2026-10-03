@@ -2,15 +2,15 @@
 
 Every HTTP endpoint, WebSocket message and webhook, as built. HTTP routes live under `/api` and WebSockets under `/ws`, both on the same domain as the frontend.
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Conventions
 
 - HTTP endpoints are mounted below `/api` (README §1).
 - Health, public settings, public astrologer cards, eligible astrologer slots and published blogs need no session. Login/callback endpoints are public; protected endpoints run the matching role guard.
-- Current account, profile, blog, public-card and booking bodies, parameters and query strings are Zod-validated. Invalid non-login input returns `400` with `{"error":"Check the information and try again."}`. Booking creation discards unrecognized body fields so a browser-supplied price cannot affect the server-owned Settings amount. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
+- Current account, profile, blog, public-card and booking bodies, parameters and query strings are Zod-validated. Invalid non-login input normally returns `400` with `{"error":"Check the information and try again."}`. Astrologer blog writes instead return the first safe allow-list message, such as `The post contains an unsupported block.`, so the editor can show what needs correction. Booking creation discards unrecognized body fields so a browser-supplied price cannot affect the server-owned Settings amount. Password logins deliberately use the same 401 response for invalid input and bad credentials. The Google form accepts its documented fields and ignores extra provider fields.
 - Owner authentication uses `astrowebapp_owner_session` scoped to `/api/owner`. Astrologer and user authentication use separate cookies scoped to `/` so shared APIs and `/ws` receive them. All three are httpOnly, use SameSite=Lax and are Secure when `NODE_ENV=production`; the owner and astrologer last 12 hours and the user lasts 30 days.
-- Missing or invalid authentication returns `401`. Missing records return `404`; duplicate email, password-gate failures and invalid state transitions return `409`; database/service failures return a generic `503`.
+- Missing or invalid authentication returns `401`. Missing records return `404`; duplicate email, password-gate failures and invalid state transitions return `409`; database/service failures return a generic `503`. Every route-level `503` records only a fixed operation name plus a sanitized error class and message; credentials, tokens, phone numbers, email addresses, birth dates and line breaks are removed before logging.
 
 ## Endpoints
 
@@ -61,8 +61,8 @@ Last updated: 2026-10-02
 | GET | `/api/astrologer/bookings` | Astrologer | Returns only that astrologer's confirmed Normal/phone bookings and booked-user details | 9, 12 |
 | GET | `/api/astrologer/bookings/:bookingId` | Astrologer | Returns one booking owned by that astrologer for protected call-room navigation | 9 |
 | GET | `/api/astrologer/blogs` | Astrologer | Returns that astrologer's drafts and published posts with comments | 14 |
-| POST | `/api/astrologer/blogs` | Astrologer | Creates an own draft or published post | 14 |
-| PUT | `/api/astrologer/blogs/:id` | Astrologer | Edits, publishes or unpublishes an own post | 14 |
+| POST | `/api/astrologer/blogs` | Astrologer | Creates an own draft or published post; foreign body/cover media returns `400` | 14 |
+| PUT | `/api/astrologer/blogs/:id` | Astrologer | Edits, publishes or unpublishes an own post; foreign body/cover media returns `400` | 14 |
 | DELETE | `/api/astrologer/blogs/:id` | Astrologer | Deletes an own post, its likes and comments | 14 |
 | DELETE | `/api/astrologer/blogs/:id/comments/:commentId` | Astrologer | Deletes a comment only from an own post | 14 |
 
@@ -154,7 +154,7 @@ Each item contains the booking id, call type/mode, UTC start/end, duration, stor
 - **Subscription credit:** When the user has a credit, a conditional positive-balance update consumes exactly one and inserts a confirmed Subscription booking with `usedCredit=true` and `pricePaise=0`. The response includes the remaining `subscriptionCredits`; concurrent requests cannot reduce the balance below zero.
 - **Positive price:** Normal and Urgent create a `pending_payment` booking whose hold expires after ten minutes plus a linked `Payment(status=created)`. Subscription does the same only when no credit remains; its Payment uses `purpose=subscription_pack` and snapshots the current pack size. The `201` response adds `checkout` with the public key id, order id, server amount/currency, expiry and the signed-in user's name/email/phone prefill.
 - **Response:** `{booking}` contains id, astrologer id, call type/mode, UTC start/end, status, stored price, duration and `usedCredit`. Subscription confirmations also return the remaining `subscriptionCredits`.
-- **Transaction:** Before inserting, the server changes elapsed `pending_payment` holds for that astrologer to `expired`, then checks the one-upcoming-Normal rule where applicable. PostgreSQL's `Booking_no_overlap` exclusion constraint decides a simultaneous conflict.
+- **Transaction:** Before inserting, one explicit SQL bulk update changes all elapsed `pending_payment` holds for that astrologer to `expired`, then the server checks the one-upcoming-Normal rule where applicable. PostgreSQL's `Booking_no_overlap` exclusion constraint decides a simultaneous conflict.
 - **Errors:** Malformed required input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, an invalid/missing required phone, an unavailable/overlapping slot and a second upcoming Normal booking return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Order/database failures return `503` with a generic message.
 
 ### POST /api/payments/verify
@@ -163,7 +163,7 @@ Each item contains the booking id, call type/mode, UTC start/end, duration, stor
 - **Request:** Strict JSON with `bookingId`, `razorpayOrderId`, `razorpayPaymentId` and the 64-hex-character `razorpaySignature`; no params or query.
 - **Verification:** The backend computes HMAC-SHA256 over `orderId|paymentId` with `RAZORPAY_KEY_SECRET`, compares equal-length bytes with `crypto.timingSafeEqual`, then checks the stored order, user, booking and amount.
 - **Success:** One transaction conditionally claims the Payment, changes the booking to `confirmed`, clears its hold and stores the unique Razorpay payment id. For `subscription_pack`, only the claim winner adds the snapshotted calls, consumes one for this booking, sets `usedCredit=true` and returns `subscriptionCredits`. Repeated verification or a racing webhook returns the same confirmed state without adding credits again.
-- **Late conflict:** If `Booking_no_overlap` rejects confirmation because the slot is now occupied, the backend issues a full Razorpay refund and stores Payment `refunded` plus Booking `expired`. The `200` response returns `status:"refunded"` and the specified user-facing message.
+- **Late conflict:** If `Booking_no_overlap` rejects confirmation because the slot is now occupied, the backend reads the provider payment and refunds its full remaining gross amount, including any customer fee Razorpay added. It then stores Payment `refunded` plus Booking `expired`. The `200` response returns `status:"refunded"` and the specified user-facing message.
 - **Errors:** Invalid signatures return `400`, foreign/missing orders return `404`, invalid payment state returns `409`, and unavailable services return the generic `503` verification message.
 
 ### GET /api/calls/:bookingId/ice-servers
@@ -204,6 +204,7 @@ All responses omit password hashes.
 | `PATCH /api/owner/astrologers/:id/listing` | UUID path id plus `{isListed: boolean}` | `{astrologer}`; an inactive account cannot be shown |
 | `PATCH /api/owner/astrologers/:id/active` | UUID path id plus `{isActive: boolean}` | `{astrologer}`; deactivation also unlists it and deletes its astrologer sessions |
 | `POST /api/owner/astrologers/:id/reset-password` | UUID path id plus `temporaryPassword` 10–256 chars | `{"ok":true}`; sets `mustChangePassword` and deletes its astrologer sessions |
+| `DELETE /api/owner/astrologers/:id/photo` | UUID path id; empty body and query | `204`; owner-only removal deletes the profile reference, R2 object and `MediaAsset` row |
 
 ## Owner settings
 
@@ -232,8 +233,12 @@ The role guard resolves only an astrologer session and then checks the matching 
 
 | Endpoint | Valid request data | Success response |
 |---|---|---|
-| `GET /api/astrologer/profile` | No body or query | `{profile}` with id, email, display name, tags, experience and `profileSavedAt` |
+| `GET /api/astrologer/profile` | No body or query | `{profile}` with id, email, display name, tags, experience, `profileSavedAt` and nullable `photoUrl` |
 | `PUT /api/astrologer/profile` | `displayName` 2–80 chars; zero to 20 expertise tags; zero to 20 language tags; each tag 1–40 chars; integer `experienceYears` 0–60 | `{profile}` after trimming and case-insensitive tag de-duplication |
+| `POST /api/astrologer/profile/photo` | `multipart/form-data` with one `image`; real JPG, PNG or WebP bytes, maximum 5 MB | `201` with processed `{asset}`; replaces only the signed-in astrologer's photo |
+| `DELETE /api/astrologer/profile/photo` | Empty body, params and query | `204`; removes only the signed-in astrologer's photo |
+| `POST /api/astrologer/blog-images` | `multipart/form-data` with one `image`; real JPG, PNG or WebP bytes, maximum 5 MB | `201` with processed `{asset}` owned by the signed-in astrologer |
+| `DELETE /api/astrologer/media/:id` | UUID media id; empty body and query | `204` for an owned, unreferenced image; foreign/missing ids return `404` and referenced media returns `409` |
 
 Both endpoints use the session subject id rather than accepting an astrologer id. The first successful save sets `profileSavedAt`; later saves keep that original time.
 
@@ -250,7 +255,7 @@ Weekly entries contain integer `weekday` from `0` (Sunday) through `6` (Saturday
 
 Exception entries contain `YYYY-MM-DD` `date`, `kind` (`blocked` or `extra`) and nullable start/end times. A whole-date block has both times null. Partial blocks and all extra hours require both times. Every end must be after its start, timed entries on one date cannot overlap, and a whole-date block must be the only exception for that date. Requests are bounded to 70 weekly and 100 exception rows.
 
-Saving deletes and recreates only this astrologer's availability inside one transaction. It does not change bookings. `displacedBookingCount` counts confirmed, not-yet-ended bookings that no longer fit the saved hours so the panel can warn that they remain booked.
+Saving uses explicit SQL bulk deletes before recreating only this astrologer's rules and exceptions inside one transaction. It does not change bookings. `displacedBookingCount` counts confirmed, not-yet-ended bookings that no longer fit the saved hours so the panel can warn that they remain booked.
 
 ### Own booking history
 
@@ -260,11 +265,11 @@ Saving deletes and recreates only this astrologer's availability inside one tran
 
 ## Blogs
 
-Public list pagination accepts only an integer `page` from 1 through 10,000. It returns `{posts,nextPage}`; each summary contains the title, two-line-ready excerpt, public astrologer identity, publication time and current counts. Drafts and unpublished posts return no public row. The detail response contains the plain-text body and oldest-first comments with only a first name and stable public avatar key.
+Public list pagination accepts only an integer `page` from 1 through 10,000. It returns `{posts,nextPage}`; each summary contains title, stored excerpt, cover URL, reading time, public astrologer identity/photo, publication time and counts. Drafts and unpublished posts return no public row. Detail returns the validated TipTap JSON document and oldest-first plain-text comments with only a first name and stable public avatar key.
 
 User mutations use the user session subject and never accept a user id. Like is an empty `PUT`. Comment creation accepts `{body}` after trimming, with 1–500 characters, and allows five accepted attempts per minute for one user and IP in the current backend process. A limited request returns `429` and `Retry-After`. User comment deletion combines the session user, post id and comment id; foreign comments return `404`.
 
-Astrologer routes sit behind both the active-account guard and the temporary-password gate. Write bodies are `{title,body,status}` with a trimmed 1–120 character title, a non-empty plain-text body, and `draft` or `published`. Every read, update and delete includes the session astrologer id. The owner routes use the owner guard and expose no user email or full name.
+Astrologer routes sit behind both the active-account guard and the temporary-password gate. Write bodies are `{title,body,coverMediaId,status}` with a trimmed 1–120 character title, a validated TipTap document, a nullable owned blog-image UUID, and `draft` or `published`. JSON is limited to 200 KB and 20 images. Nodes are `doc`, paragraph, H2/H3, blockquote, bullet/ordered list, list item, image and hard break; marks are bold, italic, underline and HTTP/HTTPS link. Body images must exactly match the configured URL of the astrologer's `MediaAsset`. A rejected create/update returns the first schema-authored validation message without echoing submitted content. Every read, update and delete includes the session astrologer id. The owner routes use the owner guard and expose no user email or full name.
 
 ## WebSocket messages
 
@@ -297,4 +302,4 @@ Chat is relay-only: the server does not store or replay it. The first admitted j
 |---|---|---|---|---|
 | Razorpay | `POST /api/razorpay/webhook` | `payment.captured`, `order.paid`, `payment.failed` | HMAC-SHA256 of the untouched raw bytes with `RAZORPAY_WEBHOOK_SECRET`; `x-razorpay-event-id` is inserted once | 12 |
 
-The raw-body handler is mounted before `express.json()`. Captured/paid events use the same idempotent settlement/refund path as browser verification. Failed events change a still-created Payment to `failed` but leave its booking hold to expire normally. A duplicate event id returns `204` without applying the event again; invalid signatures or payloads return `400`.
+The raw-body handler is mounted before `express.json()`. Captured/paid events use the same idempotent settlement/refund path as browser verification. The webhook accepts either a provider gross amount equal to the stored amount or a customer-fee payment whose `gross - fee` equals the stored amount; settlement still uses the Settings-backed stored amount. Failed events change a still-created Payment to `failed` but leave its booking hold to expire normally. A duplicate event id returns `204` without applying the event again; invalid signatures or payloads return `400`.

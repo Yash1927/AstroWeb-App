@@ -2,7 +2,7 @@
 
 How to install and run the project as it is now. The planned setup is in README §13.
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Requirements
 
@@ -12,6 +12,7 @@ Last updated: 2026-10-02
 - A Google Cloud OAuth client of type **Web application** for user sign-in
 - A coturn server or compatible managed TURN service with a REST shared secret for reliable in-app calls
 - A Razorpay account with test API keys and a test webhook secret
+- A Cloudflare account with R2 enabled for profile and blog images
 - An HTTPS tunnel to the Vite server for real-phone microphone, earbuds and mobile-data checks
 
 ## Install
@@ -32,6 +33,8 @@ npm install
 | `APP_ORIGIN` | `backend/.env` | The one browser origin allowed by CORS | 1 | `http://localhost:5173` |
 | `DATABASE_URL` | `backend/.env` | Neon pooled runtime connection | 2 | See `backend/.env.example` |
 | `DIRECT_DATABASE_URL` | `backend/.env` | Neon direct migration connection | 2 | See `backend/.env.example` |
+| `RUN_NEON_BRANCH_TESTS` | Temporary test shell only | Opt in to the item 7â€“8 destructive integration suite; keep `0` for normal tests | Pending fixes | `0` |
+| `NEON_BRANCH_NAME` | Temporary test shell only | Prove the integration target uses the dedicated pending-fix branch naming pattern | Pending fixes | `pending-fixes-7-8-YYYYMMDD` |
 | `SESSION_SECRET` | `backend/.env` | Sign server sessions | 3 | At least 32 random characters |
 | `GOOGLE_CLIENT_ID` | `backend/.env` | Verify Google user sign-in | 6 | `xxxx.apps.googleusercontent.com` |
 | `VITE_GOOGLE_CLIENT_ID` | `frontend/.env` | Render Google Identity Services in the browser; this client id is public | 6 | `xxxx.apps.googleusercontent.com` |
@@ -44,6 +47,11 @@ npm install
 | `TURN_URLS` | `backend/.env` | TURN relay addresses | 11 | See `backend/.env.example` |
 | `TURN_SECRET` | `backend/.env` | Derive short-lived TURN credentials | 11 | Placeholder only in the example |
 | `APP_TIMEZONE` | `backend/.env` | App timezone for display and slot rules | 2 | `Asia/Kolkata` |
+| `R2_ACCOUNT_ID` | `backend/.env` | Cloudflare account that owns the media bucket | Pending fix 13 | See the R2 Account Details page |
+| `R2_ACCESS_KEY_ID` | `backend/.env` | Server-only R2 API token key id | Pending fix 13 | Placeholder only in the example |
+| `R2_SECRET_ACCESS_KEY` | `backend/.env` | Server-only R2 API token secret | Pending fix 13 | Placeholder only in the example |
+| `R2_BUCKET` | `backend/.env` | R2 bucket used for processed WebP objects | Pending fix 13 | `astro-shashank-media` |
+| `R2_PUBLIC_BASE_URL` | `backend/.env` | HTTPS public media origin, without a trailing slash | Pending fix 13 | Development `r2.dev` URL or production custom domain |
 
 `backend/.env.example` and `frontend/.env.example` contain placeholders only. Use the same Web client id for `GOOGLE_CLIENT_ID` and `VITE_GOOGLE_CLIENT_ID`.
 
@@ -68,8 +76,11 @@ npm install
 | Apply pending migrations | `backend/` | `npm run db:migrate` |
 | Verify Neon against the contract | `backend/` | `npm run db:verify` |
 | Seed owner and settings | `backend/` | `npm run seed` |
+| Delete unreferenced uploads older than 24 hours | `backend/` | `npm run media:cleanup` |
 
 `dev:make-booking` looks up an existing user and astrologer by email, creates one confirmed free Normal call at the requested minute offset, and uses the supplied positive duration. A negative offset is allowed for testing Past cards. The command refuses to run when `NODE_ENV=production`; it can still be rejected by the database overlap constraint.
+
+After creating any migration, run `npm run migration:check`, `npm run db:migrate`, `npm run migration:status` and `npm run db:verify` from `backend/` before reporting the work complete. If the target database must deliberately remain unchanged, state clearly in the report that the owner must run the apply/status/verify commands.
 
 ## Running locally
 
@@ -91,7 +102,7 @@ The call room fetches Google's public STUN address and configured TURN values fr
 
 The manifest and service worker are production-build output. Run `npm run build`, then `npm run preview` in `frontend/`; the normal Vite development server does not install the generated service worker. Use a fresh browser profile when retesting install banners because dismissal is remembered in local storage.
 
-`frontend/public/app-icon.svg` is the editable source icon. After changing it, run `npm run generate:pwa-assets` from `frontend/` to replace the 192px, 512px, maskable 512px and Apple touch PNGs. Do not edit those PNGs separately.
+`frontend/public/logo.jpg` is the owner-supplied brand source and must not be edited by the icon workflow. Run `npm run generate:pwa-assets` from `frontend/`; `scripts/create-pwa-icon-source.mjs` isolates and centres its AM ring on `#FFFBEB` in `public/app-icon-source.png` and creates the 96px `public/app-icon-header.png`. Then `pwa-assets.config.ts` replaces the 192px, 512px, maskable 512px and Apple touch PNGs. The maskable preset adds same-colour safe-zone padding so the source does not show as a square. Do not edit generated PNGs separately.
 
 Real Android/desktop installation and iPhone/iPad Add to Home Screen checks need localhost or HTTPS. Physical-device checks need HTTPS. After a successful online load, disabling the connection shows the offline message from README §5.7; API, WebSocket, call-room and payment paths are not cached.
 
@@ -115,6 +126,18 @@ Static usernames and passwords must not be added to frontend source or `VITE_` v
 
 The backend uses the official `razorpay` Node SDK. Orders and refunds require backend keys; the browser receives only the public key id with its server-created order. The webhook must receive its untouched `application/json` body, so its Express handler remains mounted before the global JSON parser.
 
+## Cloudflare R2 media setup
+
+1. Create or sign in to the Cloudflare account that will own the app. Open **R2 object storage** and enable R2. Cloudflare may ask for a payment card even when usage remains inside its free allowance.
+2. Create a private bucket, for example `astro-shashank-media`. Put its exact name in `R2_BUCKET`.
+3. On the R2 Account Details page, copy the account id into `R2_ACCOUNT_ID`.
+4. Create an R2 API token with **Object Read & Write** permission scoped only to this bucket. Put its access-key id and one-time secret in `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`. These values stay in `backend/.env`; never add them to frontend variables.
+5. For development, enable the bucket's **Public Development URL** and put its HTTPS `https://pub-….r2.dev` origin in `R2_PUBLIC_BASE_URL`. The `r2.dev` address is for development only.
+6. For production, connect a dedicated custom media domain to the bucket, wait for HTTPS to become active, and replace `R2_PUBLIC_BASE_URL` with that origin. Restart the backend so upload responses and the Content Security Policy use it.
+7. Run `npm run db:migrate` before the first upload. Schedule `npm run media:cleanup` at least daily in the production job runner. It deletes only media older than 24 hours that is not a profile photo, post cover or post-body image.
+
+Uploads accept real JPG, PNG or WebP bytes up to 5 MB. The backend re-encodes them to metadata-free WebP before R2 receives them. A changed or removed profile image and images belonging to a deleted post are removed from both R2 and `MediaAsset`.
+
 ## Database setup
 
 1. In Neon, copy the pooled connection string into `DATABASE_URL` and the direct connection string into `DIRECT_DATABASE_URL`. Keep `sslmode=require` in both. The direct hostname does not contain `-pooler`.
@@ -128,7 +151,20 @@ npm run seed
 npm run db:verify
 ```
 
-The second seed run should report that neither row was created. Applied migration packages are `20260930T0841_database_schema`, `20260930T1814_astrologer_profile_saved_at` and `20261002T0936_subscription_pack_credits`. The Step 13 package was generated with `npm run migration:plan -- --name subscription_pack_credits`, applied with `npm run db:migrate`, and checked with `npm run migration:check` and `npm run db:verify`.
+The second seed run should report that neither row was created. Migration `20261003T0224_media_and_rich_blogs` was applied by the owner reviewer on 2026-10-03. A later status and full verification confirmed that the live marker and schema match contract `4d019937…`.
+
+### Isolated Neon integration test
+
+`backend/src/blog/blog-service-neon.integration.test.ts` inserts and deletes temporary rows. Never point it at Neon's primary/default branch. Create a child branch first, confirm Neon reports `primary: false` and `default: false`, then set `DATABASE_URL` to that branch for this command only:
+
+```powershell
+$env:RUN_NEON_BRANCH_TESTS = "1"
+$env:NEON_BRANCH_NAME = "pending-fixes-7-8-YYYYMMDD"
+$env:DATABASE_URL = "<isolated Neon branch connection string>"
+npm test -- src/blog/blog-service-neon.integration.test.ts
+```
+
+The suite covers a post with two likes and comments, two-session revocation through all three account flows, multiple availability rows and two elapsed payment holds. Set `RUN_NEON_BRANCH_TESTS` back to `0` and restore the normal `DATABASE_URL` before running the app.
 
 ## Testing on a phone (HTTPS tunnel)
 
@@ -165,5 +201,7 @@ _Write in Step 16:_ building and starting the app, production env vars, HTTPS an
 | Vite rejects the HTTPS tunnel host | Add only the tunnel's exact hostname to `server.allowedHosts` in `frontend/vite.config.ts`, then restart Vite. Do not enable every host. |
 | Two peers cannot establish audio on a restrictive or mobile network | Confirm TURN is configured, then repeat with the development relay-only flag. A successful relay-only call proves media is not falling back to direct STUN. |
 | Checkout says payment is unavailable | Confirm all three Razorpay backend variables use test-mode values, restart the backend, and allow `https://checkout.razorpay.com` in any local browser/content blocker. Never put the key secret in the frontend. |
+| An image upload says media storage is not configured | Fill all five `R2_` variables, use an HTTPS public base URL, and restart the backend. |
+| An uploaded image returns 404 in the browser | Confirm the R2 bucket has a public development URL or production custom domain and that `R2_PUBLIC_BASE_URL` matches it. |
 | Razorpay shows a paid order but the booking stays pending | Confirm the browser called `/api/payments/verify`; also check that the Dashboard webhook points to the exact public `/api/razorpay/webhook` URL and uses the same webhook secret configured in the backend. |
 | Prisma reports `RUNTIME.TEMPORAL_UNAVAILABLE` | Run `npm install`; `temporal-polyfill` must be installed and is loaded by `src/prisma/db.ts`. |

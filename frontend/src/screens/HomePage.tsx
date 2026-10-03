@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
+import { withLowercaseDayPeriod } from '../display-time'
 import {
   bookingApi,
   BookingApiError,
@@ -21,6 +22,7 @@ import {
 } from '../api/user'
 import {
   AstrologerCard,
+  Avatar,
   BottomSheet,
   Button,
   Card,
@@ -28,12 +30,14 @@ import {
   PolicyLinks,
   Skeleton,
   Toast,
+  PageHeader,
   UserDetailsForm,
   UserSignIn,
   type AstrologerCardProfile,
 } from '../components'
 import { detailsDraftFrom } from '../user-details'
 import { openRazorpayCheckout } from '../razorpay-checkout'
+import { formatCallsLeft } from '../subscription-display'
 
 type FlowStep = 'options' | 'checking' | 'sign-in' | 'details' | 'phone' | 'slots' | 'summary' | 'success' | 'error'
 
@@ -97,7 +101,7 @@ function optionsFrom(settings: PublicSettings, subscriptionCredits: number): Cal
       callType: 'subscription',
       label: 'Subscription',
       summary: subscriptionCredits > 0
-        ? `${subscriptionCredits} calls left · ${settings.subscriptionDurationMin} min each`
+        ? `${formatCallsLeft(subscriptionCredits)} · ${settings.subscriptionDurationMin} min each`
         : `${formatRupees(settings.subscriptionPricePaise)} for ${settings.subscriptionCallsPerPack} calls · ${settings.subscriptionDurationMin} min each`,
       description: 'The astrologer calls your phone',
     },
@@ -139,12 +143,12 @@ function formatDateChip(date: string) {
 }
 
 function formatTimeInIst(startsAt: string) {
-  return new Intl.DateTimeFormat('en-IN', {
+  return withLowercaseDayPeriod(new Intl.DateTimeFormat('en-IN', {
     timeZone: 'Asia/Kolkata',
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  }).format(new Date(startsAt))
+  }).format(new Date(startsAt)))
 }
 
 function formatDateInIst(startsAt: string) {
@@ -539,9 +543,7 @@ export default function HomePage() {
 
   return (
     <section className="home-screen screen">
-      <header className="home-header">
-        <h1>AstroWebApp</h1>
-      </header>
+      <PageHeader title="Astrologers" />
 
       {listError ? (
         <Card className="home-state">
@@ -705,8 +707,11 @@ export default function HomePage() {
           && selectedPrice !== null ? (
           <div className="booking-summary stack">
             <Card compact>
+              <div className="booking-summary__astrologer">
+                <Avatar id={selectedAstrologer.id} name={selectedAstrologer.displayName} size={56} src={selectedAstrologer.photoUrl} />
+                <strong>{selectedAstrologer.displayName}</strong>
+              </div>
               <dl>
-                <div><dt>Astrologer</dt><dd>{selectedAstrologer.displayName}</dd></div>
                 <div><dt>Call type</dt><dd>{callTypeLabel(chosenCallType)}</dd></div>
                 <div><dt>Date</dt><dd>{formatDateInIst(selectedSlot.startsAt)}</dd></div>
                 <div><dt>Time</dt><dd>{formatTimeInIst(selectedSlot.startsAt)}</dd></div>
@@ -718,7 +723,9 @@ export default function HomePage() {
                       ? '1 subscription credit'
                       : selectedPrice === 0
                         ? 'Free'
-                        : formatRupees(selectedPrice)}
+                        : chosenCallType === 'subscription' && settings
+                          ? `${formatRupees(settings.subscriptionPricePaise)} for ${settings.subscriptionCallsPerPack} calls (this booking uses 1)`
+                          : formatRupees(selectedPrice)}
                   </dd>
                 </div>
               </dl>
@@ -771,7 +778,7 @@ export default function HomePage() {
                 : `Booked! ${selectedAstrologer?.displayName ?? 'The astrologer'} will call you on ${displayPhone(bookingUser?.phone ?? '')} at ${formatTimeInIst(createdBooking.startsAt)} on ${formatDateInIst(createdBooking.startsAt)}. Please keep your phone nearby.`}
             </p>
             {createdBooking.callType === 'subscription' && successCredits !== null ? (
-              <p className="booking-notice">Subscription calls left: {successCredits}</p>
+              <p className="booking-notice">Subscription: {formatCallsLeft(successCredits)}</p>
             ) : null}
             <Link className="button button--primary" to="/history">Go to History</Link>
           </div>

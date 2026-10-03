@@ -76,6 +76,8 @@ Run each command inside its folder. Steps 1 and 2 add the commands that don't ex
     - `npm run build` passes in `frontend/`
     - the backend type-checks
     - all tests pass
+
+    Run these full checks **once, at the end**. Run them again only if you change code afterwards. While you work, run only the test files for the code you changed (`npx vitest run <file>`). Docs-only changes need no checks.
 12. **Ask first** before anything destructive or hard to undo:
     - dropping or resetting database tables, or deleting data
     - deleting files you didn't create
@@ -94,11 +96,16 @@ Run each command inside its folder. Steps 1 and 2 add the commands that don't ex
    - update every other doc the change affects (see [Docs](#docs))
 6. **Report** in the format below, then stop. Don't start the next step.
 
-Small tasks outside the build steps (fixes, tweaks, questions that lead to changes) don't need a feature doc. They still update `docs/CHANGELOG.md` and every other doc the change affects.
+Small tasks outside the build steps (fixes, tweaks, questions that lead to changes) don't need a feature doc. They update `docs/CHANGELOG.md` and mark items in `docs/PENDING_FIXES.md`. They touch another doc only when a fact recorded there changed, such as an endpoint, table, env var, script, permission or something the owner or astrologers see.
 
 ## Docs
 
-A task isn't finished until `docs/` matches the code. Update the docs in the same task as the change.
+A task isn't finished until `docs/` matches the code. Update the docs in the same task as the change, but **keep doc work small**:
+
+- Edit only the lines whose facts changed. Don't rewrite, reorganise or re-read whole docs.
+- Write each fact in one doc and link to it from others; don't repeat it.
+- Keep a CHANGELOG entry to at most 6 short lines.
+- Don't document internal refactors, styling tweaks or test-only changes beyond the CHANGELOG line.
 
 | If you… | Update |
 |---|---|
@@ -126,7 +133,7 @@ How to write the docs:
 
 ## Report
 
-End every task with:
+End every task with these five headings, a few lines each:
 
 1. **Built / changed:** what you did, and the main files
 2. **Docs updated:** which files

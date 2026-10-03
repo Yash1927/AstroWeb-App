@@ -2,7 +2,7 @@
 
 Choices made while building, and why. Newest entries go last. This file also records the owner's answers to the README's open questions (README §16.2).
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 Use this format:
 
@@ -157,3 +157,17 @@ Use this format:
 - **Context:** README §5.4 and §16.2 question 11 define who can comment and delete, but do not define the comment rate, the size of the owner's “Recent comments” list, or how to keep avatar colours stable without exposing a user's database id.
 - **Decision:** Accept five comment attempts per minute per signed-in user and IP in one backend process. Show the newest 50 comments to the owner. Public comments contain the first name and a SHA-256-derived avatar key, not the user id or full name.
 - **Consequences:** Normal conversation remains easy while simple bursts are throttled. A multi-instance deployment needs a shared limiter in Step 16. The owner list is bounded, and one commenter keeps a stable avatar colour without exposing a profile identifier.
+
+## D-020: Use the supplied logo unchanged
+- **Date:** 2026-10-03
+- **Status:** Accepted
+- **Context:** README §16.2 Q15 names the product Astromaitreyi and requires `frontend/public/logo.jpg`; its embedded wordmark matches that name.
+- **Decision:** Use Astromaitreyi in every user-visible brand surface. Use the JPEG unchanged for large app, panel, login, offline and Checkout branding; derive install and compact-header icons from its AM ring monogram.
+- **Consequences:** The image and adjacent product name agree, so there is no outstanding logo confirmation. The generated assets can be rebuilt with `npm run generate:pwa-assets`; the internal R2 bucket name remains unchanged.
+
+## D-021: Run abandoned-media cleanup as a deployment job
+- **Date:** 2026-10-03
+- **Status:** Accepted
+- **Context:** README §19.1 requires unused uploads older than 24 hours to be removed, but it does not choose a scheduler and the current backend has no job-runner service.
+- **Decision:** Provide `npm run media:cleanup` as an idempotent command and have the production platform invoke it at least daily. The command rechecks profile, cover and body references immediately before each deletion.
+- **Consequences:** No scheduler library or always-on timer is added to the web process. The owner must configure one recurring deployment job; missed runs delay cleanup without deleting referenced media.

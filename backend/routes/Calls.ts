@@ -5,6 +5,7 @@ import {
   type SessionManager,
 } from "../src/auth/session";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import {
   RealtimeBookingUnavailableError,
 } from "../src/realtime/booking-service";
@@ -77,9 +78,11 @@ export function createCallsRouter({ iceServers, sessions }: Dependencies) {
       response.status(404).json({ error: "Call not found." });
     } catch (error) {
       if (error instanceof TurnConfigurationError) {
+        logRouteError("calls.ice-servers", error);
         response.status(503).json({ error: "Call audio is unavailable. Please try again." });
         return;
       }
+      logRouteError("calls.ice-servers", error);
       response.status(503).json({ error: "Call audio is unavailable. Please try again." });
     }
   });

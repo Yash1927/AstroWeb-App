@@ -1,5 +1,6 @@
 import "temporal-polyfill/global";
 import { db } from "../prisma/db";
+import { publicMediaUrl } from "../media/media-service";
 
 type BookingStatus = "upcoming" | "completed" | "missed" | "phone-call";
 
@@ -20,6 +21,7 @@ type BookingRow = {
 type AstrologerRow = {
   displayName: string;
   id: string;
+  photoUrl?: string | null;
 };
 
 type UserRow = {
@@ -142,9 +144,18 @@ export class DatabaseBookingHistoryRepository implements BookingHistoryRepositor
 
   async findAstrologers(ids: string[]) {
     if (ids.length === 0) return [];
-    return db.orm.public.Astrologer.select("id", "displayName")
+    const astrologers = await db.orm.public.Astrologer.select("id", "displayName", "profileMediaId")
       .where((astrologer) => astrologer.id.in(ids))
       .all();
+    const mediaIds = astrologers.flatMap((item) => item.profileMediaId ? [item.profileMediaId] : []);
+    const assets = mediaIds.length
+      ? await db.orm.public.MediaAsset.select("id", "storageKey").where((asset) => asset.id.in(mediaIds)).all()
+      : [];
+    const media = new Map(assets.map((asset) => [asset.id, publicMediaUrl(asset.storageKey)]));
+    return astrologers.map(({ profileMediaId, ...item }) => ({
+      ...item,
+      photoUrl: profileMediaId ? media.get(profileMediaId) ?? null : null,
+    }));
   }
 
   async findUsers(ids: string[]) {
@@ -281,4 +292,3 @@ export class DefaultBookingHistoryService implements BookingHistoryService {
 
 export const bookingHistoryRepository = new DatabaseBookingHistoryRepository();
 export const bookingHistoryService = new DefaultBookingHistoryService(bookingHistoryRepository);
-

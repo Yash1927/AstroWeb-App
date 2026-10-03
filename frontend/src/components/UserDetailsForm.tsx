@@ -14,7 +14,7 @@ function formatTime(value: string) {
   if (!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(value)) return ''
   const [hoursText, minutes] = value.split(':')
   const hours = Number(hoursText)
-  const period = hours >= 12 ? 'PM' : 'AM'
+  const period = hours >= 12 ? 'pm' : 'am'
   return `${hours % 12 || 12}:${minutes} ${period}`
 }
 
@@ -158,4 +158,3 @@ export function UserDetailsForm({
     </form>
   )
 }
-

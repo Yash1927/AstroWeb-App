@@ -38,6 +38,7 @@ Add the protected astrologer panel and complete the reusable email/password sess
 - `POST /api/auth/astrologer/login` uses the same five-failures-per-15-minutes email-plus-IP policy and indistinguishable credential error as owner login. The protected `/api/astrologer/*` router checks the astrologer role and the live account's active state.
 - Password replacement uses Argon2id, deletes every earlier astrologer session in the same transaction, and issues a fresh session to the current browser. Logout deletes its Session row.
 - The Profile screen edits display name, expertise tags, language tags and 0–60 years of experience. Preview renders unsaved values with the same `AstrologerCard` that Home will use; its Call button has no action in preview.
+- The profile also accepts JPG, PNG or WebP photos up to 5 MB. It previews the centred square crop before an explicit photo save, supports change/remove, and uses the processed 512×512 WebP everywhere the astrologer appears. The owner can remove a photo for moderation. See README §19.1–§19.2.
 - The first successful save sets `profileSavedAt`; later saves preserve it. Migration `20260930T1814_astrologer_profile_saved_at` is applied on Neon and the live schema matches the contract.
 - Owner profile details include the saved-profile state. Owner deactivation unlists the astrologer and revokes every astrologer session atomically; password reset also revokes every astrologer session and restores the forced-password gate.
 - User and astrologer cookie paths are `/`, while the owner cookie stays scoped to `/api/owner`. Separate cookie names keep the roles isolated.
@@ -49,9 +50,10 @@ Add the protected astrologer panel and complete the reusable email/password sess
 2. Add an astrologer with a temporary password of at least 10 characters.
 3. Open `/astrologer` in a separate browser profile, sign in, and confirm **Set a new password** appears before the panel. Save a new password of at least 10 characters.
 4. Add expertise and language tags, set experience from 0 through 60, and change the display name. Choose **Preview** before saving and confirm the card uses those unsaved values and its **Call** button does nothing.
-5. Save the profile, refresh, and confirm the saved values return. Log out, log back in with the new password, and confirm the temporary password no longer works.
-6. Back at `/owner`, choose **View and edit** and confirm the expertise, languages, experience and profile-saved time appear.
-7. While the astrologer is signed in, deactivate or reset that account from `/owner`. The next protected astrologer request must return to login; a reset requires the new temporary password and another replacement.
+5. Choose a profile image, check the centred square preview, save it, and confirm Preview/Home use the photo. Remove it and confirm initials return.
+6. Save the profile, refresh, and confirm the saved values return. Log out, log back in with the new password, and confirm the temporary password no longer works.
+7. Back at `/owner`, choose **View and edit** and confirm the photo, expertise, languages, experience and profile-saved time appear. Try **Remove photo**.
+8. While the astrologer is signed in, deactivate or reset that account from `/owner`. The next protected astrologer request must return to login; a reset requires the new temporary password and another replacement.
 
 ## Follow-ups and known issues
 

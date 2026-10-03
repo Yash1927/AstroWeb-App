@@ -2,11 +2,11 @@
 
 Neon Postgres, accessed through Prisma 8. The source contract is `backend/src/prisma/contract.prisma`, and the product model is README §11.
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Current state
 
-The complete 13-table contract is applied to Neon. Migration `20260930T0841_database_schema` replaced the empty boilerplate tables, enabled `btree_gist` and added the active-booking overlap constraint. Step 4 migration `20260930T1814_astrologer_profile_saved_at` adds the nullable first-profile-save marker. Step 13 migration `20261002T0936_subscription_pack_credits` adds the pack-size snapshot to Payment without changing existing rows.
+The source and live Neon database contain the 14-table contract. Applied migration `20261003T0224_media_and_rich_blogs` adds media ownership/profile/cover relations and converts plain blog text to TipTap JSONB. Migration integrity, live status and full contract verification passed after the owner reviewer applied it.
 
 The running app and seed use pooled `DATABASE_URL`. Migration commands use direct `DIRECT_DATABASE_URL`. Money columns are whole paise. Instants are PostgreSQL `timestamptz`; local calendar dates and availability clock times use `date` and `time`.
 
@@ -37,9 +37,10 @@ The Step 2 seed creates the one owner row. Step 3 reads its hash for owner login
 | `isActive` | boolean | No | `true` |
 | `isListed` | boolean | No | `false` |
 | `profileSavedAt` | timestamptz(3) | Yes | Set once by the first successful profile save |
+| `profileMediaId` | text | Yes | Unique foreign key to the current profile-photo `MediaAsset` |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-Relations: availability rules, availability exceptions, bookings and blogs.
+Relations: availability rules, availability exceptions, bookings, blogs and owned media.
 
 Owner creates override the database's `isListed = false` default with `true` and leave `mustChangePassword = true`. Step 4 records `profileSavedAt` without changing an owner's listing choice; the public query requires active, listed and saved. Deactivation sets both `isActive = false` and `isListed = false`; reactivation changes only `isActive`.
 
@@ -71,7 +72,7 @@ Relations: bookings, payments, blog likes and blog comments. Nullable onboarding
 | `startTime` | time(0) | No | Local availability clock time |
 | `endTime` | time(0) | No | Local availability clock time |
 
-Step 7 stores zero or more rows per weekday for each astrologer. Zero rows means the day is off. The protected replacement validates weekday `0`–`6`, end-after-start and non-overlap before deleting/recreating only the signed-in astrologer's rows in one transaction.
+Step 7 stores zero or more rows per weekday for each astrologer. Zero rows means the day is off. The protected replacement validates weekday `0`–`6`, end-after-start and non-overlap before explicit SQL bulk deletes recreate only the signed-in astrologer's rows in one transaction.
 
 ### `AvailabilityException`
 
@@ -84,7 +85,7 @@ Step 7 stores zero or more rows per weekday for each astrologer. Zero rows means
 | `startTime` | time(0) | Yes | Optional partial-day boundary |
 | `endTime` | time(0) | Yes | Optional partial-day boundary |
 
-Step 7 uses null start/end only for a whole-date `blocked` exception. Partial blocks and every `extra` exception have both local clock times. A whole-date block is the date's only exception; timed exceptions on one date cannot overlap. The slot engine adds extra windows before subtracting blocks.
+Step 7 uses null start/end only for a whole-date `blocked` exception. Partial blocks and every `extra` exception have both local clock times. A whole-date block is the date's only exception; timed exceptions on one date cannot overlap. The slot engine adds extra windows before subtracting blocks. Availability replacement clears every matching exception with one explicit SQL bulk delete before writing the new set.
 
 ### `Booking`
 
@@ -106,7 +107,7 @@ Step 7 uses null start/end only for a whole-date `blocked` exception. Partial bl
 
 Relations: one user, one astrologer and optional related payments.
 
-Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` intervals as occupied. Booking creation rechecks an exact slot and then expires the selected astrologer's elapsed holds before inserting. A zero-price row is immediately `confirmed` with no hold expiry. A positive-price Normal or Urgent row is `pending_payment` with a ten-minute expiry and is inserted with its created Payment. Subscription uses `phone`: an existing credit creates a confirmed zero-price row with `usedCredit=true`; otherwise a pack Payment holds the slot and settlement marks the confirmed row as credit-backed. Every paid row preserves the Settings amount in whole paise.
+Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` intervals as occupied. Booking creation rechecks an exact slot and then expires all matching elapsed holds with one explicit SQL bulk update before inserting. A zero-price row is immediately `confirmed` with no hold expiry. A positive-price Normal or Urgent row is `pending_payment` with a ten-minute expiry and is inserted with its created Payment. Subscription uses `phone`: an existing credit creates a confirmed zero-price row with `usedCredit=true`; otherwise a pack Payment holds the slot and settlement marks the confirmed row as credit-backed. Every paid row preserves the Settings amount in whole paise.
 
 `Booking_no_overlap` applies to both `pending_payment` and `confirmed` rows. If simultaneous inserts target the same astrologer and overlapping time, PostgreSQL accepts one and rejects the other with exclusion error `23P01`. Prisma 8 surfaces this on `SqlQueryError.sqlState`, directly or below a transaction `cause`; the API maps that shape to a friendly `409`.
 
@@ -125,7 +126,7 @@ Step 7 slot reads treat confirmed intervals and unexpired `pending_payment` inte
 | `status` | text enum | No | `created`, `paid`, `failed` or `refunded` |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-Step 12 inserts one created Payment with each paid hold. Step 13 uses `purpose=subscription_pack` and records the current `Settings.subscriptionCallsPerPack` in `creditsPurchased`; later owner edits cannot change an existing order. Verification or a captured/paid webhook conditionally claims the Payment, stores the unique payment id and confirms the Booking in one transaction. A pack claim adds `creditsPurchased` and consumes one call in that same transaction. A late provider payment that conflicts on confirmation is fully refunded, then stored as `refunded` while its Booking becomes `expired`.
+Step 12 inserts one created Payment with each paid hold. Step 13 uses `purpose=subscription_pack` and records the current `Settings.subscriptionCallsPerPack` in `creditsPurchased`; later owner edits cannot change an existing order. Verification or a captured/paid webhook conditionally claims the Payment, stores the unique payment id and confirms the Booking in one transaction. A fee-bearing webhook may report a provider gross amount above the stored Settings amount when `gross - fee` matches it; the app always settles the stored amount. A pack claim adds `creditsPurchased` and consumes one call in that same transaction. A late provider payment that conflicts on confirmation is refunded for the provider's full remaining gross amount, including a customer fee, then stored as `refunded` while its Booking becomes `expired`.
 
 ### `WebhookEvent`
 
@@ -158,13 +159,31 @@ The server reads this row for the public settings endpoint, slot duration and ev
 |---|---|---|---|
 | `id` | text | No | UUID |
 | `astrologerId` | text | No | Foreign key to `Astrologer.id` |
-| `title`, `body` | text | No | — |
+| `title` | text | No | Up to 120 characters at the API boundary |
+| `body` | jsonb | No | Validated TipTap JSON document; 200 KB and 20-image limits |
+| `excerpt` | text | No | Server-derived first 200 plain-text characters |
+| `readingMinutes` | integer | No | `1`; server-derived at 200 words per minute, minimum one |
+| `coverMediaId` | text | Yes | Foreign key to an owned blog-image `MediaAsset` |
 | `status` | text enum | No | `draft` by default; also `published` |
 | `publishedAt` | timestamptz(3) | Yes | — |
 | `createdAt` | timestamptz(3) | No | Current time |
 | `updatedAt` | timestamptz | No | Set on create and each non-empty ORM update |
 
-Step 14 writes only through the signed-in astrologer's id. Public queries require `status = published` and non-null `publishedAt`, order newest first and never return draft rows. Unpublishing clears `publishedAt`; publishing a draft sets it to the current UTC instant.
+Writes use only the signed-in astrologer's id. Public queries require `status = published` and non-null `publishedAt`, order newest first and never return drafts. The applied migration preserved old text by splitting it on blank lines into paragraph/text nodes.
+
+### `MediaAsset`
+
+| Column | Type | Nullable | Default / notes |
+|---|---|---|---|
+| `id` | text | No | UUID |
+| `ownerAstrologerId` | text | No | Foreign key to `Astrologer.id` |
+| `kind` | text enum | No | `profile_photo` or `blog_image` |
+| `storageKey` | text | No | Unique random R2 object key |
+| `width`, `height` | integer | No | Processed WebP pixel dimensions |
+| `bytes` | integer | No | Processed object size |
+| `createdAt` | timestamptz(3) | No | Current time |
+
+The table stores no R2 credentials or original metadata. Profile and cover foreign keys identify direct use; body use is checked by matching the configured public URL to owned rows. The cleanup command deletes unreferenced rows and objects older than 24 hours.
 
 ### `BlogLike`
 
@@ -188,7 +207,7 @@ Step 14 uses the composite row as the like state. Toggling removes an existing r
 | `body` | text | No | — |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-Comments are stored exactly as trimmed plain text, up to 500 characters at the API boundary. Deleting a post removes its like and comment rows in the same transaction before removing the post. Step 14 uses the existing Step 2 tables, so it adds no migration.
+Comments are stored exactly as trimmed plain text, up to 500 characters at the API boundary. Deleting a post removes every matching like and comment with explicit SQL bulk deletes in the same transaction before removing the post. Step 14 uses the existing Step 2 tables, so it adds no migration.
 
 ### `Session`
 
@@ -200,7 +219,7 @@ Comments are stored exactly as trimmed plain text, up to 500 characters at the A
 | `expiresAt` | timestamptz(3) | No | Revocation and expiry boundary |
 | `createdAt` | timestamptz(3) | No | Current time |
 
-The session manager stores a random UUID as the session id and sends a signed form of that id in the role-specific cookie. Resolution verifies the signature, expected role and `expiresAt`. Logout and expired-session cleanup delete the row. User rows expire 30 days after Google sign-in; owner and astrologer rows expire after 12 hours. Astrologer password replacement, owner password reset and owner deactivation delete all sessions for that astrologer.
+The session manager stores a random UUID as the session id and sends a signed form of that id in the role-specific cookie. Resolution verifies the signature, expected role and `expiresAt`. Logout and expired-session cleanup delete the row. User rows expire 30 days after Google sign-in; owner and astrologer rows expire after 12 hours. Astrologer password replacement, owner password reset and owner deactivation revoke all matching astrologer sessions with explicit SQL bulk deletes.
 
 ## Rules the database enforces
 
@@ -213,6 +232,8 @@ The session manager stores a random UUID as the session id and sends a signed fo
 | Razorpay order and payment ids cannot be reused | `Payment` | Unique constraints | 2 |
 | Enum fields contain only listed values | Several | Planner-generated check constraints | 2 |
 | List fields contain no null elements | `Astrologer` | Planner-generated check constraints | 2 |
+| One object key per media row | `MediaAsset` | Unique `storageKey` constraint | Pending fix 13 |
+| At most one current profile reference per photo | `Astrologer`, `MediaAsset` | Unique nullable `profileMediaId` plus foreign key | Pending fix 14 |
 | Related ids must exist | Availability, bookings, payments and blogs | Foreign keys and supporting indexes | 2 |
 | One astrologer cannot have overlapping active bookings | `Booking` | `btree_gist` plus `Booking_no_overlap` exclusion constraint for `pending_payment` and `confirmed` | 2 |
 
@@ -224,8 +245,9 @@ The session manager stores a random UUID as the session id and sends a signed fo
 | `20260930T0841_database_schema` | Replaces the boilerplate with the complete contract, extension and overlap constraint | 2 | 2026-09-30 | Applied |
 | `20260930T1814_astrologer_profile_saved_at` | Adds nullable `Astrologer.profileSavedAt` | 4 | 2026-09-30 | Applied |
 | `20261002T0936_subscription_pack_credits` | Adds `Payment.creditsPurchased` with a zero default | 13 | 2026-10-02 | Applied |
+| `20261003T0224_media_and_rich_blogs` | Adds media records and references, rich-blog summaries, and converts plain bodies to TipTap JSONB | Pending fixes 13–15 | 2026-10-03 | Applied |
 
-The application migrations were generated and self-emitted with Prisma 8. `npm run migration:check` reports that the packages and compiled operations are valid. `npm run migration:status` and `npm run db:verify` confirm the Step 13 migration is applied and Neon matches contract hash `9608a099…`.
+The application migrations were generated and self-emitted with Prisma 8. `npm run migration:check` reports that all packages and compiled operations are valid. On 2026-10-03, `npm run migration:status` reported every package applied and `npm run db:verify` reported that the live database marker and schema match contract `4d0199379797ac877863f254474c634219f08ffe8504decc5cb28ec5cfc199f5`.
 
 Steps 7 and 8 change no contract or migration. Step 7 begins using availability rows and booking intervals for slot filtering. Step 8 writes confirmed zero-price rows and relies on the existing exclusion constraint for concurrent conflicts.
 

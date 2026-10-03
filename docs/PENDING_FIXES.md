@@ -13,28 +13,38 @@ Work through them in order. When an item is fixed:
 
 Delete this file once every item is Done.
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Summary
 
 | # | Area | Problem | Severity | Status |
 |---|---|---|---|---|
-| 1 | Payments | The webhook rejects payments that include Razorpay's customer fee, but still replies 204 | **High**: a user can pay and get no booking or credits | Not started |
-| 2 | Booking UI | The time picker grid overflows, so time chips are 560px wide and the sheet scrolls sideways | Medium | Not started |
-| 3 | Home | The Call button is double height on cards without expertise or languages | Low | Not started |
-| 4 | Astrologer panel | The Bookings subtitle still says "Normal calls" | Low | Not started |
-| 5 | Credits | Shows "1 calls left" | Low | Not started |
-| 6 | Pack summary | "Price ₹999" reads like the price of one call | Medium | Not started |
-| 7 | Blogs | Deleting a post that has comments fails with a 503 | **High** | Not started |
-| 8 | Sessions | The same multi-row delete revokes astrologer sessions on deactivate and reset password | **High**: deactivation may not take effect | Not started |
-| 9 | Logging | Generic 503 responses hide the real error | Medium | Not started |
-| 10 | Polish | Comment-delete confirmation, kept comment drafts, stale counts, stretched badges | Low | Not started |
-| 11 | Brand | Rename to "Astro Shashank" and use `frontend/public/logo.jpg` everywhere, PWA icons included | Change request | Not started |
-| 12 | PWA | 40 of the 50 precached files are fonts (942 KB), 24 of them in unused scripts | Medium | Not started |
-| 13 | Media | Cloudflare R2 storage and a safe image upload pipeline | Change request | Not started |
-| 14 | Astrologers | Profile photo upload, shown everywhere an astrologer appears | Change request | Not started |
-| 15 | Blogs | Medium-style rich editor (headings, bold, italic, underline…), images, reading view | Change request | Not started |
-| 16 | UI | Consistent, polished layout across every screen and panel | Change request | Not started |
+| 1 | Payments | The webhook rejects payments that include Razorpay's customer fee, but still replies 204 | **High**: a user can pay and get no booking or credits | **Done** |
+| 2 | Booking UI | The time picker grid overflows, so time chips are 560px wide and the sheet scrolls sideways | Medium | **Done** |
+| 3 | Home | The Call button is double height on cards without expertise or languages | Low | **Done** |
+| 4 | Astrologer panel | The Bookings subtitle still says "Normal calls" | Low | **Done** |
+| 5 | Credits | Shows "1 calls left" | Low | **Done** |
+| 6 | Pack summary | "Price ₹999" reads like the price of one call | Medium | **Done** |
+| 7 | Blogs | Deleting a post that has comments fails with a 503 | **High** | **Done** |
+| 8 | Sessions | The same multi-row delete revokes astrologer sessions on deactivate and reset password | **High**: deactivation may not take effect | **Done** |
+| 9 | Logging | Generic 503 responses hide the real error | Medium | **Done** |
+| 10 | Polish | Comment-delete confirmation, kept comment drafts, stale counts, stretched badges | Low | **Done** |
+| 11 | Brand | Use the Astromaitreyi name and `frontend/public/logo.jpg` everywhere, PWA icons included | Change request | **Done** |
+| 12 | PWA | 40 of the 50 precached files are fonts (942 KB), 24 of them in unused scripts | Medium | **Done** |
+| 13 | Media | Cloudflare R2 storage and a safe image upload pipeline | Change request | **Done** |
+| 14 | Astrologers | Profile photo upload, shown everywhere an astrologer appears | Change request | **Done** |
+| 15 | Blogs | Medium-style rich editor (headings, bold, italic, underline…), images, reading view | Change request | **Done** |
+| 16 | UI | Consistent, polished layout across every screen and panel | Change request | **Done** |
+
+### C3 browser review
+
+| # | Fix | Status |
+|---|---|---|
+| 0 | Rename user-visible branding to Astromaitreyi | **Done** |
+| 1–2 | Keep the editor mounted during first save; stop autosave after a failure until the next edit | **Done** |
+| 3–6 | Load italic fonts, suppress initial close animations, neutralize the email field and update the test fixture | **Done** |
+| 7–10 | Return 400 for media ownership, reposition image insert, add a small header asset and trim lazy chunks from precache | **Done** |
+| 11–13 | Theme crop sliders, style cover upload and confirm profile-photo removal | **Done** |
 
 There is also one **owner action** that isn't a code change: in the Razorpay dashboard, switch the fee bearer from the customer to the business. Until then, customers silently pay about 2% more than the price the app shows, which breaks README §10.5 ("no hidden charges"). Item 1 must be fixed either way, because the fee setting can change.
 
@@ -128,9 +138,11 @@ Many routes catch every error and return a 503 without logging. That hid the cau
 - Refresh the like and comment counts in the astrologer's post list after changes, or when reopening the list.
 - Stop the "Draft" and "Published" badges in the astrologer's post list stretching to full width.
 
-### 11. Brand: "Astro Shashank" and the logo
+### 11. Brand: Astromaitreyi and the logo
 
-**The new name, "Astro Shashank", replaces "AstroWebApp" everywhere users see it:**
+**Done 2026-10-03.** User-visible branding, Checkout and the manifest use Astromaitreyi. Shared app/panel branding uses the unchanged JPEG. Generated install icons use a scripted monogram crop with maskable safe-zone padding.
+
+**The name Astromaitreyi replaces AstroWebApp everywhere users see it:**
 - `index.html` `<title>` and the PWA manifest `name` and `short_name`
 - the app header and the panel headers
 - the install banner text and the offline screen
@@ -140,7 +152,7 @@ Many routes catch every error and return a 503 without logging. That hid the cau
 Docs can keep describing the codebase as-is.
 
 **Use `frontend/public/logo.jpg` (1254×1254 JPEG) as the logo:**
-- **App header and panels:** show the logo next to the name, about 32–40px tall, with alt text "Astro Shashank".
+- **App header and panels:** show the logo next to the name, about 32–40px tall, with alt text "Astromaitreyi".
 - **Login screens and the offline screen:** show it larger.
 - **Razorpay:** pass the logo as Checkout's `image`.
 
@@ -149,8 +161,6 @@ Docs can keep describing the codebase as-is.
 - Generate 192 and 512 icons, a maskable 512 icon with the monogram inside the 80% safe zone, and an `apple-touch-icon`, using `pwa-assets.config.ts`.
 - Use the cream background as the manifest `background_color`.
 - Remove the placeholder "A" icon.
-
-**Flag for the owner:** the logo's wordmark reads "Astromaitreyi", not "Astro Shashank". Don't edit the logo image. Note this in `docs/DECISIONS.md` and keep going.
 
 **Check:** run `npm run build`; DevTools → Application → Manifest shows the new name and icons with no errors, and the header shows the logo on every screen.
 
@@ -166,6 +176,8 @@ The service worker precaches 50 files (942 KB). 40 of them are Nunito fonts: 24 
 
 ### 13. Media storage: Cloudflare R2 and the upload pipeline
 
+**Done 2026-10-03.** Added the R2-backed, metadata-stripping WebP pipeline, media records, replacement/deletion and 24-hour cleanup, CSP media origin, mocked storage tests and owner setup instructions.
+
 Build README §19.1:
 - Add the R2 env vars to `backend/.env.example` and `docs/SETUP.md`.
 - Add the `MediaAsset` table.
@@ -178,6 +190,8 @@ Build README §19.1:
 
 ### 14. Astrologer profile photos
 
+**Done 2026-10-03.** Astrologers can preview a square crop and save, change or remove their own photo. Public cards, bookings, calls, blog author rows and owner views use it with initials fallback; the owner can remove it.
+
 Build README §19.2, using the item 13 pipeline:
 - **Astrologer Profile:** upload, square crop, preview, save, change or remove.
 - **Display:** the photo shows wherever an astrologer appears, falling back to initials.
@@ -187,6 +201,8 @@ Build README §19.2, using the item 13 pipeline:
 **Tests:** the access rules, plus rejection of non-images and files over 5 MB.
 
 ### 15. Medium-style blogs
+
+**Done 2026-10-03.** Blog bodies are validated TipTap JSONB with rich editing, body/cover uploads, autosave, derived summaries, safe React rendering, richer list/reading layouts and a migration for existing text.
 
 Build README §19.3:
 - **Editor:** TipTap with a floating toolbar offering bold, italic, underline, H2, H3, quote, lists and link, plus a "+" image insert with captions, an optional cover image, autosave, and Ctrl/Cmd shortcuts.
@@ -205,6 +221,8 @@ Build README §19.3:
 - the plain-text migration works
 
 ### 16. UI consistency and polish
+
+**Done 2026-10-03.** User screens and panels share the app-brand/app-bar treatment, content widths and page headers. Navigation moves from the bottom to the app bar at 1024px. Read-only fields, badges, time text and the Home footer now follow one pattern. All 18 routed/offline states passed rendered checks at 360px, 768px and 1280px.
 
 Build README §19.4: one shared app bar with the logo, one content width and page-header pattern, a centred Home grid with equal cards, a fixed footer position, nothing hidden behind the tab bar, matching panels, a neutral read-only field style, consistent components and one time format.
 

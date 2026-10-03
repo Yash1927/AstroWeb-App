@@ -7,6 +7,7 @@ import type { AstrologerProfile, OwnerService, OwnerSettings } from "../src/owne
 import { createOwnerRouter } from "./Owner";
 import { createOwnerAuthRouter } from "./OwnerAuth";
 import type { BlogService } from "../src/blog/blog-service";
+import type { MediaService } from "../src/media/media-service";
 
 const astrologerId = "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0";
 const ownerSession: ResolvedSession = {
@@ -86,15 +87,21 @@ function fakeBlogs(): BlogService {
   };
 }
 
-function testApp(owners = fakeOwners(), sessions = fakeSessions(), limiter = new LoginRateLimiter(), blogs = fakeBlogs()) {
+function fakeMedia() {
+  return {
+    removeProfileAsOwner: vi.fn(async () => undefined),
+  };
+}
+
+function testApp(owners = fakeOwners(), sessions = fakeSessions(), limiter = new LoginRateLimiter(), blogs = fakeBlogs(), media = fakeMedia()) {
   const app = express();
   app.use(express.json());
   app.use(
     "/api/auth/owner",
     createOwnerAuthRouter({ owners, rateLimiter: limiter, sessions }),
   );
-  app.use("/api/owner", createOwnerRouter({ owners, blogs, sessions }));
-  return { app, blogs, owners, sessions };
+  app.use("/api/owner", createOwnerRouter({ owners, blogs, media: media as unknown as MediaService, sessions }));
+  return { app, blogs, media, owners, sessions };
 }
 
 describe("owner authentication", () => {
@@ -280,5 +287,18 @@ describe("protected owner routes", () => {
     expect(list.body.comments[0]).not.toHaveProperty("email");
     expect(removed.status).toBe(204);
     expect(blogs.deleteOwnerComment).toHaveBeenCalledWith(commentId);
+  });
+
+  it("lets only the owner remove an astrologer's profile photo", async () => {
+    const media = fakeMedia();
+    const allowed = testApp(fakeOwners(), fakeSessions(), new LoginRateLimiter(), fakeBlogs(), media);
+    const removed = await request(allowed.app).delete(`/api/owner/astrologers/${astrologerId}/photo`);
+    expect(removed.status).toBe(204);
+    expect(media.removeProfileAsOwner).toHaveBeenCalledWith(astrologerId);
+
+    const deniedMedia = fakeMedia();
+    const denied = testApp(fakeOwners(), fakeSessions(null), new LoginRateLimiter(), fakeBlogs(), deniedMedia);
+    expect((await request(denied.app).delete(`/api/owner/astrologers/${astrologerId}/photo`)).status).toBe(401);
+    expect(deniedMedia.removeProfileAsOwner).not.toHaveBeenCalled();
   });
 });

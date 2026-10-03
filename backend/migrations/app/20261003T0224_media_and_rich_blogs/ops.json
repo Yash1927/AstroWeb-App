@@ -1,0 +1,625 @@
+[
+  {
+    "id": "table.MediaAsset",
+    "label": "Create table \"MediaAsset\"",
+    "summary": "Creates table \"MediaAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "table",
+        "name": "MediaAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure table \"MediaAsset\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaAsset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create table \"MediaAsset\"",
+        "sql": "CREATE TABLE \"public\".\"MediaAsset\" (\n  \"bytes\" int4 NOT NULL,\n  \"createdAt\" timestamptz(3) DEFAULT (now()) NOT NULL,\n  \"height\" int4 NOT NULL,\n  \"id\" text NOT NULL,\n  \"kind\" text NOT NULL,\n  \"ownerAstrologerId\" text NOT NULL,\n  \"storageKey\" text NOT NULL,\n  \"width\" int4 NOT NULL,\n  PRIMARY KEY (\"id\"),\n  CONSTRAINT \"MediaAsset_kind_check_851939b5\" CHECK (\"kind\" IN ('profile_photo', 'blog_image'))\n)",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify table \"MediaAsset\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaAsset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Astrologer.profileMediaId",
+    "label": "Add column \"profileMediaId\" to \"Astrologer\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "profileMediaId",
+        "table": "Astrologer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"profileMediaId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Astrologer",
+          "profileMediaId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"profileMediaId\"",
+        "sql": "ALTER TABLE \"public\".\"Astrologer\" ADD COLUMN \"profileMediaId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"profileMediaId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Astrologer",
+          "profileMediaId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Blog.coverMediaId",
+    "label": "Add column \"coverMediaId\" to \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "coverMediaId",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"coverMediaId\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "coverMediaId"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"coverMediaId\"",
+        "sql": "ALTER TABLE \"public\".\"Blog\" ADD COLUMN \"coverMediaId\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"coverMediaId\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "coverMediaId"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Blog.readingMinutes",
+    "label": "Add column \"readingMinutes\" to \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "readingMinutes",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"readingMinutes\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "readingMinutes"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"readingMinutes\"",
+        "sql": "ALTER TABLE \"public\".\"Blog\" ADD COLUMN \"readingMinutes\" int4 DEFAULT 1 NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"readingMinutes\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "readingMinutes"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Blog.excerpt",
+    "label": "Add column \"excerpt\" to \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "excerpt",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"excerpt\" is missing",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "excerpt"
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add column \"excerpt\"",
+        "sql": "ALTER TABLE \"public\".\"Blog\" ADD COLUMN \"excerpt\" text"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"excerpt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "excerpt"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "data.public.Blog.excerpt",
+    "label": "Backfill blog excerpts",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "excerpt",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "allow excerpt backfill",
+        "sql": "SELECT true AS \"result\""
+      }
+    ],
+    "execute": [
+      {
+        "description": "derive excerpts from plain text",
+        "sql": "UPDATE \"public\".\"Blog\" SET \"excerpt\" = left(regexp_replace(\"body\", E'\\s+', ' ', 'g'), 200) WHERE \"excerpt\" IS NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify excerpts are filled",
+        "sql": "SELECT NOT EXISTS (SELECT 1 FROM \"public\".\"Blog\" WHERE \"excerpt\" IS NULL) AS \"result\""
+      }
+    ]
+  },
+  {
+    "id": "alterNullability.setNotNull.Blog.excerpt",
+    "label": "Set NOT NULL on \"Blog\".\"excerpt\"",
+    "operationClass": "destructive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "excerpt",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure column \"excerpt\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "excerpt"
+        ]
+      },
+      {
+        "description": "ensure no NULL values in \"excerpt\"",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"public\".\"Blog\" WHERE \"excerpt\" IS NULL) AS \"result\"",
+        "params": []
+      }
+    ],
+    "execute": [
+      {
+        "description": "set NOT NULL on \"excerpt\"",
+        "sql": "ALTER TABLE \"public\".\"Blog\" ALTER COLUMN \"excerpt\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify column \"excerpt\" is NOT NULL",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"information_schema\".\"columns\" WHERE (\"table_schema\" = $1 AND \"table_name\" = $2 AND \"column_name\" = $3 AND \"is_nullable\" = $4)) AS \"result\"",
+        "params": [
+          "public",
+          "Blog",
+          "excerpt",
+          "NO"
+        ]
+      }
+    ]
+  },
+  {
+    "id": "column.public.Blog.body.rich-text",
+    "label": "Convert blog bodies to TipTap JSON",
+    "operationClass": "data",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "column",
+        "name": "body",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "verify blog body is plain text",
+        "sql": "SELECT (data_type = 'text') AS \"result\" FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Blog' AND column_name = 'body'"
+      }
+    ],
+    "execute": [
+      {
+        "description": "add temporary JSONB body",
+        "sql": "ALTER TABLE \"public\".\"Blog\" ADD COLUMN \"bodyRich\" jsonb"
+      },
+      {
+        "description": "split plain text paragraphs into a TipTap document",
+        "sql": "UPDATE \"public\".\"Blog\" AS blog SET \"bodyRich\" = jsonb_build_object('type', 'doc', 'content', COALESCE((SELECT jsonb_agg(jsonb_build_object('type', 'paragraph', 'content', jsonb_build_array(jsonb_build_object('type', 'text', 'text', btrim(paragraph))))) FROM regexp_split_to_table(blog.\"body\", E'\\n\\s*\\n') AS paragraph WHERE btrim(paragraph) <> ''), '[]'::jsonb))"
+      },
+      {
+        "description": "replace plain text body",
+        "sql": "ALTER TABLE \"public\".\"Blog\" DROP COLUMN \"body\""
+      },
+      {
+        "description": "rename rich body",
+        "sql": "ALTER TABLE \"public\".\"Blog\" RENAME COLUMN \"bodyRich\" TO \"body\""
+      },
+      {
+        "description": "require rich body",
+        "sql": "ALTER TABLE \"public\".\"Blog\" ALTER COLUMN \"body\" SET NOT NULL"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify blog body is JSONB",
+        "sql": "SELECT (data_type = 'jsonb') AS \"result\" FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'Blog' AND column_name = 'body'"
+      }
+    ]
+  },
+  {
+    "id": "unique.Astrologer.Astrologer_profileMediaId_key",
+    "label": "Add unique constraint on \"Astrologer\" (profileMediaId)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "Astrologer_profileMediaId_key",
+        "table": "Astrologer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"Astrologer_profileMediaId_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Astrologer_profileMediaId_key",
+          "public",
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"Astrologer_profileMediaId_key\"",
+        "sql": "ALTER TABLE \"public\".\"Astrologer\" ADD CONSTRAINT \"Astrologer_profileMediaId_key\" UNIQUE (\"profileMediaId\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"Astrologer_profileMediaId_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Astrologer_profileMediaId_key",
+          "public",
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "unique.MediaAsset.MediaAsset_storageKey_key",
+    "label": "Add unique constraint on \"MediaAsset\" (storageKey)",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "unique",
+        "name": "MediaAsset_storageKey_key",
+        "table": "MediaAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure constraint \"MediaAsset_storageKey_key\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaAsset_storageKey_key",
+          "public",
+          "\"public\".\"MediaAsset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add unique constraint \"MediaAsset_storageKey_key\"",
+        "sql": "ALTER TABLE \"public\".\"MediaAsset\" ADD CONSTRAINT \"MediaAsset_storageKey_key\" UNIQUE (\"storageKey\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify constraint \"MediaAsset_storageKey_key\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaAsset_storageKey_key",
+          "public",
+          "\"public\".\"MediaAsset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.Blog.Blog_coverMediaId_idx_a9883159",
+    "label": "Create index \"Blog_coverMediaId_idx_a9883159\" on \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "Blog_coverMediaId_idx_a9883159",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"Blog_coverMediaId_idx_a9883159\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blog_coverMediaId_idx_a9883159\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"Blog_coverMediaId_idx_a9883159\"",
+        "sql": "CREATE INDEX \"Blog_coverMediaId_idx_a9883159\" ON \"public\".\"Blog\" (\"coverMediaId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"Blog_coverMediaId_idx_a9883159\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"Blog_coverMediaId_idx_a9883159\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "index.MediaAsset.MediaAsset_ownerAstrologerId_idx_59bdb05e",
+    "label": "Create index \"MediaAsset_ownerAstrologerId_idx_59bdb05e\" on \"MediaAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "index",
+        "name": "MediaAsset_ownerAstrologerId_idx_59bdb05e",
+        "table": "MediaAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure index \"MediaAsset_ownerAstrologerId_idx_59bdb05e\" does not exist",
+        "sql": "SELECT (to_regclass($1)) IS NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaAsset_ownerAstrologerId_idx_59bdb05e\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "create index \"MediaAsset_ownerAstrologerId_idx_59bdb05e\"",
+        "sql": "CREATE INDEX \"MediaAsset_ownerAstrologerId_idx_59bdb05e\" ON \"public\".\"MediaAsset\" (\"ownerAstrologerId\")",
+        "params": []
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify index \"MediaAsset_ownerAstrologerId_idx_59bdb05e\" exists",
+        "sql": "SELECT (to_regclass($1)) IS NOT NULL AS \"result\"",
+        "params": [
+          "\"public\".\"MediaAsset_ownerAstrologerId_idx_59bdb05e\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.MediaAsset.MediaAsset_ownerAstrologerId_fkey",
+    "label": "Add foreign key \"MediaAsset_ownerAstrologerId_fkey\" on \"MediaAsset\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "MediaAsset_ownerAstrologerId_fkey",
+        "table": "MediaAsset"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"MediaAsset_ownerAstrologerId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaAsset_ownerAstrologerId_fkey",
+          "public",
+          "\"public\".\"MediaAsset\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"MediaAsset_ownerAstrologerId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"MediaAsset\"\nADD CONSTRAINT \"MediaAsset_ownerAstrologerId_fkey\"\nFOREIGN KEY (\"ownerAstrologerId\")\nREFERENCES \"public\".\"Astrologer\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"MediaAsset_ownerAstrologerId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "MediaAsset_ownerAstrologerId_fkey",
+          "public",
+          "\"public\".\"MediaAsset\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Astrologer.Astrologer_profileMediaId_fkey",
+    "label": "Add foreign key \"Astrologer_profileMediaId_fkey\" on \"Astrologer\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Astrologer_profileMediaId_fkey",
+        "table": "Astrologer"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Astrologer_profileMediaId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Astrologer_profileMediaId_fkey",
+          "public",
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Astrologer_profileMediaId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Astrologer\"\nADD CONSTRAINT \"Astrologer_profileMediaId_fkey\"\nFOREIGN KEY (\"profileMediaId\")\nREFERENCES \"public\".\"MediaAsset\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Astrologer_profileMediaId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Astrologer_profileMediaId_fkey",
+          "public",
+          "\"public\".\"Astrologer\""
+        ]
+      }
+    ]
+  },
+  {
+    "id": "foreignKey.Blog.Blog_coverMediaId_fkey",
+    "label": "Add foreign key \"Blog_coverMediaId_fkey\" on \"Blog\"",
+    "operationClass": "additive",
+    "target": {
+      "id": "postgres",
+      "details": {
+        "schema": "public",
+        "objectType": "foreignKey",
+        "name": "Blog_coverMediaId_fkey",
+        "table": "Blog"
+      }
+    },
+    "precheck": [
+      {
+        "description": "ensure FK \"Blog_coverMediaId_fkey\" does not exist",
+        "sql": "SELECT NOT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Blog_coverMediaId_fkey",
+          "public",
+          "\"public\".\"Blog\""
+        ]
+      }
+    ],
+    "execute": [
+      {
+        "description": "add FK \"Blog_coverMediaId_fkey\"",
+        "sql": "ALTER TABLE \"public\".\"Blog\"\nADD CONSTRAINT \"Blog_coverMediaId_fkey\"\nFOREIGN KEY (\"coverMediaId\")\nREFERENCES \"public\".\"MediaAsset\" (\"id\")"
+      }
+    ],
+    "postcheck": [
+      {
+        "description": "verify FK \"Blog_coverMediaId_fkey\" exists",
+        "sql": "SELECT EXISTS (SELECT 1 AS \"one\" FROM \"pg_constraint\" AS \"c\" INNER JOIN \"pg_namespace\" AS \"n\" ON \"n\".\"oid\" = \"c\".\"connamespace\" WHERE (\"c\".\"conname\" = $1 AND \"n\".\"nspname\" = $2 AND \"c\".\"conrelid\" = to_regclass($3))) AS \"result\"",
+        "params": [
+          "Blog_coverMediaId_fkey",
+          "public",
+          "\"public\".\"Blog\""
+        ]
+      }
+    ]
+  }
+]

@@ -2,6 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 import express, { Router } from "express";
 import { cookieValue, sessionConfigs, sessionCookieOptions, sessionManager, type SessionManager } from "../src/auth/session";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import {
   GoogleConfigurationError,
   googleIdentityVerifier,
@@ -76,9 +77,11 @@ export function createUserAuthRouter({ appOrigin, identities, sessions, users }:
         response.redirect(303, new URL(returnTo, origin).toString());
       } catch (error) {
         if (error instanceof GoogleConfigurationError) {
+          logRouteError("user.google-login", error);
           response.status(503).json({ error: "Google sign-in is not configured." });
           return;
         }
+        logRouteError("user.google-login", error);
         response.status(503).json({ error: "The service is unavailable. Please try again." });
       }
     },
@@ -93,4 +96,3 @@ export default createUserAuthRouter({
   sessions: sessionManager,
   users: userService,
 });
-

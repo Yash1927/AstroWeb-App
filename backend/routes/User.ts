@@ -12,6 +12,7 @@ import {
   type SessionManager,
 } from "../src/auth/session";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import { userDetailsSchema } from "../src/user/user-schemas";
 import {
   UserNotFoundError,
@@ -35,6 +36,7 @@ function respondWithUserError(error: unknown, response: Response) {
     response.status(409).json({ error: error.message, field: "phone" });
     return;
   }
+  logRouteError("user.route", error);
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
@@ -76,7 +78,8 @@ export function createUserRouter({ bookings, sessions, users }: Dependencies) {
 
     try {
       response.json(await bookings.listUserBookings(response.locals.userSession.subjectId));
-    } catch {
+    } catch (error) {
+      logRouteError("user.bookings.list", error);
       response.status(503).json({ error: "Bookings are unavailable. Please try again." });
     }
   });
@@ -97,7 +100,8 @@ export function createUserRouter({ bookings, sessions, users }: Dependencies) {
         return;
       }
       response.json({ booking });
-    } catch {
+    } catch (error) {
+      logRouteError("user.bookings.get", error);
       response.status(503).json({ error: "The booking is unavailable. Please try again." });
     }
   });
@@ -114,7 +118,8 @@ export function createUserRouter({ bookings, sessions, users }: Dependencies) {
         clearSessionCookieOptions("user"),
       );
       response.status(204).end();
-    } catch {
+    } catch (error) {
+      logRouteError("user.logout", error);
       response.status(503).json({ error: "The service is unavailable. Please try again." });
     }
   });

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { blogsApi, type BlogSummary } from '../api/blogs'
-import { Avatar, Button, Card, Skeleton } from '../components'
+import { Avatar, Button, Card, PageHeader, Skeleton } from '../components'
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('en-IN', {
@@ -47,11 +47,7 @@ export default function BlogsPage() {
 
   return (
     <section className="screen user-screen blog-screen">
-      <header className="blog-header">
-        <p className="owner-eyebrow">AstroWebApp</p>
-        <h1>Blogs</h1>
-        <p className="screen__intro">Thoughtful guidance from our astrologers.</p>
-      </header>
+      <PageHeader intro="Thoughtful guidance from our astrologers." title="Blogs" />
       {loading ? (
         <div aria-busy="true" className="blog-list">
           {[0, 1, 2].map((item) => (
@@ -72,10 +68,11 @@ export default function BlogsPage() {
           {posts.map((post) => (
             <article className="card card--interactive blog-card" key={post.id}>
               <Link className="blog-card__link" to={`/blogs/${post.id}`}>
+                {post.coverUrl ? <img alt="" className="blog-card__cover" src={post.coverUrl} /> : null}
                 <h2>{post.title}</h2>
                 <div className="blog-author">
-                  <Avatar id={post.author.id} name={post.author.displayName} size={40} />
-                  <div><strong>{post.author.displayName}</strong><time dateTime={post.publishedAt}>{formatDate(post.publishedAt)}</time></div>
+                  <Avatar id={post.author.id} name={post.author.displayName} size={40} src={post.author.photoUrl} />
+                  <div><strong>{post.author.displayName}</strong><time dateTime={post.publishedAt}>{formatDate(post.publishedAt)} · {post.readingMinutes} min read</time></div>
                 </div>
                 <p className="blog-card__excerpt">{post.excerpt}</p>
                 <p className="blog-counts" aria-label={`${post.likeCount} likes and ${post.commentCount} comments`}>
@@ -95,4 +92,3 @@ export default function BlogsPage() {
     </section>
   )
 }
-

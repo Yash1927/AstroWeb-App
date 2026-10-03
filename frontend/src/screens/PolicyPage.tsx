@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { publicApi, type PublicSettings } from '../api/public'
-import { Button, Card, Skeleton } from '../components'
+import { Button, Card, PageHeader, Skeleton } from '../components'
 
 export type PolicyPageKind = 'about' | 'contact' | 'pricing' | 'privacy' | 'refunds' | 'shipping' | 'terms'
 
@@ -11,7 +11,7 @@ type StaticPolicy = { intro: string; placeholder: string; title: string }
 const staticPolicies: Record<Exclude<PolicyPageKind, 'pricing'>, StaticPolicy> = {
   about: {
     title: 'About us',
-    intro: 'This page will explain who runs AstroWebApp and how the service helps people book calls with astrologers.',
+    intro: 'This page will explain who runs Astromaitreyi and how the service helps people book calls with astrologers.',
     placeholder: '[Owner: add your business name, story and service description here.]',
   },
   contact: {
@@ -36,7 +36,7 @@ const staticPolicies: Record<Exclude<PolicyPageKind, 'pricing'>, StaticPolicy> =
   },
   terms: {
     title: 'Terms and conditions',
-    intro: 'These terms will explain the rules for using AstroWebApp and booking calls.',
+    intro: 'These terms will explain the rules for using Astromaitreyi and booking calls.',
     placeholder: '[Owner: write your terms and conditions here and have them reviewed before launch.]',
   },
 }
@@ -54,10 +54,7 @@ function formatRupees(paise: number) {
 function PolicyLayout({ children, title }: { children: ReactNode; title: string }) {
   return (
     <section className="policy-page screen">
-      <header className="policy-page__header">
-        <p className="policy-page__eyebrow">AstroWebApp</p>
-        <h1>{title}</h1>
-      </header>
+      <PageHeader title={title} />
       <div className="policy-page__content">{children}</div>
       <Link className="button button--secondary policy-page__home" to="/">Back to Home</Link>
     </section>

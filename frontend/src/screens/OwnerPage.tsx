@@ -7,7 +7,8 @@ import {
   type AstrologerProfile,
   type OwnerSettings,
 } from '../api/owner'
-import { Avatar, Button, Card, Dialog, OwnerRecentComments, Skeleton, Toast } from '../components'
+import { AppBar, AppBrand, Avatar, Button, Card, Dialog, OwnerRecentComments, Skeleton, Toast } from '../components'
+import { withLowercaseDayPeriod } from '../display-time'
 
 type OwnerSection = 'astrologers' | 'settings' | 'comments'
 type ToastState = { kind: 'success' | 'error'; message: string } | null
@@ -52,11 +53,11 @@ function asDuration(value: string): 10 | 15 | 30 | null {
 }
 
 function formatCreatedAt(value: string) {
-  return new Intl.DateTimeFormat('en-IN', {
+  return withLowercaseDayPeriod(new Intl.DateTimeFormat('en-IN', {
     dateStyle: 'medium',
     timeStyle: 'short',
     timeZone: 'Asia/Kolkata',
-  }).format(new Date(value))
+  }).format(new Date(value)))
 }
 
 function messageFrom(error: unknown) {
@@ -305,6 +306,20 @@ export default function OwnerPage() {
     }
   }
 
+  const removePhoto = async () => {
+    if (!selected) return
+    setProfileBusy(true)
+    setProfileError('')
+    try {
+      await ownerApi.removePhoto(selected.id)
+      const updated = { ...selected, photoUrl: null }
+      setSelected(updated)
+      replaceAstrologer(updated)
+      setToast({ kind: 'success', message: 'Profile photo removed.' })
+    } catch (error) { setProfileError(messageFrom(error)) }
+    finally { setProfileBusy(false) }
+  }
+
   const handleReset = async (event: FormEvent) => {
     event.preventDefault()
     if (!resetTarget) return
@@ -408,6 +423,7 @@ export default function OwnerPage() {
     return (
       <main className="standalone-page screen" aria-busy="true">
         <Card className="owner-login-card">
+          <AppBrand large />
           <Skeleton variant="title" />
           <Skeleton />
           <Skeleton />
@@ -420,7 +436,7 @@ export default function OwnerPage() {
     return (
       <main className="standalone-page screen">
         <Card className="owner-login-card">
-          <p className="owner-eyebrow">AstroWebApp</p>
+          <AppBrand large />
           <h1>Owner login</h1>
           <p className="screen__intro">Sign in to manage astrologers and call settings.</p>
           <form className="stack" onSubmit={handleLogin}>
@@ -458,13 +474,8 @@ export default function OwnerPage() {
 
   return (
     <main className="owner-page screen">
-      <header className="owner-header">
-        <div>
-          <p className="owner-eyebrow">AstroWebApp</p>
-          <h1>Owner panel</h1>
-        </div>
-        <Button onClick={handleLogout} variant="secondary">Log out</Button>
-      </header>
+      <AppBar actions={<Button onClick={handleLogout} variant="secondary">Log out</Button>} panelLabel="Owner panel" />
+      <h1 className="visually-hidden">Owner panel</h1>
 
       <nav aria-label="Owner sections" className="owner-section-nav">
         <button
@@ -525,7 +536,7 @@ export default function OwnerPage() {
               {astrologers.map((astrologer) => (
                 <Card key={astrologer.id}>
                   <div className="owner-profile-summary">
-                    <Avatar id={astrologer.id} name={astrologer.displayName} size={56} />
+                    <Avatar id={astrologer.id} name={astrologer.displayName} size={56} src={astrologer.photoUrl} />
                     <div>
                       <h3>{astrologer.displayName}</h3>
                       <p className="owner-muted">{astrologer.email}</p>
@@ -712,7 +723,8 @@ export default function OwnerPage() {
       <Dialog onClose={() => setSelected(null)} open={Boolean(selected)} title="Astrologer profile">
         {selected ? (
           <div className="stack">
-            <div className="owner-profile-summary"><Avatar id={selected.id} name={selected.displayName} size={56} /><div><h3>{selected.displayName}</h3><p className="owner-muted">Created {formatCreatedAt(selected.createdAt)}</p></div></div>
+            <div className="owner-profile-summary"><Avatar id={selected.id} name={selected.displayName} size={56} src={selected.photoUrl} /><div><h3>{selected.displayName}</h3><p className="owner-muted">Created {formatCreatedAt(selected.createdAt)}</p></div></div>
+            {selected.photoUrl ? <Button disabled={profileBusy} onClick={() => void removePhoto()} variant="secondary">Remove photo</Button> : null}
             <dl className="owner-detail-list">
               <div><dt>Expertise</dt><dd>{selected.expertise.length ? selected.expertise.join(', ') : 'Not added yet'}</dd></div>
               <div><dt>Languages</dt><dd>{selected.languages.length ? selected.languages.join(', ') : 'Not added yet'}</dd></div>

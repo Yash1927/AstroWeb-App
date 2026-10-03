@@ -1,7 +1,7 @@
-# Astro Shashank
+# Astromaitreyi
 
-> **App name: "Astro Shashank"** (decided 2026-10-02; it replaces the working name "AstroWebApp" everywhere users can see it).
-> **Logo:** `frontend/public/logo.jpg`, a gold "AM" monogram in a ring above a wordmark, on cream. Use it wherever a logo appears: app header, panels, login screens, offline screen, Razorpay Checkout and the PWA icons (§5.7). The wordmark on the current file reads "Astromaitreyi"; the owner must confirm or replace the logo before launch.
+> **App name: "Astromaitreyi"** (decided 2026-10-03; it replaces "Astro Shashank" and the working name "AstroWebApp" everywhere users can see it). It matches the wordmark on the logo.
+> **Logo:** `frontend/public/logo.jpg`, a gold "AM" monogram in a ring above a wordmark, on cream. Use it wherever a logo appears: app header, panels, login screens, offline screen, Razorpay Checkout and the PWA icons (§5.7). Its wordmark reads "Astromaitreyi", the app name.
 
 An installable astrology web app (PWA). Users browse astrologers, book a call and pay with Razorpay. Depending on the call type, they talk to the astrologer inside the app or the astrologer phones them at the booked time. Astrologers manage their availability and blogs from their own panel. The owner manages astrologers, prices and call durations.
 
@@ -720,7 +720,7 @@ Until a question is answered, build the default in the right-hand column.
 | 12 | Which fields go on the astrologer card? | Name, expertise, languages, years of experience |
 | 13 | Does "custom link for astrologers" mean one shared panel link, or a personal link for each astrologer? | One shared link: `/astrologer` |
 | 14 | Should the owner see a list of bookings and payments in the owner panel? | No. Use the Razorpay dashboard. |
-| 15 | App name, logo and icon (needed for the install manifest) | **Decided 2026-10-02:** name "Astro Shashank", logo `frontend/public/logo.jpg`. The logo's wordmark reads "Astromaitreyi"; owner to confirm or replace it before launch. |
+| 15 | App name, logo and icon (needed for the install manifest) | **Decided 2026-10-03:** name "Astromaitreyi" (it replaces "Astro Shashank", chosen 2026-10-02), logo `frontend/public/logo.jpg`, whose wordmark reads "Astromaitreyi". |
 | 16 | Many people don't know their exact birth time. Offer an "I don't know" option? | No. It stays required, as in the brief. |
 | 17 | Show a small mental-health helpline note in Settings, e.g. Tele-MANAS (free, 24×7): **14416**? | Recommended, but not built until the owner approves |
 | 18 | India's DPDP Rules (notified Nov 2025, fully in force around May 2027) give users the right to have their data erased. Add a "Delete my account" option? | Not built. Deletion requests come in through the Contact page. Check with a lawyer. |
@@ -858,7 +858,7 @@ Take the look and flow from Medium: a calm, distraction-free writing canvas and 
 The owner reported the UI as inconsistent and broken in places. Make every screen look like one calm, simple app, using the `design.css` tokens.
 
 **Layout:**
-- **One shared layout** for every user page (Home, Blogs, blog post, History, Settings, policy pages): a **top app bar** with the logo and "Astro Shashank", and one content width, centred (about 960px for lists, 680px for reading and forms).
+- **One shared layout** for every user page (Home, Blogs, blog post, History, Settings, policy pages): a **top app bar** with the logo and "Astromaitreyi", and one content width, centred (about 960px for lists, 680px for reading and forms).
 - **One page-header pattern:** title and optional subtitle, the same size and spacing everywhere. Today Home, Blogs, History and the policy pages each look different.
 - **Home:** a centred, responsive card grid (1 column on phones, 2 on tablets, 3 on desktop). Cards have equal heights and the Call button keeps its normal height.
 - **Footer:** policy links sit at the end of page content, not floating mid-page. No content may be hidden behind the bottom tab bar: reserve its height plus the safe area.

@@ -2,7 +2,7 @@
 
 The UI as built: tokens, components, animations, screens and wording. In code, the source of truth is `frontend/src/design.css`, created in Step 1. The spec is README §10.
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Tokens
 
@@ -34,10 +34,12 @@ Last updated: 2026-10-02
 
 | Component | File | Variants / props | Used on |
 |---|---|---|---|
+| AppBrand / AppBar | `frontend/src/components/AppBrand.tsx` | Centred AM monogram at 40px, name, optional panel label/action, and the complete logo in larger login/offline treatments | User app shell, panels, login, offline, not-found and call-room states |
+| PageHeader | `frontend/src/components/PageHeader.tsx` | One title, optional intro and optional actions | Home, History, Blogs, Settings and policy pages |
 | Button | `frontend/src/components/Button.tsx` | Primary, secondary, text, disabled, optional soft glow | User screens, design page and both panels |
 | Card | `frontend/src/components/Card.tsx` | Default, compact, interactive hover | User screens, panels, placeholders and design page |
-| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; stable id-hashed colour; initials skip words that do not start with a letter | Settings, astrologer cards, owner list/profile and design page |
-| AstrologerCard | `frontend/src/components/AstrologerCard.tsx` | 56px avatar, name, non-empty expertise/language rows, experience, full-width Call action and desktop hover | Home, astrologer preview and design page |
+| Avatar | `frontend/src/components/Avatar.tsx` | 32, 40, 56 and 96px; circular astrologer photo with load-error fallback; otherwise stable id-hashed initials that skip words not starting with a letter | Settings, astrologer cards, bookings, calls, blog authors, owner list/profile and design page |
+| AstrologerCard | `frontend/src/components/AstrologerCard.tsx` | 56px avatar, name, optional non-empty expertise/language rows, experience, and a full-width Call action pinned to the same bottom row even when details are absent | Home, astrologer preview and design page |
 | BottomSheet | `frontend/src/components/BottomSheet.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Home call-type picker and design page |
 | Dialog | `frontend/src/components/Dialog.tsx` | Body portal, labelled modal, backdrop, close button, Escape key | Owner forms, astrologer preview, blog sign-in/delete confirmations and design page |
 | Toast | `frontend/src/components/Toast.tsx` | Body portal; success or error; live region; closes after four seconds | Panel action feedback; design page |
@@ -51,14 +53,34 @@ Last updated: 2026-10-02
 | AvailabilityEditor | `frontend/src/components/AvailabilityEditor.tsx` | Seven day/day-off groups, repeatable time ranges, responsive date exceptions, field errors, first-error focus and save warning | Astrologer Availability |
 | Inputs, selects and tags | `frontend/src/design.css` | Label, hint, linked error, input, read-only input, rupee input, select, tag editor and removable tags | User forms, panel forms and design page |
 | Chips | `frontend/src/design.css` | Default, selected, horizontal date/time and disabled-empty states | Panel navigation, Home slot picker and design page |
-| Bottom tab bar | `frontend/src/App.tsx` | Home, History, Blogs and Settings; gold active tab | User app shell and design preview |
+| Main navigation | `frontend/src/App.tsx` | Fixed bottom tabs below 1024px; horizontal app-bar links from 1024px; gold active tab on mobile/tablet | User app shell and design preview |
 | Call-room controls | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Large labelled Mute/Unmute, Chat and Leave controls; capability-gated Speaker; track-backed mute state across rejoins; current remote-muted badge; two-person layout; timer/notice and full-width end action | User and astrologer call rooms |
 | Call chat | `frontend/src/screens/CallRoomPage.tsx`, `frontend/src/design.css` | Portalled BottomSheet, 500-character textarea/counter, once-per-second send state, local/remote message bubbles and polite additions | Connected user and astrologer call rooms |
-| Blog cards and comments | `frontend/src/screens/BlogsPage.tsx`, `BlogPostPage.tsx`, `frontend/src/design.css` | Two-line excerpts, 40px author avatars, 32px commenter avatars, counts, plain-text paragraphs, 500-character comment form and responsive one/two-column list | Public Blogs and post pages |
-| AstrologerBlogs | `frontend/src/components/AstrologerBlogs.tsx` | Own draft/published list, title counter, plain-text editor, publishing controls, comments and delete confirmation | Astrologer Blogs |
+| Blog cards and comments | `frontend/src/screens/BlogsPage.tsx`, `BlogPostPage.tsx`, `frontend/src/components/BlogDocument.tsx`, `frontend/src/design.css` | Cover thumbnails, excerpts, reading time, author photos, rich React-rendered reading body, 32px commenter avatars, counts, route-scoped session comment drafts, 500-character comments and responsive one/two-column list | Public Blogs and post pages |
+| RichBlogEditor / AstrologerBlogs | `frontend/src/components/RichBlogEditor.tsx`, `AstrologerBlogs.tsx` | Borderless title, labelled TipTap selection toolbar, keyboard formatting, cursor-line image upload/progress, editable inline captions, styled cover picker, saved/not-saved autosave status, draft/publish/unpublish/delete controls and compact post status/counts | Astrologer Blogs |
+| ProfilePhotoCropper | `frontend/src/components/ProfilePhotoCropper.tsx` | Square preview, zoom and horizontal/vertical position controls before a 512px WebP upload | Astrologer Profile |
 | OwnerRecentComments | `frontend/src/components/OwnerRecentComments.tsx` | Newest comments, post context and delete confirmation | Owner Recent comments |
 | InstallPrompt | `frontend/src/components/InstallPrompt.tsx` | Compact Android/desktop install banner, persistent dismissal and one-time iPhone/iPad Safari Add to Home Screen guidance | Home app shell |
 | PolicyLinks | `frontend/src/components/PolicyLinks.tsx` | Seven policy/help links in stacked or compact wrapping layouts | Settings and Home footer |
+
+## Layout
+
+- User lists and grids use one centred 60rem (about 960px) app column. Settings, policy and blog-reading content use a centred 42.5rem (about 680px) reading column.
+- Home is one column by default, two from 42rem and three from 64rem. Cards in a row keep equal heights and their Call actions stay aligned.
+- The owner and astrologer panels use the same 60rem width, logo app bar, wrapping section tabs and shared controls as the user app.
+- On phones and tablets, the fixed tab bar is paired with shell bottom padding. From 64rem (1024px), navigation moves into the app bar and that bottom padding is removed.
+- The Home footer uses the remaining page height, so it sits at the page end on short screens and follows content naturally on long screens.
+- Status badges use their content width. The read-only Settings email uses the neutral page background with a dashed border. Displayed 12-hour times use lowercase `am` and `pm`.
+- Rich blog reading stays inside the 42.5rem column. Its body uses 1.125rem text with 1.7 line height; images and captions fill that column without causing horizontal scroll.
+- The rich-editor toolbar stays inside the editor and viewport, can scroll horizontally on a phone, and keeps 48px targets. The image button follows the selected empty line after content, image and layout changes. Profile-photo previews use the 96px circular avatar; the token-themed adjustable square cropper produces the file uploaded for server processing.
+
+### Responsive review: pending fix 16
+
+| Width | Before | After, checked 2026-10-03 |
+|---|---|---|
+| 360px | Repeated screen-specific headings, inconsistent panel branding and widths, and no single page-header rule | All 18 routed/offline states rendered with the shared brand/header treatment, fixed bottom navigation, no horizontal overflow and no visible control below 48×48px |
+| 768px | User content stayed in a narrow 44rem column while panel widths differed; footer position depended only on a margin | List/grid content uses the centred 60rem cap, reading/forms use 42.5rem, the Home footer reaches the page end, and tablet bottom navigation clears all content |
+| 1280px | The mobile bottom tabs remained fixed and owner/astrologer pages used unrelated 72rem/48rem widths | Navigation is in the top app bar, the bottom bar is absent, and user/panel content shares the 60rem layout with 42.5rem reading columns |
 
 ## Animations
 
@@ -86,15 +108,15 @@ Last updated: 2026-10-02
 |---|---|---|---|
 | Home | `/` | Public skeleton/error/empty/list states; install guidance; call type; session check; Google sign-in; missing details; phone-only step; slot loading/error, 14 date chips and time chips; booking summary; free confirmation or on-demand Razorpay Checkout; dismissal/failure/refund; booking success; compact policy footer | 5–8, 12, 13, 15 |
 | History | `/history` | Booking skeleton/error, signed-out Google screen, Upcoming/Past Normal and phone cards, empty sections, live Join states and phone-call/number guidance | 6, 9, 12 |
-| Blogs | `/blogs` | Public skeleton/error/empty/list states, 20-post pages and Load more | 14 |
-| Blog post | `/blogs/:id` | Public loading/not-found/full-text states, viewer-aware like, Google gate, oldest-first comments and commenter deletion | 14 |
+| Blogs | `/blogs` | Public skeleton/error/empty/list states, cover/excerpt/author/date/read-time/count cards, 20-post pages and Load more | 14, pending fix 15 |
+| Blog post | `/blogs/:id` | Public loading/not-found/rich-document states, cover, author photo/date/read time, viewer-aware like, Google gate, oldest-first comments, route-scoped session draft restoration and confirmed commenter deletion | 14, pending fix 15 |
 | Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, upcoming-phone-call removal error, all seven policy links, save toast and logout | 6, 12, 15 |
 | Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; countdown/notice; mute, conditional Speaker, transient chat, device-change feedback, speaking rings, leave and rejoin | 9–11 |
 | Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Public readable content with owner placeholders; Pricing loading/error/live Settings states | 15 |
-| Offline | Current route while disconnected | Centered app mark and exact offline status message; current route returns when online | 15 |
-| Astrologer panel | `/astrologer` | Session check, login, forced password change, profile, availability, bookings, and own draft/published blog authoring and moderation | 4, 7, 9, 12, 14 |
+| Offline | Current route while disconnected | Large Astromaitreyi logo/name and exact offline status message; current route returns when online | 15, pending fix 11 |
+| Astrologer panel | `/astrologer` | Session check, login, forced password change, own profile-photo preview/save/change/remove, availability, bookings, and rich draft/published blog authoring and moderation | 4, 7, 9, 12, 14; pending fixes 14–15 |
 | Astrologer call | `/astrologer/call/:bookingId` | The same four call states and complete controls, with caller-first-name waiting text and astrologer session protection | 9–11 |
-| Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer management, pricing/settings and Recent comments moderation | 3, 14 |
+| Owner panel | `/owner` | Session check, login, loading, empty, error, astrologer photos/removal and account management, pricing/settings and Recent comments moderation | 3, 14; pending fix 14 |
 | Design system | `/_design` | Development only; absent from production code | 1 |
 | Not found | Any unmatched path | Link back to Home | 1 |
 
@@ -106,7 +128,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 |---|---|---|
 | Unknown route | “This page does not exist.” | Not-found screen |
 | Offline | “You're offline. Please check your internet connection.” | Global offline screen |
-| Install banner | “Install AstroWebApp” with **Install app** and **Not now** | Home in supported Android/desktop browsers |
+| Install banner | “Install Astromaitreyi” with **Install app** and **Not now** | Home in supported Android/desktop browsers |
 | iOS installation | “To install: tap Share, then Add to Home Screen.” | Home in iPhone/iPad Safari |
 | Shipping | “Services are delivered online or by phone. Nothing is shipped.” | Shipping policy |
 | Design success toast | “Your changes were saved.” | Development design page |
@@ -121,9 +143,11 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Private-details note | “Your details are private. Only the astrologer you book can see them.” | First booking details and Settings |
 | Empty slot date | “No free times on this day. Please try another day.” | Home slot picker |
 | Free booking action | “Confirm booking” | Home booking summary |
-| Subscription pack option | “₹999 for 4 calls · 15 min each” or “N calls left · 15 min each” | Home call-type sheet; values come from Settings and the signed-in user |
+| Subscription pack option | “₹999 for 4 calls · 15 min each” or “1 call left · 15 min each” / “N calls left · 15 min each” | Home call-type sheet; values come from Settings and the signed-in user |
 | Credit booking action | “Confirm booking” with “1 subscription credit” in the summary | Home booking summary when a credit is available |
-| Subscription balance | “Subscription calls left: N” | Subscription success and History when relevant |
+| New pack booking summary | “₹999 for 4 calls (this booking uses 1)” | Home booking summary with no credit; price and pack size come from Settings |
+| Subscription balance | “Subscription calls left: 1 call left” or “Subscription calls left: N calls left” | Subscription success and History when relevant |
+| Astrologer bookings context | “Your upcoming and past calls.” | Astrologer Bookings |
 | Checkout closed | “Payment was not completed. You can try again.” | Home booking summary error |
 | Checkout failed | “Payment didn't go through. If any money was deducted, it will be returned automatically.” | Home booking summary error |
 | Late payment refund | “This time was booked by someone else, so we've refunded your payment.” | Home booking summary error |
@@ -158,7 +182,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 - All focusable elements receive the specified 3px `--color-link` focus ring.
 - Current interactive targets have a minimum rendered size of 48×48px.
 - Body type starts at `1rem`, uses a 1.6 line height, and text containers do not use fixed heights.
-- Bottom sheets and dialogs have names, modal semantics, close buttons, backdrop dismissal and Escape handling. Closed overlays are inert.
+- Bottom sheets and dialogs have names, modal semantics, close buttons, backdrop dismissal and Escape handling. Initially closed overlays are hidden without animation; after opening, their normal close animation runs and they become inert.
 - Dialog and BottomSheet focus the close control once when they open. Re-rendering controlled form fields does not steal focus; their Escape listeners call the latest close callback.
 - Dialog, BottomSheet and Toast use React portals into `document.body`, so a transformed screen animation cannot confine their fixed positioning to the page column.
 - Owner settings validation places a specific error beside every invalid field and links it with `aria-describedby` and `aria-invalid`.
@@ -168,7 +192,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 - Availability time/date controls have visible labels and field-linked errors. An invalid save scrolls to and focuses the first invalid control and repeats the required action beside Save. The Day off label provides the checkbox's 48px target, and repeatable ranges remain a single flexible column at the mobile baseline.
 - Toasts use polite or assertive live regions according to their kind.
 - Avatars use `Intl.Segmenter` for initials in Latin and non-Latin scripts and expose the person's name.
-- A 360px browser emulation check found no horizontal overflow on the app shell or design page.
+- A rendered 360px Chrome check using the production CSS found the slot picker contained within the page, time chips wrapping into three columns and only the date-chip strip scrolling horizontally. The same layout expands without clipping at 1280px.
 - Owner cards, action buttons and forms use wrapping/minmax layouts so they fit the 360px mobile baseline without fixed content widths. A fresh rendered check remains in the Step 3 manual try-out because no browser surface was available in the build session.
 - The astrologer panel, tag editor, actions and 360px preview use wrapping/flexible layouts with no fixed text height. The Step 4 manual try-out includes the rendered 360px check.
 - Home uses one card column by default, two from 42rem and three from 64rem. Card contents and call-option summaries wrap without fixed text heights.

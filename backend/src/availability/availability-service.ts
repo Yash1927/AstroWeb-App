@@ -120,8 +120,14 @@ export class DatabaseAvailabilityService implements AvailabilityService {
         .where((booking) => booking.endsAt.gt(now))
         .all();
 
-      await transaction.orm.public.AvailabilityRule.where({ astrologerId }).delete();
-      await transaction.orm.public.AvailabilityException.where({ astrologerId }).delete();
+      const deleteRules = transaction.sql.public.AvailabilityRule.delete()
+        .where((rule, functions) => functions.eq(rule.astrologerId, astrologerId))
+        .build();
+      const deleteExceptions = transaction.sql.public.AvailabilityException.delete()
+        .where((exception, functions) => functions.eq(exception.astrologerId, astrologerId))
+        .build();
+      await transaction.execute(deleteRules);
+      await transaction.execute(deleteExceptions);
 
       for (const range of availability.weekly) {
         await transaction.orm.public.AvailabilityRule.create({

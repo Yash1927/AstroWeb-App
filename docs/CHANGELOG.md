@@ -2,7 +2,7 @@
 
 Every change to the project, newest first, with one entry per task. Use this format:
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ```markdown
 ## YYYY-MM-DD: Step N, title (or a short description)
@@ -15,6 +15,61 @@ Last updated: 2026-10-02
 ```
 
 ---
+
+## 2026-10-03: C3 browser-review fixes
+- **Changed:** renamed all user-visible branding to Astromaitreyi and added a 4.5 KB header icon.
+- **Fixed:** stable blog editing/autosave, initial overlay flashes, italics, neutral email, image-button positioning, styled uploads/crop sliders and confirmed photo removal.
+- **Fixed:** blog media ownership errors now return 400, and panel/editor chunks are excluded from the offline precache.
+- **Files:** blog/editor/overlay/profile components, PWA assets/config, styling, blog service/routes and focused tests.
+- **Database / env vars:** none.
+- **Checks/docs:** lint/build/type-check pass; backend has 134 pass/4 skipped; all 68 frontend tests pass across the final run plus an isolated retry of one load-related timeout; affected docs updated.
+
+## 2026-10-03: Browser-review fixes for rich editing, photos and loading
+- **Fixed 1–3:** preserved editor selections, corrected labelled toolbar states/containment, added editable inline captions and moved the image button to the cursor's empty line.
+- **Fixed 4–6:** added styled profile upload with adjustable square crop, corrected monogram/icon crops without changing `logo.jpg`, and lazy-loaded panels, editor and cropper; the entry chunk fell from 856.80 kB to 344.03 kB.
+- **Fixed 7–9:** separated excerpt blocks, surfaced safe server validation messages and made the read-only email neutral.
+- **Checked 10:** the reviewer-applied migration is current and verified; future migration apply/status/verify steps are documented.
+- **Checks/docs:** 64 frontend and 133 backend tests, lint, build, type-check and migration checks passed; updated the affected docs. No controllable browser was available for a new rendered pass.
+
+## 2026-10-03: R2 media, astrologer photos and rich blogs, pending fixes 13–15
+- **Fixed item 13:** added backend-only Cloudflare R2 storage, a `MediaAsset` record, real-byte JPG/PNG/WebP validation, a 5 MB ceiling, metadata-free Sharp WebP transforms, random keys, replacement/deletion cleanup, a 24-hour orphan-cleanup command and the configured media origin in CSP
+- **Fixed item 14:** added astrologer photo selection with a centred square preview and explicit save/change/remove actions; owner moderation removal; and photo display with initials fallback on public cards, bookings, call rooms, blog authors and both panels
+- **Fixed item 15:** replaced plain blog bodies with validated TipTap JSONB; added the floating rich toolbar, shortcuts, body/cover uploads, captions, autosave and publish controls; derived excerpts/read times; and rendered allowed nodes through React in the public list and 680px reading view
+- **Files:** `backend/src/media/`, blog schemas/services/tests, protected media routes, Prisma contract/migration, app CSP, frontend media APIs, avatar/profile/owner/call/blog components, `frontend/src/design.css`, and package manifests
+- **Database:** added pending migration `20261003T0224_media_and_rich_blogs`; it creates `MediaAsset`, profile/cover references, excerpt/read-time fields and converts legacy plain-text blog bodies to TipTap JSONB. Migration integrity passes; no database was changed in this task
+- **Env vars:** added `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` and `R2_PUBLIC_BASE_URL` to `backend/.env.example`
+- **Dependencies:** added backend `@aws-sdk/client-s3`, `file-type`, `helmet`, `multer`, `sharp` and `@types/multer`; added frontend TipTap React, Starter Kit, link, underline, image and placeholder packages
+- **Docs updated:** `docs/PENDING_FIXES.md`, `docs/PROGRESS.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`, feature docs 04 and 14, and `docs/CHANGELOG.md`
+- **Notes:** R2 is mocked in tests. Backend type-check, all 131 standard tests, migration integrity, frontend lint, all 62 frontend tests and the production build pass. The four opt-in Neon tests skip normally. A real R2 browser flow and database migration remain owner actions. Vite reports the new rich-editor main chunk above 500 kB; Step 16 tracks lazy-loading review.
+
+## 2026-10-03: Brand and responsive UI polish, pending fixes 11 and 16
+- **Fixed item 11:** renamed all user-visible AstroWebApp branding to Astromaitreyi; added the unchanged owner-supplied logo to shared app/panel headers, sign-in/offline/call states and Razorpay Checkout; and replaced the placeholder PWA artwork with generated monogram icons, including maskable safe-zone padding
+- **Fixed item 16:** added shared app-bar and page-header components; unified user and panel widths; moved navigation into the desktop app bar from 1024px; kept mobile/tablet navigation fixed without covering content; anchored the Home footer; made read-only email neutral and badges content-sized; and standardized displayed day periods to lowercase `am`/`pm`
+- **Files:** `frontend/src/App.tsx`, shared brand/header components, user and panel screens, `frontend/src/design.css`, time formatting, Checkout, manifest/PWA asset configuration, generated icons and tests
+- **Database:** none
+- **Env vars:** none
+- **Dependencies:** added direct development dependency `sharp` for the reproducible logo crop used by `npm run generate:pwa-assets`
+- **Docs updated:** `docs/PENDING_FIXES.md`, `docs/PROGRESS.md`, `docs/CHANGELOG.md`, `docs/ARCHITECTURE.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/DECISIONS.md`, `docs/PANEL_GUIDE.md`
+- **Notes:** `frontend/public/logo.jpg` stayed byte-identical. All 18 routed/offline states passed Chrome render and target-size checks at 360px, 768px and 1280px.
+
+## 2026-10-03: Pending-fix repairs, items 1–10 and 12
+- **Fixed item 1:** fee-bearing Razorpay webhooks now validate against the stored order amount, Urgent and Subscription payments settle correctly when the customer charge includes a fee, invalid settlements emit non-personal diagnostics, and late-conflict refunds use the full amount fetched from Razorpay
+- **Fixed item 2:** the booking slot picker now constrains its grid children, so the date strip is the only horizontal scroller and time chips wrap inside the sheet at mobile and desktop widths
+- **Fixed item 3:** Home astrologer cards reserve a separate flexible details row and a fixed action row, keeping Call buttons at their normal height when profile details are empty
+- **Fixed item 4:** the astrologer Bookings section now describes all upcoming and past calls instead of incorrectly limiting the subtitle to Normal calls
+- **Fixed item 5:** Subscription credit copy now uses a shared plural-aware formatter everywhere, including the call options, booking success and History screens
+- **Fixed item 6:** a no-credit Subscription booking summary now states the live pack price, number of calls and that the current booking uses one call
+- **Fixed item 7:** deleting an astrologer post now uses Prisma SQL bulk deletes for all matching likes and comments before removing the post
+- **Fixed item 8:** every multi-row mutation found by the backend audit now uses an explicit Prisma SQL bulk plan, covering astrologer session revocation, availability replacement and elapsed payment-hold expiry
+- **Fixed item 9:** every generic route-level 503 path now logs a fixed operation context plus the sanitized error class and message, without logging request data, identifiers or known personal and secret patterns
+- **Fixed item 10:** user and astrologer comment deletion now confirms first; visitor drafts survive Google redirect in session storage; astrologer post counts refresh on focus and editor close; and post-status badges keep their content width
+- **Fixed item 12:** Nunito imports now include only Latin and Latin Extended for the four used weights, and the service worker precaches only their eight WOFF2 files instead of forty font files
+- **Files:** payment gateway/service/schema tests; owner, astrologer, availability, booking and blog services; all backend route error paths and the shared safe logger; Home, History, Blogs, astrologer panel/card components and tests; `frontend/src/design.css`, font imports and PWA configuration
+- **Database:** no schema or migration changes; items 7 and 8 were exercised only on non-primary Neon child branch `pending-fixes-7-8-20261003`
+- **Env vars:** added test-only `RUN_NEON_BRANCH_TESTS` and `NEON_BRANCH_NAME` placeholders; no runtime variables changed
+- **Dependencies:** none
+- **Docs updated:** `docs/PROGRESS.md`, `docs/PENDING_FIXES.md`, `docs/ARCHITECTURE.md`, `docs/API.md`, `docs/DATABASE.md`, `docs/DESIGN_SYSTEM.md`, `docs/SETUP.md`, `docs/TESTING.md`, `docs/SECURITY.md`, `docs/PANEL_GUIDE.md`, `docs/CHANGELOG.md`
+- **Notes:** backend type-check and the standard suite pass with 118 tests (the 4 opt-in Neon tests skip normally); all 4 integration cases pass on the isolated child branch. Frontend lint, all 62 tests and the production build pass. The service worker now precaches 18 entries (547.94 KiB), including 8 WOFF2 font files and no WOFF files. The test branch remains available for review; the production/main database was not used.
 
 ## 2026-10-02: Step 15, Installable app and policy pages
 - **Added:** an AstroWebApp web manifest; generated 192px, 512px, maskable and Apple touch icons from one SVG; an auto-updating app-shell service worker; offline UI; Android/desktop installation prompting; one-time iPhone/iPad Safari installation guidance; seven public policy pages; live Settings-backed Pricing; and policy links on Home and Settings

@@ -1,15 +1,20 @@
+import type { BlogDocument } from './astrologer'
+
 export type BlogAuthor = {
   displayName: string
   id: string
+  photoUrl: string | null
 }
 
 export type BlogSummary = {
   author: BlogAuthor
   commentCount: number
   excerpt: string
+  coverUrl: string | null
   id: string
   likeCount: number
   publishedAt: string
+  readingMinutes: number
   title: string
 }
 
@@ -22,7 +27,7 @@ export type BlogComment = {
 }
 
 export type BlogPost = BlogSummary & {
-  body: string
+  body: BlogDocument
   comments: BlogComment[]
   likedByViewer: boolean
 }
@@ -75,4 +80,3 @@ export const blogsApi = {
     { method: 'DELETE' },
   ),
 }
-

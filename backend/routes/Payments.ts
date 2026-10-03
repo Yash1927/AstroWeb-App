@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireUser } from "../src/auth/require-user";
 import { sessionManager, type SessionManager } from "../src/auth/session";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import {
   DefaultPaymentService,
   PaymentOwnershipError,
@@ -33,6 +34,7 @@ function respondWithPaymentError(error: unknown, response: Response) {
     response.status(409).json({ error: error.message });
     return;
   }
+  logRouteError("payments.verify", error);
   response.status(503).json({ error: "Payment could not be verified. Please try again." });
 }
 
@@ -76,6 +78,7 @@ export function createRazorpayWebhookHandler(
         response.status(400).json({ error: "Invalid webhook request." });
         return;
       }
+      logRouteError("payments.webhook", error);
       response.status(503).json({ error: "Webhook processing failed." });
     }
   };

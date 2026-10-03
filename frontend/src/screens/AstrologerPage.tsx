@@ -1,4 +1,6 @@
 import {
+  lazy,
+  Suspense,
   useCallback,
   useEffect,
   useId,
@@ -16,7 +18,9 @@ import {
 import {
   AstrologerCard,
   AstrologerBookings,
-  AstrologerBlogs,
+  Avatar,
+  AppBar,
+  AppBrand,
   AvailabilityEditor,
   Button,
   Card,
@@ -24,6 +28,9 @@ import {
   Skeleton,
   Toast,
 } from '../components'
+
+const AstrologerBlogs = lazy(() => import('../components/AstrologerBlogs').then((module) => ({ default: module.AstrologerBlogs })))
+const ProfilePhotoCropper = lazy(() => import('../components/ProfilePhotoCropper').then((module) => ({ default: module.ProfilePhotoCropper })))
 
 type AuthState = 'checking' | 'logged-out' | 'password' | 'logged-in'
 type AstrologerSection = 'profile' | 'availability' | 'bookings' | 'blogs'
@@ -156,8 +163,17 @@ export default function AstrologerPage() {
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({})
   const [profileError, setProfileError] = useState('')
   const [profileBusy, setProfileBusy] = useState(false)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [cropFile, setCropFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoRemoveOpen, setPhotoRemoveOpen] = useState(false)
   const [previewOpen, setPreviewOpen] = useState(false)
   const [toast, setToast] = useState<ToastState>(null)
+
+  useEffect(() => () => {
+    if (photoPreview) URL.revokeObjectURL(photoPreview)
+  }, [photoPreview])
 
   const handleSessionEnded = useCallback(() => {
     setAuthState('logged-out')
@@ -328,10 +344,55 @@ export default function AstrologerPage() {
     }
   }
 
+  const choosePhoto = (file: File | undefined) => {
+    if (!file) return
+    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+      setProfileError('Choose a JPG, PNG or WebP image smaller than 5 MB.')
+      return
+    }
+    setProfileError('')
+    setCropFile(file)
+  }
+
+  const acceptCrop = (file: File) => {
+    setPhotoFile(file)
+    setPhotoPreview(URL.createObjectURL(file))
+    setCropFile(null)
+  }
+
+  const savePhoto = async () => {
+    if (!photoFile) return
+    setPhotoBusy(true)
+    try {
+      const asset = await astrologerApi.uploadProfilePhoto(photoFile)
+      setProfile((current) => current ? { ...current, photoUrl: asset.url } : current)
+      setPhotoFile(null)
+      setCropFile(null)
+      setPhotoPreview(null)
+      setPhotoRemoveOpen(false)
+      setToast({ kind: 'success', message: 'Profile photo saved.' })
+    } catch (error) { setProfileError(messageFrom(error)) }
+    finally { setPhotoBusy(false) }
+  }
+
+  const removePhoto = async () => {
+    setPhotoBusy(true)
+    try {
+      await astrologerApi.removeProfilePhoto()
+      setProfile((current) => current ? { ...current, photoUrl: null } : current)
+      setPhotoFile(null)
+      setCropFile(null)
+      setPhotoPreview(null)
+      setPhotoRemoveOpen(false)
+      setToast({ kind: 'success', message: 'Profile photo removed.' })
+    } catch (error) { setProfileError(messageFrom(error)) }
+    finally { setPhotoBusy(false) }
+  }
+
   if (authState === 'checking') {
     return (
       <main aria-busy="true" className="standalone-page screen">
-        <Card className="astrologer-login-card"><Skeleton variant="title" /><Skeleton /><Skeleton /></Card>
+        <Card className="astrologer-login-card"><AppBrand large /><Skeleton variant="title" /><Skeleton /><Skeleton /></Card>
       </main>
     )
   }
@@ -340,7 +401,7 @@ export default function AstrologerPage() {
     return (
       <main className="standalone-page screen">
         <Card className="astrologer-login-card">
-          <p className="owner-eyebrow">AstroWebApp</p>
+          <AppBrand large />
           <h1>Astrologer login</h1>
           <p className="screen__intro">Sign in with the account the owner created for you.</p>
           <form className="stack" onSubmit={handleLogin}>
@@ -364,6 +425,7 @@ export default function AstrologerPage() {
     return (
       <main className="standalone-page screen">
         <Card className="astrologer-login-card">
+          <AppBrand large />
           <h1>Set a new password</h1>
           <p className="screen__intro">Replace the temporary password before continuing.</p>
           <form className="stack" onSubmit={handlePassword}>
@@ -388,10 +450,8 @@ export default function AstrologerPage() {
 
   return (
     <main className="astrologer-page screen">
-      <header className="owner-header">
-        <div><p className="owner-eyebrow">AstroWebApp</p><h1>Astrologer panel</h1></div>
-        <Button onClick={() => void handleLogout()} variant="secondary">Log out</Button>
-      </header>
+      <AppBar actions={<Button onClick={() => void handleLogout()} variant="secondary">Log out</Button>} panelLabel="Astrologer panel" />
+      <h1 className="visually-hidden">Astrologer panel</h1>
 
       <nav aria-label="Astrologer sections" className="astrologer-section-nav">
         {(['profile', 'availability', 'bookings', 'blogs'] as const).map((item) => (
@@ -414,6 +474,24 @@ export default function AstrologerPage() {
           ) : (
             <Card>
               <form className="astrologer-profile-form" noValidate onSubmit={handleProfileSave}>
+                <div className="profile-photo-field">
+                  <Avatar id={profile?.id ?? 'profile'} name={form.displayName} size={96} src={photoPreview ?? profile?.photoUrl} />
+                  <div className="stack">
+                    <span className="field__label">Profile photo</span>
+                    <input accept="image/jpeg,image/png,image/webp" className="visually-hidden" id="profile-photo-upload" onChange={(event) => { choosePhoto(event.target.files?.[0]); event.currentTarget.value = '' }} type="file" />
+                    <label className="button button--secondary profile-photo-upload" htmlFor="profile-photo-upload">Upload photo</label>
+                    <span className="field__hint">JPG, PNG or WebP, up to 5 MB.</span>
+                    <div className="profile-photo-field__actions">
+                      {photoFile ? <Button disabled={photoBusy} onClick={() => void savePhoto()} type="button">{photoBusy ? 'Saving…' : 'Save photo'}</Button> : null}
+                      {profile?.photoUrl ? <Button disabled={photoBusy} onClick={() => setPhotoRemoveOpen(true)} type="button" variant="secondary">Remove photo</Button> : null}
+                    </div>
+                  </div>
+                </div>
+                {cropFile ? (
+                  <Suspense fallback={<div aria-busy="true"><Skeleton /><Skeleton /></div>}>
+                    <ProfilePhotoCropper file={cropFile} onCancel={() => setCropFile(null)} onCrop={acceptCrop} onError={setProfileError} />
+                  </Suspense>
+                ) : null}
                 <label className="field">
                   <span className="field__label">Display name</span>
                   <input aria-describedby={profileErrors.displayName ? 'display-name-error' : undefined} aria-invalid={Boolean(profileErrors.displayName)} className="input" maxLength={80} onChange={(event) => changeField('displayName', event.target.value)} required value={form.displayName} />
@@ -450,7 +528,7 @@ export default function AstrologerPage() {
           <div className="owner-section__heading">
             <div>
               <h2 id="bookings-heading">Bookings</h2>
-              <p className="screen__intro">Your upcoming and past Normal calls.</p>
+              <p className="screen__intro">Your upcoming and past calls.</p>
             </div>
           </div>
           <AstrologerBookings onSignedOut={handleSessionEnded} />
@@ -458,7 +536,9 @@ export default function AstrologerPage() {
       ) : (
         <section aria-labelledby="blogs-heading" className="astrologer-section">
           <div className="owner-section__heading"><div><h2 id="blogs-heading">Blogs</h2><p className="screen__intro">Write and manage your posts.</p></div></div>
-          <AstrologerBlogs onSignedOut={handleSessionEnded} />
+          <Suspense fallback={<Card aria-busy="true"><Skeleton variant="title" /><Skeleton /><Skeleton /></Card>}>
+            <AstrologerBlogs onSignedOut={handleSessionEnded} />
+          </Suspense>
         </section>
       )}
 
@@ -467,8 +547,17 @@ export default function AstrologerPage() {
         <div className="astrologer-preview-frame">
           <AstrologerCard
             onCall={() => undefined}
-            profile={{ id: profile?.id ?? 'preview', ...form }}
+            profile={{ id: profile?.id ?? 'preview', photoUrl: photoPreview ?? profile?.photoUrl, ...form }}
           />
+        </div>
+      </Dialog>
+      <Dialog onClose={() => setPhotoRemoveOpen(false)} open={photoRemoveOpen} title="Remove photo?">
+        <div className="stack">
+          <p>Your initials will be shown until you upload another photo.</p>
+          <div className="dialog__actions">
+            <Button onClick={() => setPhotoRemoveOpen(false)} variant="secondary">Keep photo</Button>
+            <Button disabled={photoBusy} onClick={() => void removePhoto()}>{photoBusy ? 'Removing…' : 'Remove photo'}</Button>
+          </div>
         </div>
       </Dialog>
       <Toast kind={toast?.kind} message={toast?.message ?? ''} onDismiss={() => setToast(null)} open={Boolean(toast)} />

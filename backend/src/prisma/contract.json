@@ -32,6 +32,10 @@
       "model": "Booking",
       "namespace": "public"
     },
+    "MediaAsset": {
+      "model": "MediaAsset",
+      "namespace": "public"
+    },
     "Owner": {
       "model": "Owner",
       "namespace": "public"
@@ -156,6 +160,19 @@
               {
                 "name": "other",
                 "value": "other"
+              }
+            ]
+          },
+          "MediaKind": {
+            "codecId": "pg/text@1",
+            "members": [
+              {
+                "name": "profile_photo",
+                "value": "profile_photo"
+              },
+              {
+                "name": "blog_image",
+                "value": "blog_image"
               }
             ]
           },
@@ -300,6 +317,13 @@
                   "kind": "scalar"
                 }
               },
+              "profileMediaId": {
+                "nullable": true,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
               "profileSavedAt": {
                 "nullable": true,
                 "type": {
@@ -371,6 +395,37 @@
                   "model": "Booking",
                   "namespace": "public"
                 }
+              },
+              "mediaAssets": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "ownerAstrologerId"
+                  ]
+                },
+                "to": {
+                  "model": "MediaAsset",
+                  "namespace": "public"
+                }
+              },
+              "profileMedia": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "profileMediaId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "MediaAsset",
+                  "namespace": "public"
+                }
               }
             },
             "storage": {
@@ -407,6 +462,9 @@
                 },
                 "passwordHash": {
                   "column": "passwordHash"
+                },
+                "profileMediaId": {
+                  "column": "profileMediaId"
                 },
                 "profileSavedAt": {
                   "column": "profileSavedAt"
@@ -612,6 +670,13 @@
               "body": {
                 "nullable": false,
                 "type": {
+                  "codecId": "pg/jsonb@1",
+                  "kind": "scalar"
+                }
+              },
+              "coverMediaId": {
+                "nullable": true,
+                "type": {
                   "codecId": "pg/text@1",
                   "kind": "scalar"
                 }
@@ -624,6 +689,13 @@
                   "typeParams": {
                     "precision": 3
                   }
+                }
+              },
+              "excerpt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
                 }
               },
               "id": {
@@ -641,6 +713,13 @@
                   "typeParams": {
                     "precision": 3
                   }
+                }
+              },
+              "readingMinutes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
                 }
               },
               "status": {
@@ -703,6 +782,22 @@
                   "namespace": "public"
                 }
               },
+              "coverMedia": {
+                "cardinality": "N:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "coverMediaId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "MediaAsset",
+                  "namespace": "public"
+                }
+              },
               "likes": {
                 "cardinality": "1:N",
                 "on": {
@@ -727,14 +822,23 @@
                 "body": {
                   "column": "body"
                 },
+                "coverMediaId": {
+                  "column": "coverMediaId"
+                },
                 "createdAt": {
                   "column": "createdAt"
+                },
+                "excerpt": {
+                  "column": "excerpt"
                 },
                 "id": {
                   "column": "id"
                 },
                 "publishedAt": {
                   "column": "publishedAt"
+                },
+                "readingMinutes": {
+                  "column": "readingMinutes"
                 },
                 "status": {
                   "column": "status"
@@ -1157,6 +1261,154 @@
               },
               "namespaceId": "public",
               "table": "Booking"
+            }
+          },
+          "MediaAsset": {
+            "fields": {
+              "bytes": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "createdAt": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "kind": "scalar",
+                  "typeParams": {
+                    "precision": 3
+                  }
+                }
+              },
+              "height": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              },
+              "id": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "kind": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                },
+                "valueSet": {
+                  "entityKind": "enum",
+                  "entityName": "MediaKind",
+                  "namespaceId": "public",
+                  "plane": "domain"
+                }
+              },
+              "ownerAstrologerId": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "storageKey": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/text@1",
+                  "kind": "scalar"
+                }
+              },
+              "width": {
+                "nullable": false,
+                "type": {
+                  "codecId": "pg/int4@1",
+                  "kind": "scalar"
+                }
+              }
+            },
+            "relations": {
+              "coverFor": {
+                "cardinality": "1:N",
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "coverMediaId"
+                  ]
+                },
+                "to": {
+                  "model": "Blog",
+                  "namespace": "public"
+                }
+              },
+              "owner": {
+                "cardinality": "N:1",
+                "nullable": false,
+                "on": {
+                  "localFields": [
+                    "ownerAstrologerId"
+                  ],
+                  "targetFields": [
+                    "id"
+                  ]
+                },
+                "to": {
+                  "model": "Astrologer",
+                  "namespace": "public"
+                }
+              },
+              "profileFor": {
+                "cardinality": "1:1",
+                "nullable": true,
+                "on": {
+                  "localFields": [
+                    "id"
+                  ],
+                  "targetFields": [
+                    "profileMediaId"
+                  ]
+                },
+                "to": {
+                  "model": "Astrologer",
+                  "namespace": "public"
+                }
+              }
+            },
+            "storage": {
+              "fields": {
+                "bytes": {
+                  "column": "bytes"
+                },
+                "createdAt": {
+                  "column": "createdAt"
+                },
+                "height": {
+                  "column": "height"
+                },
+                "id": {
+                  "column": "id"
+                },
+                "kind": {
+                  "column": "kind"
+                },
+                "ownerAstrologerId": {
+                  "column": "ownerAstrologerId"
+                },
+                "storageKey": {
+                  "column": "storageKey"
+                },
+                "width": {
+                  "column": "width"
+                }
+              },
+              "namespaceId": "public",
+              "table": "MediaAsset"
             }
           },
           "Owner": {
@@ -1872,6 +2124,11 @@
                   "nativeType": "text",
                   "nullable": false
                 },
+                "profileMediaId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": true
+                },
                 "profileSavedAt": {
                   "codecId": "pg/timestamptz-temporal@1",
                   "nativeType": "timestamptz",
@@ -1881,7 +2138,24 @@
                   }
                 }
               },
-              "foreignKeys": [],
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "profileMediaId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Astrologer"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaAsset"
+                  }
+                }
+              ],
               "indexes": [],
               "primaryKey": {
                 "columns": [
@@ -1892,6 +2166,11 @@
                 {
                   "columns": [
                     "email"
+                  ]
+                },
+                {
+                  "columns": [
+                    "profileMediaId"
                   ]
                 }
               ]
@@ -2067,9 +2346,14 @@
                   "nullable": false
                 },
                 "body": {
+                  "codecId": "pg/jsonb@1",
+                  "nativeType": "jsonb",
+                  "nullable": false
+                },
+                "coverMediaId": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
-                  "nullable": false
+                  "nullable": true
                 },
                 "createdAt": {
                   "codecId": "pg/timestamptz-temporal@1",
@@ -2083,6 +2367,11 @@
                     "precision": 3
                   }
                 },
+                "excerpt": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
                 "id": {
                   "codecId": "pg/text@1",
                   "nativeType": "text",
@@ -2095,6 +2384,15 @@
                   "typeParams": {
                     "precision": 3
                   }
+                },
+                "readingMinutes": {
+                  "codecId": "pg/int4@1",
+                  "default": {
+                    "kind": "literal",
+                    "value": 1
+                  },
+                  "nativeType": "int4",
+                  "nullable": false
                 },
                 "status": {
                   "codecId": "pg/text@1",
@@ -2138,6 +2436,22 @@
                     "namespaceId": "public",
                     "tableName": "Astrologer"
                   }
+                },
+                {
+                  "source": {
+                    "columns": [
+                      "coverMediaId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Blog"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaAsset"
+                  }
                 }
               ],
               "indexes": [
@@ -2147,6 +2461,14 @@
                   ],
                   "name": "Blog_astrologerId_idx_e78e3c7e",
                   "prefix": "Blog_astrologerId_idx",
+                  "unique": false
+                },
+                {
+                  "columns": [
+                    "coverMediaId"
+                  ],
+                  "name": "Blog_coverMediaId_idx_a9883159",
+                  "prefix": "Blog_coverMediaId_idx",
                   "unique": false
                 }
               ],
@@ -2528,6 +2850,110 @@
                 ]
               },
               "uniques": []
+            },
+            "MediaAsset": {
+              "checks": [
+                {
+                  "expression": "\"kind\" IN ('profile_photo', 'blog_image')",
+                  "name": "MediaAsset_kind_check_851939b5",
+                  "prefix": "MediaAsset_kind_check"
+                }
+              ],
+              "columns": {
+                "bytes": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "createdAt": {
+                  "codecId": "pg/timestamptz-temporal@1",
+                  "default": {
+                    "expression": "now()",
+                    "kind": "function"
+                  },
+                  "nativeType": "timestamptz",
+                  "nullable": false,
+                  "typeParams": {
+                    "precision": 3
+                  }
+                },
+                "height": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                },
+                "id": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "kind": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false,
+                  "valueSet": {
+                    "entityKind": "valueSet",
+                    "entityName": "MediaKind",
+                    "namespaceId": "public",
+                    "plane": "storage"
+                  }
+                },
+                "ownerAstrologerId": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "storageKey": {
+                  "codecId": "pg/text@1",
+                  "nativeType": "text",
+                  "nullable": false
+                },
+                "width": {
+                  "codecId": "pg/int4@1",
+                  "nativeType": "int4",
+                  "nullable": false
+                }
+              },
+              "foreignKeys": [
+                {
+                  "source": {
+                    "columns": [
+                      "ownerAstrologerId"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "MediaAsset"
+                  },
+                  "target": {
+                    "columns": [
+                      "id"
+                    ],
+                    "namespaceId": "public",
+                    "tableName": "Astrologer"
+                  }
+                }
+              ],
+              "indexes": [
+                {
+                  "columns": [
+                    "ownerAstrologerId"
+                  ],
+                  "name": "MediaAsset_ownerAstrologerId_idx_59bdb05e",
+                  "prefix": "MediaAsset_ownerAstrologerId_idx",
+                  "unique": false
+                }
+              ],
+              "primaryKey": {
+                "columns": [
+                  "id"
+                ]
+              },
+              "uniques": [
+                {
+                  "columns": [
+                    "storageKey"
+                  ]
+                }
+              ]
             },
             "Owner": {
               "columns": {
@@ -3047,6 +3473,13 @@
                 "other"
               ]
             },
+            "MediaKind": {
+              "kind": "valueSet",
+              "values": [
+                "profile_photo",
+                "blog_image"
+              ]
+            },
             "PaymentPurpose": {
               "kind": "valueSet",
               "values": [
@@ -3078,10 +3511,10 @@
         "kind": "postgres-schema"
       }
     },
-    "storageHash": "9608a0999bb006847f875e40b5f4d8248025a6139f897a09fe56ece30982dd11"
+    "storageHash": "4d0199379797ac877863f254474c634219f08ffe8504decc5cb28ec5cfc199f5"
   },
   "execution": {
-    "executionHash": "2dccff6fb0b3a9dc532c7cd7c81fb9d00563db4fa599fedd5703d417cb075a2d",
+    "executionHash": "a089b64f86c97438d9370f56e5950875065a63ea2be45441e7d73767eca012f4",
     "mutations": {
       "defaults": [
         {
@@ -3161,6 +3594,17 @@
           },
           "ref": {
             "entry": "Booking",
+            "field": "id",
+            "namespace": "public"
+          }
+        },
+        {
+          "onCreate": {
+            "id": "uuidv4",
+            "kind": "generator"
+          },
+          "ref": {
+            "entry": "MediaAsset",
             "field": "id",
             "namespace": "public"
           }

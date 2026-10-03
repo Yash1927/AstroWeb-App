@@ -10,6 +10,7 @@ export type AstrologerProfile = {
   languages: string[]
   mustChangePassword: boolean
   profileSavedAt: string | null
+  photoUrl: string | null
 }
 
 export type OwnerSettings = {
@@ -116,6 +117,9 @@ export const ownerApi = {
       method: 'POST',
       body: JSON.stringify({ temporaryPassword }),
     }),
+  removePhoto: (id: string) => ownerRequest<void>(`/api/owner/astrologers/${id}/photo`, {
+    method: 'DELETE',
+  }),
   getSettings: async () =>
     (await ownerRequest<{ settings: OwnerSettings }>('/api/owner/settings')).settings,
   updateSettings: async (settings: OwnerSettings) =>

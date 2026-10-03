@@ -36,9 +36,13 @@ describe('App connectivity', () => {
 
     render(<MemoryRouter><App /></MemoryRouter>)
     expect(screen.getByText("You're offline. Please check your internet connection.")).toBeDefined()
+    expect(screen.getByRole('img', { name: 'Astromaitreyi' })).toHaveProperty('src', 'http://localhost:3000/logo.jpg')
 
     online.mockReturnValue(true)
     fireEvent(window, new Event('online'))
     expect(await screen.findByText('No astrologers are available right now. Please check again later.')).toBeDefined()
+    const brand = screen.getByRole('link', { name: /Astromaitreyi/ })
+    expect(brand).toBeDefined()
+    expect(brand.querySelector('img')).toHaveProperty('src', 'http://localhost:3000/app-icon-header.png')
   })
 })

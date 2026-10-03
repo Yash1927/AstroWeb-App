@@ -44,6 +44,7 @@ describe("public astrologer cards", () => {
           expertise: ["Vedic", "Tarot"],
           languages: ["Hindi", "English"],
           experienceYears: 8,
+          photoUrl: null,
           email: "private@example.com",
           isActive: true,
           profileSavedAt: "2026-10-01T00:00:00Z",
@@ -61,6 +62,7 @@ describe("public astrologer cards", () => {
           expertise: ["Vedic", "Tarot"],
           languages: ["Hindi", "English"],
           experienceYears: 8,
+          photoUrl: null,
         },
       ],
     });

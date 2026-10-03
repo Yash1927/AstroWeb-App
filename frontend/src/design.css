@@ -170,6 +170,8 @@ svg {
 }
 
 .app-shell {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   min-height: 100svh;
   padding-block-end: calc(5rem + env(safe-area-inset-bottom));
@@ -184,7 +186,103 @@ svg {
 }
 
 .app-main {
-  width: min(100%, 72rem);
+  width: min(100%, 60rem);
+  flex: 1;
+}
+
+.app-bar-wrap {
+  width: min(100%, 60rem);
+  margin-inline: auto;
+  padding: var(--space-4) var(--space-4) 0;
+}
+
+.app-bar {
+  display: flex;
+  min-height: var(--tap-min);
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding-block-end: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.app-brand {
+  display: inline-flex;
+  min-width: 0;
+  min-height: var(--tap-min);
+  align-items: center;
+  gap: var(--space-3);
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.app-brand__logo {
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  object-position: 50% 37%;
+}
+
+.app-brand__text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.app-brand__text strong {
+  overflow-wrap: anywhere;
+}
+
+.app-brand__text span {
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.app-brand--large {
+  width: 100%;
+  min-height: auto;
+  flex-direction: column;
+  margin-block-end: var(--space-6);
+  text-align: center;
+}
+
+.app-brand--large .app-brand__logo {
+  width: 7rem;
+  height: 7rem;
+}
+
+.app-brand--large .app-brand__text {
+  font-size: var(--text-xl);
+}
+
+.app-bar__actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.page-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-block-end: var(--space-6);
+}
+
+.page-header h1,
+.page-header p {
+  margin-block-end: 0;
+}
+
+.page-header__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .standalone-page {
@@ -398,6 +496,12 @@ svg {
   pointer-events: none;
 }
 
+.modal-layer[data-state="idle"],
+.toast[data-state="idle"] {
+  visibility: hidden;
+  pointer-events: none;
+}
+
 .modal-backdrop {
   position: absolute;
   inset: 0;
@@ -529,7 +633,8 @@ svg {
   margin: 0;
 }
 
-.bottom-tab-bar {
+.bottom-tab-bar,
+.main-navigation {
   position: fixed;
   z-index: 20;
   inset-inline: 0;
@@ -546,7 +651,8 @@ svg {
   box-shadow: var(--shadow-raised);
 }
 
-.bottom-tab-bar__link {
+.bottom-tab-bar__link,
+.main-navigation__link {
   display: flex;
   min-width: var(--tap-min);
   min-height: var(--tap-min);
@@ -563,7 +669,8 @@ svg {
   text-decoration: none;
 }
 
-.bottom-tab-bar__link[aria-current="page"] {
+.bottom-tab-bar__link[aria-current="page"],
+.main-navigation__link[aria-current="page"] {
   background: var(--color-primary);
   color: var(--color-on-primary);
 }
@@ -596,6 +703,24 @@ svg {
   font-weight: 800;
   line-height: 1;
   text-transform: uppercase;
+}
+
+img.avatar {
+  display: block;
+  object-fit: cover;
+}
+
+.profile-photo-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.profile-photo-field__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 
 .avatar--32 {
@@ -637,6 +762,8 @@ svg {
   border-radius: var(--radius-full);
   font-size: var(--text-sm);
   font-weight: 800;
+  width: fit-content;
+  justify-self: start;
 }
 
 .status-badge--upcoming,
@@ -713,7 +840,7 @@ svg {
 }
 
 .owner-page {
-  width: min(100%, 72rem);
+  width: min(100%, 60rem);
   min-height: 100vh;
   min-height: 100svh;
   margin-inline: auto;
@@ -865,7 +992,7 @@ svg {
 }
 
 .astrologer-page {
-  width: min(100%, 48rem);
+  width: min(100%, 60rem);
   min-height: 100vh;
   min-height: 100svh;
   margin-inline: auto;
@@ -928,6 +1055,7 @@ svg {
 
 .astrologer-card {
   display: grid;
+  grid-template-rows: auto 1fr auto;
   gap: var(--space-4);
 }
 
@@ -956,6 +1084,7 @@ svg {
 
 .astrologer-card__details {
   display: grid;
+  grid-row: 2;
   gap: var(--space-3);
   margin: 0;
 }
@@ -976,6 +1105,7 @@ svg {
 }
 
 .astrologer-card__call {
+  grid-row: 3;
   width: 100%;
 }
 
@@ -1086,8 +1216,21 @@ svg {
 }
 
 .user-screen {
-  width: min(100%, 44rem);
+  width: 100%;
   margin-inline: auto;
+}
+
+.reading-screen,
+.blog-post,
+.policy-page {
+  width: min(100%, 42.5rem);
+  margin-inline: auto;
+}
+
+.home-screen {
+  display: flex;
+  min-height: calc(100svh - 12rem);
+  flex-direction: column;
 }
 
 .booking-sections,
@@ -1230,6 +1373,16 @@ svg {
   margin-inline: auto;
   place-items: center;
   padding: var(--space-6) var(--space-4);
+}
+
+.call-shell {
+  min-height: 100vh;
+  min-height: 100svh;
+}
+
+.call-shell .call-room-page {
+  min-height: calc(100vh - 5rem);
+  min-height: calc(100svh - 5rem);
 }
 
 .call-room {
@@ -1540,8 +1693,86 @@ svg {
 }
 
 .settings-email .input[readonly] {
-  background: var(--color-surface-soft);
+  border: 1px dashed var(--color-border);
+  background: var(--color-bg);
   color: var(--color-text-muted);
+  cursor: not-allowed;
+}
+
+.profile-photo-upload {
+  width: fit-content;
+}
+
+.profile-cropper {
+  display: grid;
+  gap: var(--space-4);
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-soft);
+}
+
+.profile-cropper h3,
+.profile-cropper p {
+  margin-block-end: 0;
+}
+
+.profile-cropper__frame {
+  position: relative;
+  width: min(100%, 24rem);
+  aspect-ratio: 1;
+  margin-inline: auto;
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.profile-cropper__frame img {
+  position: absolute;
+  max-width: none;
+  user-select: none;
+}
+
+.profile-cropper input[type="range"] {
+  width: 100%;
+  min-height: var(--tap-min);
+  accent-color: var(--color-primary);
+}
+
+.profile-cropper input[type="range"]::-webkit-slider-runnable-track {
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+}
+
+.profile-cropper input[type="range"]::-webkit-slider-thumb {
+  width: var(--space-6);
+  height: var(--space-6);
+  margin-top: calc(-1 * var(--space-2));
+  border: 2px solid var(--color-surface);
+  border-radius: var(--radius-full);
+  appearance: none;
+  background: var(--color-primary);
+}
+
+.profile-cropper input[type="range"]::-moz-range-track {
+  height: var(--space-2);
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+}
+
+.profile-cropper input[type="range"]::-moz-range-thumb {
+  width: var(--space-6);
+  height: var(--space-6);
+  border: 2px solid var(--color-surface);
+  border-radius: var(--radius-full);
+  background: var(--color-primary);
+}
+
+.profile-cropper__position {
+  display: grid;
+  gap: var(--space-4);
 }
 
 .policy-links {
@@ -1574,8 +1805,8 @@ svg {
   display: grid;
   justify-items: center;
   gap: var(--space-2);
-  margin-block-start: var(--space-12);
-  padding-block-start: var(--space-6);
+  margin-block-start: auto;
+  padding-block-start: var(--space-12);
   border-top: 1px solid var(--color-border);
   text-align: center;
 }
@@ -1624,7 +1855,7 @@ svg {
 }
 
 .policy-page {
-  width: min(100%, 48rem);
+  width: min(100%, 42.5rem);
   margin-inline: auto;
 }
 
@@ -1744,6 +1975,13 @@ svg {
   border-radius: var(--radius-md);
 }
 
+.blog-card__cover {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
 .blog-author {
   display: flex;
   align-items: center;
@@ -1787,6 +2025,28 @@ svg {
 .blog-post__body {
   padding-block: var(--space-4);
   border-block: 1px solid var(--color-border);
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+.blog-post header h1 {
+  font-size: clamp(var(--text-2xl), 8vw, 3rem);
+}
+
+.blog-post__body img {
+  width: 100%;
+  border-radius: var(--radius-md);
+}
+
+.blog-post__body figure {
+  margin: var(--space-5) 0;
+}
+
+.blog-post__body figcaption {
+  margin-block-start: var(--space-2);
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+  text-align: center;
 }
 
 .blog-post__body p,
@@ -1881,9 +2141,180 @@ svg {
   gap: var(--space-3);
 }
 
-.blog-editor__body {
+.blog-editor__title {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-2) 0;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-2xl);
+  font-weight: 800;
+}
+
+.rich-blog-editor {
+  position: relative;
+  min-width: 0;
+  overflow: visible;
+  border-block: 1px solid var(--color-border);
+}
+
+.rich-blog-editor__content {
   min-height: 18rem;
-  resize: vertical;
+  padding: var(--space-4) 0 var(--space-4) calc(var(--tap-min) + var(--space-2));
+  outline: none;
+  font-size: 1.125rem;
+  line-height: 1.7;
+}
+
+.rich-blog-editor__content p.is-editor-empty:first-child::before {
+  height: 0;
+  color: var(--color-text-muted);
+  content: attr(data-placeholder);
+  float: left;
+  pointer-events: none;
+}
+
+.rich-blog-editor__content img,
+.blog-cover-picker img {
+  width: 100%;
+  max-height: 24rem;
+  border-radius: var(--radius-md);
+  object-fit: cover;
+}
+
+.rich-blog-image {
+  margin: var(--space-6) 0;
+}
+
+.rich-blog-image__caption {
+  width: 100%;
+  min-height: var(--tap-min);
+  padding: var(--space-2);
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  background: transparent;
+  color: var(--color-text-muted);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: center;
+}
+
+.blog-cover-picker__choices {
+  display: flex;
+  width: 100%;
+  gap: var(--space-2);
+  overflow-x: auto;
+}
+
+.blog-cover-picker__choices button {
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  padding: var(--space-1);
+  border: 2px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  cursor: pointer;
+}
+
+.blog-cover-picker__choices button[aria-pressed="true"] {
+  border-color: var(--color-primary-hover);
+}
+
+.blog-cover-picker__choices img {
+  width: 5rem;
+  height: 5rem;
+}
+
+.rich-blog-editor__toolbar {
+  display: grid;
+  width: max-content;
+  max-width: min(100%, calc(100vw - (2 * var(--space-4))));
+  overflow: hidden;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-raised);
+}
+
+.rich-blog-editor__toolbar-actions {
+  display: flex;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.rich-blog-editor__toolbar button,
+.rich-blog-editor__link input {
+  min-width: var(--tap-min);
+  min-height: var(--tap-min);
+  border: 0;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  font: inherit;
+}
+
+.rich-blog-editor__toolbar button[aria-pressed="true"] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+
+.rich-blog-editor__link {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) auto auto;
+  border-top: 1px solid var(--color-border);
+}
+
+.rich-blog-editor__link input {
+  width: 100%;
+  padding-inline: var(--space-3);
+  color: var(--color-text);
+  font: inherit;
+}
+
+.rich-blog-editor__add-image {
+  position: absolute;
+  left: 0;
+  display: grid;
+  width: var(--tap-min);
+  min-height: var(--tap-min);
+  place-items: center;
+  transform: translateY(calc(-1 * var(--space-2)));
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-full);
+  background: var(--color-surface);
+  color: var(--color-link);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-xl);
+}
+
+.rich-blog-editor__add-image:disabled {
+  cursor: wait;
+}
+
+.rich-blog-editor__progress {
+  width: 100%;
+  margin-block: var(--space-2);
+}
+
+.blog-cover-picker {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-3);
+  padding-block: var(--space-3);
+}
+
+.blog-cover-upload {
+  width: fit-content;
+}
+
+.blog-cover-picker img {
+  flex: 1 1 15rem;
+  max-width: 20rem;
 }
 
 .astrologer-blog-row,
@@ -1901,6 +2332,10 @@ svg {
   display: grid;
   min-width: 0;
   gap: var(--space-2);
+}
+
+.astrologer-blog-row .status-badge {
+  justify-self: start;
 }
 
 .author-comments {
@@ -1933,6 +2368,45 @@ svg {
 @media (min-width: 64rem) {
   .home-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-shell {
+    padding-block-end: 0;
+  }
+
+  .app-main {
+    min-height: auto;
+    padding-block-start: var(--space-6);
+  }
+
+  .main-navigation {
+    position: static;
+    display: flex;
+    width: auto;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  .main-navigation__link {
+    min-height: var(--tap-min);
+    flex-direction: row;
+    padding-inline: var(--space-3);
+  }
+
+  .main-navigation__link[aria-current="page"] {
+    background: var(--color-surface-soft);
+    color: var(--color-text);
+  }
+
+  .toast {
+    bottom: var(--space-6);
+  }
+
+  .home-screen {
+    min-height: calc(100svh - 9rem);
   }
 }
 
@@ -2109,13 +2583,25 @@ svg {
 .availability-exceptions,
 .slot-picker {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   gap: var(--space-4);
+}
+
+.slot-picker > * {
+  min-width: 0;
 }
 
 .booking-summary dl {
   display: grid;
   gap: var(--space-3);
   margin: 0;
+}
+
+.booking-summary__astrologer {
+  align-items: center;
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
 }
 
 .booking-summary dl > div {

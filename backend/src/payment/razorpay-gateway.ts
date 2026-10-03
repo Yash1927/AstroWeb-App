@@ -15,7 +15,7 @@ export type CreatedRazorpayOrder = {
 export interface RazorpayGateway {
   createOrder(input: CreateRazorpayOrderInput): Promise<CreatedRazorpayOrder>;
   getCheckoutKeyId(): string;
-  refundPayment(paymentId: string, amountPaise: number, paymentRecordId: string): Promise<void>;
+  refundPayment(paymentId: string, paymentRecordId: string): Promise<void>;
 }
 
 export class OfficialRazorpayGateway implements RazorpayGateway {
@@ -59,17 +59,22 @@ export class OfficialRazorpayGateway implements RazorpayGateway {
     return { id: order.id, amountPaise, currency: "INR" as const };
   }
 
-  async refundPayment(paymentId: string, amountPaise: number, paymentRecordId: string) {
+  async refundPayment(paymentId: string, paymentRecordId: string) {
     const client = this.getClient();
     const payment = await client.payments.fetch(paymentId);
+    const amountPaidPaise = Number(payment.amount);
+    const amountRefundedPaise = Number(payment.amount_refunded ?? 0);
+    if (!Number.isInteger(amountPaidPaise) || amountPaidPaise < 1) {
+      throw new Error("Razorpay returned an invalid payment amount.");
+    }
     if (
       payment.refund_status === "full"
-      || Number(payment.amount_refunded ?? 0) >= amountPaise
+      || amountRefundedPaise >= amountPaidPaise
     ) {
       return;
     }
     await client.payments.refund(paymentId, {
-      amount: amountPaise,
+      amount: amountPaidPaise - amountRefundedPaise,
       speed: "normal",
       receipt: `rf_${paymentRecordId.replaceAll("-", "").slice(0, 32)}`,
       notes: { reason: "booking_slot_unavailable" },

@@ -48,7 +48,7 @@ describe('BookingLists', () => {
     const join = screen.getByRole('link', { name: 'Join' })
     expect(join.className).toContain('button--secondary')
     expect(join.getAttribute('href')).toBe(`/call/${userBooking.id}`)
-    expect(screen.getByText('Thu, 1 Oct · 3:30 PM')).toBeDefined()
+    expect(screen.getByText('Thu, 1 Oct · 3:30 pm')).toBeDefined()
 
     act(() => { vi.advanceTimersByTime(1_001) })
     const joinNow = screen.getByRole('link', { name: 'Join now' })
@@ -88,7 +88,7 @@ describe('BookingLists', () => {
 
     expect(screen.getByText('Maya Shah')).toBeDefined()
     expect(screen.getByText('17 Aug 1991')).toBeDefined()
-    expect(screen.getByText('5:30 AM')).toBeDefined()
+    expect(screen.getByText('5:30 am')).toBeDefined()
     expect(screen.getByText('+91 98765 43210')).toBeDefined()
     expect(container.textContent).not.toContain('Email')
   })
@@ -108,7 +108,7 @@ describe('BookingLists', () => {
     )
 
     expect(screen.queryByRole('link', { name: /Join/u })).toBeNull()
-    expect(screen.getByText(/Anika Rao will call you at 3:30 PM on \+91 98765 43210/)).toBeDefined()
+    expect(screen.getByText(/Anika Rao will call you at 3:30 pm on \+91 98765 43210/)).toBeDefined()
     expect(screen.getByRole('link', { name: 'Wrong number? Update it in Settings.' }).getAttribute('href'))
       .toBe('/settings')
   })
@@ -136,10 +136,9 @@ describe('BookingLists', () => {
       </MemoryRouter>,
     )
 
-    expect(screen.getByText(/Phone call · Thu, 1 Oct · 3:30 PM/)).toBeDefined()
+    expect(screen.getByText(/Phone call · Thu, 1 Oct · 3:30 pm/)).toBeDefined()
     expect(screen.getByRole('link', { name: '+91 98765 43210' }).getAttribute('href'))
       .toBe('tel:+919876543210')
     expect(screen.queryByRole('link', { name: /Join/u })).toBeNull()
   })
 })
-

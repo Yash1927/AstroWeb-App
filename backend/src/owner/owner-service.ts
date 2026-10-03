@@ -2,6 +2,7 @@ import argon2 from "argon2";
 import { randomUUID } from "node:crypto";
 import { db } from "../prisma/db";
 import { hashOwnerPassword } from "../prisma/seed-helpers";
+import { publicMediaUrl } from "../media/media-service";
 
 const missingOwnerHash =
   "$argon2id$v=19$m=65536,p=4,t=3$GeLu1IsYiyNTfvb43gtE2A$kjz/e9b0yCAsOuEpp6zuDhbutUeTiBNkhphU/hFS6e4";
@@ -18,6 +19,7 @@ export type AstrologerProfile = {
   languages: string[];
   mustChangePassword: boolean;
   profileSavedAt: string | null;
+  photoUrl?: string | null;
 };
 
 export type OwnerSettings = {
@@ -68,6 +70,7 @@ function toProfile(astrologer: {
   languages: readonly string[];
   mustChangePassword: boolean;
   profileSavedAt: { toString(): string } | null;
+  profileMediaId: string | null;
 }): AstrologerProfile {
   return {
     ...astrologer,
@@ -75,6 +78,7 @@ function toProfile(astrologer: {
     expertise: [...astrologer.expertise],
     languages: [...astrologer.languages],
     profileSavedAt: astrologer.profileSavedAt?.toString() ?? null,
+    photoUrl: null,
   };
 }
 
@@ -89,6 +93,7 @@ const profileFields = [
   "isListed",
   "mustChangePassword",
   "profileSavedAt",
+  "profileMediaId",
   "createdAt",
 ] as const;
 
@@ -116,13 +121,22 @@ export class DatabaseOwnerService implements OwnerService {
       .orderBy((astrologer) => astrologer.displayName.asc())
       .all();
 
-    return astrologers.map(toProfile);
+    const assets = await this.photoAssets(astrologers.map((item) => item.profileMediaId));
+    return astrologers.map((item) => {
+      const storageKey = item.profileMediaId ? assets.get(item.profileMediaId) : undefined;
+      return { ...toProfile(item), photoUrl: storageKey ? publicMediaUrl(storageKey) : null };
+    });
   }
 
   async getAstrologer(id: string) {
     const astrologer = await db.orm.public.Astrologer.select(...profileFields).first({ id });
     if (!astrologer) throw new OwnerNotFoundError("Astrologer not found.");
-    return toProfile(astrologer);
+    const profile = toProfile(astrologer);
+    if (astrologer.profileMediaId) {
+      const asset = await db.orm.public.MediaAsset.select("storageKey").first({ id: astrologer.profileMediaId });
+      profile.photoUrl = asset ? publicMediaUrl(asset.storageKey) : null;
+    }
+    return profile;
   }
 
   async createAstrologer(input: CreateAstrologerInput) {
@@ -182,10 +196,13 @@ export class DatabaseOwnerService implements OwnerService {
         isActive: false,
         isListed: false,
       });
-      await transaction.orm.public.Session.where({
-        role: "astrologer",
-        subjectId: id,
-      }).delete();
+      const deleteSessions = transaction.sql.public.Session.delete()
+        .where((session, functions) => functions.and(
+          functions.eq(session.role, "astrologer"),
+          functions.eq(session.subjectId, id),
+        ))
+        .build();
+      await transaction.execute(deleteSessions);
     });
 
     return this.getAstrologer(id);
@@ -202,10 +219,13 @@ export class DatabaseOwnerService implements OwnerService {
         passwordHash,
         mustChangePassword: true,
       });
-      await transaction.orm.public.Session.where({
-        role: "astrologer",
-        subjectId: id,
-      }).delete();
+      const deleteSessions = transaction.sql.public.Session.delete()
+        .where((session, functions) => functions.and(
+          functions.eq(session.role, "astrologer"),
+          functions.eq(session.subjectId, id),
+        ))
+        .build();
+      await transaction.execute(deleteSessions);
     });
   }
 
@@ -228,6 +248,14 @@ export class DatabaseOwnerService implements OwnerService {
     await this.getSettings();
     await db.orm.public.Settings.where({ id: 1 }).update(input);
     return this.getSettings();
+  }
+
+  private async photoAssets(ids: Array<string | null>) {
+    const uniqueIds = [...new Set(ids.filter((id): id is string => Boolean(id)))];
+    if (!uniqueIds.length) return new Map<string, string>();
+    const rows = await db.orm.public.MediaAsset.select("id", "storageKey")
+      .where((asset) => asset.id.in(uniqueIds)).all();
+    return new Map(rows.map((row) => [row.id, row.storageKey]));
   }
 }
 

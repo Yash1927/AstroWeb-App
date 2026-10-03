@@ -33,6 +33,7 @@ type PageState = 'loading' | 'ready' | 'signed-out' | 'error'
 type Person = {
   id: string
   name: string
+  photoUrl?: string | null
 }
 
 type RoomDetails = {
@@ -247,12 +248,12 @@ export default function CallRoomPage({ audience }: CallRoomPageProps) {
       ? Promise.all([userApi.getBooking(bookingId), userApi.getMe()]).then(([booking, user]) => ({
         booking,
         local: { id: user.id, name: user.name },
-        remote: { id: booking.astrologer.id, name: booking.astrologer.displayName },
+        remote: { id: booking.astrologer.id, name: booking.astrologer.displayName, photoUrl: booking.astrologer.photoUrl },
       }))
       : Promise.all([astrologerApi.getBooking(bookingId), astrologerApi.getProfile()])
         .then(([booking, profile]) => ({
           booking,
-          local: { id: profile.id, name: profile.displayName },
+          local: { id: profile.id, name: profile.displayName, photoUrl: profile.photoUrl },
           remote: { id: booking.user.id, name: booking.user.name },
         }))
 
@@ -700,7 +701,7 @@ export default function CallRoomPage({ audience }: CallRoomPageProps) {
           <div className="call-room__participants">
             <div className="call-participant">
               <div className={`call-participant__avatar${localSpeaking && !localMuted ? ' call-participant__avatar--speaking' : ''}`}>
-                <Avatar id={details.local.id} name={details.local.name} size={96} />
+                <Avatar id={details.local.id} name={details.local.name} size={96} src={details.local.photoUrl} />
                 {localMuted ? <MutedBadge name={details.local.name} /> : null}
               </div>
               <strong>{details.local.name}</strong>
@@ -708,7 +709,7 @@ export default function CallRoomPage({ audience }: CallRoomPageProps) {
             </div>
             <div className="call-participant">
               <div className={`call-participant__avatar${peerSpeaking && !peerMuted ? ' call-participant__avatar--speaking' : ''}`}>
-                <Avatar id={details.remote.id} name={details.remote.name} size={96} />
+                <Avatar id={details.remote.id} name={details.remote.name} size={96} src={details.remote.photoUrl} />
                 {peerMuted ? <MutedBadge name={details.remote.name} /> : null}
               </div>
               <strong>{details.remote.name}</strong>
@@ -818,4 +819,3 @@ export default function CallRoomPage({ audience }: CallRoomPageProps) {
     </main>
   )
 }
-

@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import { ownerLoginRateLimiter, type LoginRateLimiter } from "../src/auth/login-rate-limit";
 import {
   sessionConfigs,
@@ -65,7 +66,8 @@ export function createOwnerAuthRouter({
         sessionCookieOptions("owner"),
       );
       response.json({ ok: true });
-    } catch {
+    } catch (error) {
+      logRouteError("owner.login", error);
       response.status(503).json({ error: "The service is unavailable. Please try again." });
     }
   });

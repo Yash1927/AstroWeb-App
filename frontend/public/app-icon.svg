@@ -1,6 +1,5 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
-  <title id="title">AstroWebApp placeholder icon</title>
-  <rect width="512" height="512" fill="#FFFBEB" />
-  <circle cx="256" cy="256" r="190" fill="#F5C542" />
-  <path fill="#FFFFFF" d="M256 130 142 382h61l23-55h60l-21-50h-18l25-61 69 166h61L288 130h-32Z" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 680" role="img" aria-labelledby="title">
+  <title id="title">Astromaitreyi monogram</title>
+  <rect width="680" height="680" fill="#FFFBEB" />
+  <image href="logo.jpg" x="-287" y="-20" width="1254" height="1254" />
 </svg>

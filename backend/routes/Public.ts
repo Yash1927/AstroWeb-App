@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { logRouteError } from "../src/http/route-error-log";
 import { db } from "../src/prisma/db";
 
 const router = Router();
@@ -7,7 +8,8 @@ router.get("/health/db", async (_request, response) => {
   try {
     await db.orm.public.Settings.select("id").first();
     response.json({ ok: true });
-  } catch {
+  } catch (error) {
+    logRouteError("public.health.database", error);
     response.status(503).json({ ok: false });
   }
 });
@@ -25,12 +27,14 @@ router.get("/settings/public", async (_request, response) => {
     ).first({ id: 1 });
 
     if (!settings) {
+      logRouteError("public.settings", new Error("Settings row is missing."));
       response.status(503).json({ error: "Settings are unavailable." });
       return;
     }
 
     response.json(settings);
-  } catch {
+  } catch (error) {
+    logRouteError("public.settings", error);
     response.status(503).json({ error: "Settings are unavailable." });
   }
 });

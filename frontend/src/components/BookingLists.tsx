@@ -40,6 +40,10 @@ function personId(booking: UserBooking | AstrologerBooking, audience: BookingLis
     : (booking as AstrologerBooking).user.id
 }
 
+function personPhoto(booking: UserBooking | AstrologerBooking, audience: BookingListsProps['audience']) {
+  return audience === 'user' ? (booking as UserBooking).astrologer.photoUrl : null
+}
+
 function UserDetails({ booking }: { booking: AstrologerBooking }) {
   const gender = booking.user.gender
     ? `${booking.user.gender[0].toLocaleUpperCase()}${booking.user.gender.slice(1)}`
@@ -88,7 +92,7 @@ function BookingCard({
     <Card className="booking-card">
       <header className="booking-card__header">
         <div className="booking-card__person">
-          <Avatar id={personId(booking, audience)} name={name} size={40} />
+          <Avatar id={personId(booking, audience)} name={name} size={40} src={personPhoto(booking, audience)} />
           <div>
             <h3>{name}</h3>
             <p>
@@ -167,4 +171,3 @@ export function BookingLists({ audience, bookings }: BookingListsProps) {
     </div>
   )
 }
-

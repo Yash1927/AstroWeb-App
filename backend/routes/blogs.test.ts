@@ -22,10 +22,12 @@ const comment: PublicBlogComment = {
 const post: PublicBlogPost = {
   id: blogId,
   title: "A gentle guide",
-  body: "First paragraph.\n\nSecond paragraph.",
+  body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "First paragraph." }] }] },
   excerpt: "First paragraph. Second paragraph.",
   publishedAt: "2026-10-02T07:00:00Z",
-  author: { id: "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0", displayName: "Anika Rao" },
+  author: { id: "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0", displayName: "Anika Rao", photoUrl: null },
+  coverUrl: null,
+  readingMinutes: 1,
   likeCount: 2,
   commentCount: 1,
   likedByViewer: true,
@@ -47,11 +49,14 @@ function fakeBlogs(): BlogService {
       id: blogId,
       title: post.title,
       body: post.body,
+      coverMediaId: null,
+      coverUrl: null,
       status: "published" as const,
       publishedAt: post.publishedAt,
       createdAt: post.publishedAt,
       updatedAt: post.publishedAt,
       likeCount: 2,
+      readingMinutes: 1,
       commentCount: 1,
       comments: [{ id: commentId, body: comment.body, createdAt: comment.createdAt, authorFirstName: "Maya" }],
     })),
@@ -114,7 +119,8 @@ describe("public blogs", () => {
     expect(list.status).toBe(200);
     expect(blogs.listPublishedPosts).toHaveBeenCalledWith(2);
     expect(detail.status).toBe(200);
-    expect(detail.body.post.body).toContain("Second paragraph.");
+    expect(detail.body.post.body.type).toBe("doc");
+    expect(JSON.stringify(detail.body.post.body)).toContain("First paragraph.");
     expect(blogs.getPublishedPost).toHaveBeenCalledWith(blogId, undefined);
   });
 
@@ -165,4 +171,3 @@ describe("user blog actions", () => {
     expect(blogs.createComment).toHaveBeenCalledTimes(1);
   });
 });
-

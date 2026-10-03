@@ -15,7 +15,8 @@ import {
 } from "../src/astrologer/astrologer-service";
 import { createAstrologerRouter } from "./Astrologer";
 import { createAstrologerAuthRouter } from "./AstrologerAuth";
-import type { BlogService } from "../src/blog/blog-service";
+import { BlogMediaValidationError, type BlogService } from "../src/blog/blog-service";
+import type { MediaService } from "../src/media/media-service";
 
 const astrologerId = "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0";
 const ownBookingId = "4090cd52-cb14-4167-834d-ee7024fd9bda";
@@ -135,6 +136,32 @@ function fakeBlogs(): BlogService {
   };
 }
 
+function fakeMedia() {
+  return {
+    deleteOwnAsset: vi.fn(async () => undefined),
+    removeOwnProfile: vi.fn(async () => undefined),
+    removeProfileAsOwner: vi.fn(async () => undefined),
+    uploadBlogImage: vi.fn(async () => ({
+      id: "6fab01f4-20a8-4822-9de2-8d625ca26d29",
+      kind: "blog_image" as const,
+      url: "https://media.example.test/blog.webp",
+      width: 1200,
+      height: 800,
+      bytes: 1234,
+      createdAt: "2026-10-03T08:00:00Z",
+    })),
+    uploadProfile: vi.fn(async () => ({
+      id: "8c86ca4e-bde2-4f69-b983-021772311986",
+      kind: "profile_photo" as const,
+      url: "https://media.example.test/profile.webp",
+      width: 512,
+      height: 512,
+      bytes: 900,
+      createdAt: "2026-10-03T08:00:00Z",
+    })),
+  };
+}
+
 function testApp(
   astrologers = fakeAstrologers(),
   sessions = fakeSessions(),
@@ -142,6 +169,7 @@ function testApp(
   availability = fakeAvailability(),
   bookings = fakeBookings(),
   blogs = fakeBlogs(),
+  media = fakeMedia(),
 ) {
   const app = express();
   app.use(express.json());
@@ -151,9 +179,9 @@ function testApp(
   );
   app.use(
     "/api/astrologer",
-    createAstrologerRouter({ astrologers, availability, bookings, blogs, sessions }),
+    createAstrologerRouter({ astrologers, availability, bookings, blogs, media: media as unknown as MediaService, sessions }),
   );
-  return { app, astrologers, availability, bookings, blogs, sessions };
+  return { app, astrologers, availability, bookings, blogs, media, sessions };
 }
 
 describe("astrologer authentication", () => {
@@ -395,7 +423,8 @@ describe("protected astrologer routes", () => {
     const commentId = "8b834d55-89c3-47d2-ab28-b8373842fd40";
     const created = await request(app).post("/api/astrologer/blogs").send({
       title: " A gentle guide ",
-      body: " Plain text only. ",
+      body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Plain text only." }] }] },
+      coverMediaId: null,
       status: "draft",
     });
     const removed = await request(app).delete(`/api/astrologer/blogs/${blogId}/comments/${commentId}`);
@@ -404,9 +433,83 @@ describe("protected astrologer routes", () => {
     expect(removed.status).toBe(204);
     expect(blogs.saveAstrologerPost).toHaveBeenCalledWith(astrologerId, null, {
       title: "A gentle guide",
-      body: "Plain text only.",
+      body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Plain text only." }] }] },
+      coverMediaId: null,
       status: "draft",
     });
     expect(blogs.deleteAstrologerComment).toHaveBeenCalledWith(astrologerId, blogId, commentId);
+  });
+
+  it("returns the specific blog validation message to the editor", async () => {
+    const { app, blogs } = testApp();
+    const response = await request(app).post("/api/astrologer/blogs").send({
+      title: "A gentle guide",
+      body: { type: "doc", content: [{ type: "video" }] },
+      coverMediaId: null,
+      status: "draft",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "The post contains an unsupported block." });
+    expect(blogs.saveAstrologerPost).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when a blog image is not owned by the signed-in astrologer", async () => {
+    const blogs = fakeBlogs();
+    blogs.saveAstrologerPost = vi.fn(async () => {
+      throw new BlogMediaValidationError("Every image must belong to this astrologer.");
+    });
+    const { app } = testApp(
+      fakeAstrologers(),
+      fakeSessions(),
+      new LoginRateLimiter(),
+      fakeAvailability(),
+      fakeBookings(),
+      blogs,
+    );
+    const response = await request(app).post("/api/astrologer/blogs").send({
+      title: "A gentle guide",
+      body: { type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Body" }] }] },
+      coverMediaId: null,
+      status: "draft",
+    });
+
+    expect(response.status).toBe(400);
+    expect(response.body).toEqual({ error: "Every image must belong to this astrologer." });
+  });
+
+  it("scopes profile removal and blog media deletion to the signed-in astrologer", async () => {
+    const media = fakeMedia();
+    const { app } = testApp(
+      fakeAstrologers(),
+      fakeSessions(),
+      new LoginRateLimiter(),
+      fakeAvailability(),
+      fakeBookings(),
+      fakeBlogs(),
+      media,
+    );
+    const mediaId = "6fab01f4-20a8-4822-9de2-8d625ca26d29";
+
+    expect((await request(app).delete("/api/astrologer/profile/photo")).status).toBe(204);
+    expect((await request(app).delete(`/api/astrologer/media/${mediaId}`)).status).toBe(204);
+    expect(media.removeOwnProfile).toHaveBeenCalledWith(astrologerId);
+    expect(media.deleteOwnAsset).toHaveBeenCalledWith(astrologerId, mediaId);
+  });
+
+  it("does not reach media storage without an astrologer session", async () => {
+    const media = fakeMedia();
+    const { app } = testApp(
+      fakeAstrologers(),
+      fakeSessions(null),
+      new LoginRateLimiter(),
+      fakeAvailability(),
+      fakeBookings(),
+      fakeBlogs(),
+      media,
+    );
+
+    expect((await request(app).delete("/api/astrologer/profile/photo")).status).toBe(401);
+    expect(media.removeOwnProfile).not.toHaveBeenCalled();
   });
 });

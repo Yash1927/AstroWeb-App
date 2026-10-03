@@ -1,4 +1,5 @@
 import type { BookingCardBase, BookingStatus } from './api/booking-history'
+import { withLowercaseDayPeriod } from './display-time'
 
 const dateFormatter = new Intl.DateTimeFormat('en-IN', {
   day: 'numeric',
@@ -20,11 +21,11 @@ export function bookingStatusAt(booking: BookingCardBase, now: number): BookingS
 
 export function formatBookingDateTime(value: string) {
   const date = new Date(value)
-  return `${dateFormatter.format(date)} · ${timeFormatter.format(date).toLocaleUpperCase()}`
+  return `${dateFormatter.format(date)} · ${withLowercaseDayPeriod(timeFormatter.format(date))}`
 }
 
 export function formatBookingTime(value: string) {
-  return timeFormatter.format(new Date(value)).toLocaleUpperCase()
+  return withLowercaseDayPeriod(timeFormatter.format(new Date(value)))
 }
 
 export function formatPrice(booking: BookingCardBase) {
@@ -50,7 +51,7 @@ export function formatBirthDate(value: string | null) {
 export function formatBirthTime(value: string | null) {
   if (!value) return 'Not provided'
   const [hours, minutes] = value.split(':').map(Number)
-  const suffix = hours! >= 12 ? 'PM' : 'AM'
+  const suffix = hours! >= 12 ? 'pm' : 'am'
   const displayHours = hours! % 12 || 12
   return `${displayHours}:${String(minutes).padStart(2, '0')} ${suffix}`
 }
@@ -58,4 +59,3 @@ export function formatBirthTime(value: string | null) {
 export function formatPhone(value: string) {
   return value.replace(/^(\+91)(\d{5})(\d{5})$/u, '$1 $2 $3')
 }
-

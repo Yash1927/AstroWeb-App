@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import {
   publicAstrologerService,
   type PublicAstrologerCard,
@@ -29,6 +30,7 @@ function publicFields(astrologer: PublicAstrologerCard): PublicAstrologerCard {
     expertise: astrologer.expertise,
     languages: astrologer.languages,
     experienceYears: astrologer.experienceYears,
+    photoUrl: astrologer.photoUrl ?? null,
   };
 }
 
@@ -43,7 +45,8 @@ export function createPublicAstrologerRouter({ astrologers, now, slots }: Depend
     try {
       const eligible = await astrologers.listEligibleAstrologers();
       response.json({ astrologers: eligible.map(publicFields) });
-    } catch {
+    } catch (error) {
+      logRouteError("public.astrologers.list", error);
       response.status(503).json({
         error: "Astrologers are unavailable. Please try again.",
       });
@@ -72,6 +75,7 @@ export function createPublicAstrologerRouter({ astrologers, now, slots }: Depend
         response.status(404).json({ error: error.message });
         return;
       }
+      logRouteError("public.astrologers.slots", error);
       response.status(503).json({ error: "Times are unavailable. Please try again." });
     }
   });

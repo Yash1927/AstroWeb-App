@@ -17,6 +17,7 @@ export type UserBooking = BookingCardBase & {
   astrologer: {
     displayName: string
     id: string
+    photoUrl?: string | null
   }
   phone: string | null
 }
@@ -41,4 +42,3 @@ export type BookingSections<T extends BookingCardBase> = {
 export type UserBookingSections = BookingSections<UserBooking> & {
   subscriptionCredits: number
 }
-

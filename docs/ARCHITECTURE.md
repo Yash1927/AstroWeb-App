@@ -2,18 +2,19 @@
 
 How the app is put together, as built. For what it should do, see [README.md](../README.md).
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Current state
 
-Step 15 makes the frontend installable and replaces the policy placeholders (README §3, §5.7 and §17). The production build emits a manifest and an auto-updating app-shell service worker; public policy pages include live Settings-backed pricing.
+Steps 1–15 are built. Pending-fix items 1–16 are complete; Step 16 remains.
 
-- `frontend/` is an installable React single-page app with public Home, Blogs and policy pages, Normal/Urgent/Subscription booking, History, Settings, authenticated Normal-call rooms, and protected owner and astrologer workflows. Blog reading is public; liking and commenting use the existing Google sign-in without requiring booking details. `frontend/src/design.css` is the only app stylesheet.
+- `frontend/` is an installable React single-page app branded Astromaitreyi, with a shared logo app bar, public Home, Blogs and policy pages, Normal/Urgent/Subscription booking, History, Settings, authenticated Normal-call rooms, and protected owner and astrologer workflows. Blog reading is public; liking and commenting use the existing Google sign-in without requiring booking details. `frontend/src/design.css` is the only app stylesheet.
 - `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
-- `backend/src/prisma/contract.prisma` defines the 13 application tables. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
+- `backend/src/prisma/contract.prisma` defines the 14 application tables, including `MediaAsset`. The running app and seed use the pooled `DATABASE_URL`; Prisma migration commands use `DIRECT_DATABASE_URL`.
 - Prisma 8 timestamps use native PostgreSQL `timestamptz`, `date` and `time` columns. A Temporal polyfill supplies the required runtime types on Node.js 24.
 - Vite forwards `/api` and `/ws` to the backend in development so the browser uses one origin.
-- The Vite production build generates the web manifest and auto-updating Workbox service worker. It precaches only the app shell and denies API, WebSocket, call-room and payment paths from its navigation fallback.
+- The Vite production build generates the web manifest and auto-updating Workbox service worker. It precaches only the user app shell and Latin/Latin Extended Nunito WOFF2 files; panel, rich-editor, cropper and astrologer-API lazy chunks stay network-loaded. API, WebSocket, call-room and payment paths are denied from its navigation fallback.
+- Generic route-level `503` paths log only a fixed operation context plus a sanitized error class and message. Request data and record ids are never passed to the logger.
 - WebSocket rooms are keyed by booking id. They relay validated WebRTC signalling, transient chat and live presence/mute state only between the booked user and astrologer during the stored call window. The room timer closes both sockets at the booking end.
 
 ## Overview
@@ -119,7 +120,7 @@ backend/
   src/booking-history/      Subject-scoped booking reads and response shaping
   src/blog/                 Blog validation, persistence, response shaping and comment throttling
   src/dev/                  Production-blocked development data helper
-  src/http/                 Shared Zod response helper
+  src/http/                 Shared Zod response helper and sanitized route-error logger
   src/owner/                Owner validation schemas and database service
   src/payment/              Razorpay gateway, signatures and idempotent settlement/refund service
   src/public/               Public Home-card database service
@@ -128,7 +129,7 @@ backend/
   migrations/               Prisma 8 migration graph, snapshots and compiled operations
   src/realtime/             Upgrade authentication, room/chat protocol, booking lifecycle and TURN credentials
 frontend/
-  public/                    Source SVG plus generated install icons
+  public/                    Unchanged owner logo, generated monogram source and install icons
   src/App.tsx               Route map, connectivity state and user app shell
   src/call/                  WebSocket protocol, WebRTC negotiation, timer and speaking analysis
   src/api/calls.ts           Typed booking-scoped ICE server client
@@ -140,6 +141,8 @@ frontend/
   src/api/booking-history.ts Shared booking-card response types
   src/api/blogs.ts          Public reading and signed-in reaction client
   src/components/           Shared UI components
+  src/components/AppBrand.tsx Shared logo/name and app-bar treatment
+  src/components/PageHeader.tsx Shared screen heading/intro/action pattern
   src/components/InstallPrompt.tsx Home installation banner and iOS Safari hint
   src/components/PolicyLinks.tsx Shared seven-route policy navigation
   src/components/AvailabilityEditor.tsx Protected weekly and exception editor
@@ -157,7 +160,8 @@ frontend/
   src/user-details.ts       Shared browser-side detail validation and form shaping
   src/design.css             Tokens, base styles, components and animation
   src/main.tsx               Fonts, global CSS, router and React root
-  pwa-assets.config.ts       Reproducible PNG generation from the source SVG
+  scripts/create-pwa-icon-source.mjs Reproducible install and compact-header monogram assets
+  pwa-assets.config.ts       PNG generation and maskable safe-zone padding
   vite.config.ts             Development proxy plus manifest/service-worker build
 docs/
   features/                 Per-step implementation records
@@ -187,7 +191,13 @@ docs/
 | `ws` | Authenticated upgrade handling and booking-room signalling | Boilerplate; implemented in 10 |
 | `razorpay` | Official server-side order creation, payment lookup and refunds | 12 |
 | `vite-plugin-pwa` | Generate/register the manifest and auto-updating Workbox service worker | 15 (development only) |
-| `@vite-pwa/assets-generator` | Generate install PNGs from the one source SVG | 15 (development only) |
+| `@vite-pwa/assets-generator` | Generate install PNGs from the cropped monogram source | 15 (development only) |
+| `sharp` | Backend image decoding, resizing and metadata-free WebP encoding; frontend development icon generation | Pending fixes 11 and 13 |
+| `@aws-sdk/client-s3` | Server-only Cloudflare R2 object writes and deletes | Pending fix 13 |
+| `file-type` | Detect upload type from file bytes instead of filename or browser MIME | Pending fix 13 |
+| `multer` and `@types/multer` | Memory-backed, size-limited multipart image intake | Pending fix 13; types are development-only |
+| `helmet` | Security headers and CSP, including the configured media origin | Pending fix 13 |
+| TipTap React, Starter Kit, link, underline, image and placeholder extensions | Structured astrologer blog editor | Pending fix 15 |
 
 ## External services
 
@@ -198,6 +208,7 @@ docs/
 | Google public STUN | WebRTC host/server-reflexive ICE candidates; no account or secret | None | 10 |
 | coturn or compatible TURN service | Relayed WebRTC audio on restrictive and mobile networks | `TURN_URLS`, `TURN_SECRET` | 11 |
 | Razorpay | INR Orders API, Standard Checkout, signed webhooks and full late-payment refunds | `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, `RAZORPAY_WEBHOOK_SECRET` | 12 |
+| Cloudflare R2 | Public processed profile photos and blog images; SDK access remains server-only | `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_BASE_URL` | Pending fix 13 |
 
 ## Main flows
 
@@ -215,6 +226,7 @@ Describe each flow once it's built, with a sequence diagram where it helps. Link
 | In-app call (WebSocket signalling, WebRTC, TURN) | 10, 11 | [In-app call flow](#in-app-call-flow) |
 | Urgent payment (Razorpay orders, verification, webhooks, refunds) | 12 | [Paid booking flow](#paid-booking-flow) |
 | Blogs | 14 | [Blog flow](#blog-flow) |
+| Media uploads | Pending fixes 13–15 | [Media and rich-blog flow](#media-and-rich-blog-flow) |
 | Install, offline and public policies | 15 | [Install, offline and policy flow](#install-offline-and-policy-flow) |
 
 ## Public Home flow
@@ -225,7 +237,9 @@ Settings stay separate from card data. A settings failure leaves browsing intact
 
 ## Install, offline and policy flow
 
-`vite-plugin-pwa` runs only for a production build. It emits the README §5.7 manifest, registers an auto-updating generated service worker and precaches `index.html`, compiled JavaScript/CSS, local fonts, the manifest and install icons. There is no runtime caching strategy. The navigation fallback explicitly excludes `/api`, `/ws`, both call-room prefixes and paths containing payment, payments or Razorpay.
+`vite-plugin-pwa` runs only for a production build. It emits the README §5.7 manifest under the Astromaitreyi name, registers an auto-updating generated service worker and precaches `index.html`, user-screen JavaScript/CSS, the manifest, install icons and the used Latin/Latin Extended WOFF2 files. Panel, rich-editor, cropper and astrologer-API chunks are excluded. There is no runtime caching strategy. The navigation fallback explicitly excludes `/api`, `/ws`, both call-room prefixes and paths containing payment, payments or Razorpay.
+
+`npm run generate:pwa-assets` first uses `frontend/scripts/create-pwa-icon-source.mjs` to crop the AM ring from `frontend/public/logo.jpg` without modifying that file and emits the 96px header asset. `pwa-assets.config.ts` then generates 192px, 512px, Apple touch and padded maskable PNGs on the cream background.
 
 `InstallPrompt` listens for `beforeinstallprompt` while the Home shell is mounted. Supported Android/desktop browsers get a dismissible banner; iPhone/iPad Safari gets the one-time Share → Add to Home Screen hint. Dismissal flags contain no personal data and stay in local storage. Standalone display mode suppresses both prompts.
 
@@ -255,7 +269,7 @@ flowchart LR
     Engine -->|UTC startsAt and endsAt| Picker
 ```
 
-The availability save replaces only the signed-in astrologer's rules and exceptions in one transaction. Weekly ranges form the base schedule; extra exception windows are merged in and blocked ranges are subtracted. The transaction reads confirmed future bookings only to count warnings and never changes a Booking row.
+The availability save replaces only the signed-in astrologer's rules and exceptions in one transaction. Both replacements use explicit Prisma SQL bulk deletes, so any number of old rows is removed before the new rows are inserted. Weekly ranges form the base schedule; extra exception windows are merged in and blocked ranges are subtracted. The transaction reads confirmed future bookings only to count warnings and never changes a Booking row.
 
 The public service first requires an active, listed, profile-saved astrologer. It then starts its four independent reads—Settings durations, weekly hours, date exceptions and blocking bookings—together and waits for all of them. It loads only exceptions and booking intervals that can affect the 14-date range. `calculateAvailableSlots` is clock-injected for deterministic tests. It interprets local availability in `Asia/Kolkata`, emits UTC instants, ignores expired holds and leaves today empty for Normal. Home displays those instants in IST and never sends a price or duration.
 
@@ -282,7 +296,7 @@ sequenceDiagram
     Tx-->>Home: 201 booking, or friendly 409 conflict
 ```
 
-The service derives user id from the session and derives price, duration, call mode, end time and status on the server. Complete details are required; Urgent and Subscription also require the user's saved phone. It invokes the same slot service used by the picker so eligibility, the 14-day range, Normal-from-tomorrow and current booking conflicts are rechecked at confirmation time.
+The service derives user id from the session and derives price, duration, call mode, end time and status on the server. Complete details are required; Urgent and Subscription also require the user's saved phone. It invokes the same slot service used by the picker so eligibility, the 14-day range, Normal-from-tomorrow and current booking conflicts are rechecked at confirmation time. Elapsed holds are changed to `expired` with one Prisma SQL bulk update before the new row is inserted.
 
 Every zero-price call type is confirmed immediately. Normal is always `in_app`; the phone call types are always `phone`. Positive-price Normal or Urgent creates a ten-minute `pending_payment` booking and linked created Payment after the backend creates the server-priced Razorpay order. For Subscription, a conditional database update consumes one available credit and confirms with `usedCredit=true`; if none remains, the service creates a ten-minute pack-payment hold whose Payment snapshots the current pack size. A zero-price pack adds its calls and consumes this booking in the same transaction. Prisma 8 normalizes PostgreSQL error `23P01` from `Booking_no_overlap` to `SqlQueryError.sqlState`; the mapper checks that property directly and through a transaction `cause` before returning the specified same-slot `409` response.
 
@@ -316,7 +330,7 @@ sequenceDiagram
     end
 ```
 
-Only the public Razorpay key id reaches the browser. The backend owns the amount, currency, receipt and order notes. Checkout is loaded on demand and receives the user's current name, Google email and canonical phone. Verification uses a timing-safe HMAC comparison plus stored user/booking/order ownership; webhook HMAC uses the untouched raw bytes before Express JSON parsing. `WebhookEvent.eventId` and unique provider ids provide database idempotency. A conditional `Payment` state change provides the cross-process winner for verification/webhook races; only that winner can add pack credits, consume the booked call and confirm the booking. An order-keyed queue also avoids duplicate work inside one process.
+Only the public Razorpay key id reaches the browser. The backend owns the amount, currency, receipt and order notes. Checkout is loaded on demand and receives the user's current name, Google email and canonical phone. Verification uses a timing-safe HMAC comparison plus stored user/booking/order ownership; webhook HMAC uses the untouched raw bytes before Express JSON parsing. A fee-bearing webhook is valid when the provider's gross payment minus its fee equals the stored order amount; settlement always uses the stored amount. `WebhookEvent.eventId` and unique provider ids provide database idempotency. A conditional `Payment` state change provides the cross-process winner for verification/webhook races; only that winner can add pack credits, consume the booked call and confirm the booking. An order-keyed queue also avoids duplicate work inside one process. Late-conflict refunds first fetch the provider payment and refund its full remaining gross amount, including any customer-paid fee.
 
 ## Booking history flow
 
@@ -442,7 +456,7 @@ sequenceDiagram
 
 Astrologer login follows the same session-manager flow through `POST /api/auth/astrologer/login`. `requireAstrologer` also checks that the session subject is the active astrologer record. A temporary-password account can reach session, logout and password-replacement actions; a router gate rejects profile, availability and booking access until `mustChangePassword` is false.
 
-Replacing a temporary password deletes all of that astrologer's sessions inside the password-update transaction, then creates one fresh session for the current browser. Owner deactivation and password reset also delete every session for that astrologer in the same transaction as the account change.
+Replacing a temporary password deletes all of that astrologer's sessions with one Prisma SQL bulk delete inside the password-update transaction, then creates one fresh session for the current browser. Owner deactivation and password reset use the same bulk plan in the account-change transaction.
 
 Cookie configurations for user, astrologer and owner roles live together with separate names. User and astrologer cookies use path `/` so shared APIs and `/ws` receive them; the owner cookie remains scoped to `/api/owner`. User sessions last 30 days; panel sessions last 12 hours.
 
@@ -450,9 +464,15 @@ The login limiter is held in the backend process. It is correct for the current 
 
 ## Blog flow
 
-`GET /api/blogs` reads only published rows, orders them by publication time and returns 20 summaries plus a next-page marker. The detail route shapes author and commenter identities for public display and optionally marks the current user's like and deletable comments when a valid user cookie is present.
+`GET /api/blogs` reads only published rows, orders them by publication time and returns 20 summaries plus a next-page marker. Summaries include the stored excerpt, reading time and explicit cover or first body image. The detail route shapes author and commenter identities for public display and optionally marks the current user's like and deletable comments when a valid user cookie is present.
 
-Likes use the `BlogLike` composite key, so one user can have at most one like per post. Comments are stored as plain text and returned oldest first. Protected mutations take the user or astrologer identity from the session: users delete only their own comments, astrologers mutate only their own posts and their posts' comments, and the owner can review the newest 50 comments. The browser renders every title, body and comment through React text nodes; no blog path accepts HTML.
+Likes use the `BlogLike` composite key, so one user can have at most one like per post. Comments remain plain text and return oldest first. Blog bodies are TipTap JSONB checked against the server allow-list and rendered by `BlogDocument.tsx` node by node; no path uses `dangerouslySetInnerHTML`. Protected mutations take identity from the session. Deleting an own post removes likes and comments transactionally, then removes its owned R2 objects and media rows. A visitor's comment draft stays in route-scoped session storage across Google redirect and is removed after a successful post.
+
+## Media and rich-blog flow
+
+Multipart routes accept one in-memory file with a 5 MB parser limit. `MediaService` detects JPG, PNG or WebP bytes, auto-orients, resizes and re-encodes through Sharp without carrying metadata. Profile images become 512×512 WebP; blog images are at most 1600px wide. The service writes a random object key through the S3-compatible R2 client before recording dimensions, byte size, owner and key in `MediaAsset`. Replacements and removals delete both stores. `npm run media:cleanup` scans assets older than 24 hours and deletes only rows not referenced by a profile, cover or body URL.
+
+TipTap sends JSON rather than HTML. The backend permits the documented block and mark set, rejects non-HTTP links, limits serialized content to 200 KB and 20 images, and confirms every image URL and cover belong to that astrologer. It normalizes link security attributes, derives the excerpt and 200-word-per-minute reading time, and saves those values with the document. The migration splits every former plain-text body on blank lines into TipTap paragraph nodes.
 
 ## Differences from the spec
 

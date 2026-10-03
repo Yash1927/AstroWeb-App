@@ -1,9 +1,12 @@
+import { useState } from 'react'
+
 type AvatarSize = 32 | 40 | 56 | 96
 
 type AvatarProps = {
   id: string
   name: string
   size?: AvatarSize
+  src?: string | null
 }
 
 const graphemeSegmenter = new Intl.Segmenter(undefined, {
@@ -39,9 +42,14 @@ function colourFor(id: string) {
   return Math.abs(hash) % 6
 }
 
-export function Avatar({ id, name, size = 40 }: AvatarProps) {
+export function Avatar({ id, name, size = 40, src }: AvatarProps) {
+  const [failedSrc, setFailedSrc] = useState<string | null>(null)
   const initials = initialsFor(name)
   const colour = colourFor(id) + 1
+
+  if (src && failedSrc !== src) {
+    return <img alt={name} className={`avatar avatar--${size}`} onError={() => setFailedSrc(src)} src={src} />
+  }
 
   return (
     <span

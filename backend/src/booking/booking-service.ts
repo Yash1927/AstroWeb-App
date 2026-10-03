@@ -231,10 +231,15 @@ export class DatabaseBookingRepository implements BookingRepository {
         return updated.subscriptionCredits;
       },
       async expireElapsedHolds(astrologerId, now) {
-        await transaction.orm.public.Booking
-          .where({ astrologerId, status: "pending_payment" })
-          .where((booking) => booking.holdExpiresAt.lte(now))
-          .update({ status: "expired" });
+        const plan = transaction.sql.public.Booking
+          .update({ status: "expired" })
+          .where((booking, functions) => functions.and(
+            functions.eq(booking.astrologerId, astrologerId),
+            functions.eq(booking.status, "pending_payment"),
+            functions.lte(booking.holdExpiresAt, now),
+          ))
+          .build();
+        await transaction.execute(plan);
       },
       async hasUpcomingNormal(userId, now) {
         const bookings = await transaction.orm.public.Booking.select(

@@ -1,5 +1,6 @@
 import cors from "cors";
 import express from "express";
+import helmet from "helmet";
 import astroRouter from "./routes/Astro";
 import astrologerRouter from "./routes/Astrologer";
 import astrologerAuthRouter from "./routes/AstrologerAuth";
@@ -18,12 +19,27 @@ import { paymentService } from "./src/payment/payment-service";
 export function createApp() {
   const app = express();
 
+  const mediaOrigin = (() => {
+    try { return process.env.R2_PUBLIC_BASE_URL ? new URL(process.env.R2_PUBLIC_BASE_URL).origin : undefined; }
+    catch { return undefined; }
+  })();
+  app.use(helmet({
+    contentSecurityPolicy: {
+      directives: {
+        "img-src": ["'self'", ...(mediaOrigin ? [mediaOrigin] : [])],
+        "script-src": ["'self'", "https://checkout.razorpay.com", "https://accounts.google.com"],
+        "frame-src": ["'self'", "https://api.razorpay.com", "https://accounts.google.com"],
+        "connect-src": ["'self'", "https://checkout.razorpay.com", "https://accounts.google.com"],
+      },
+    },
+  }));
+
   app.post(
     "/api/razorpay/webhook",
     express.raw({ type: "application/json", limit: "64kb" }),
     createRazorpayWebhookHandler(paymentService),
   );
-  app.use(express.json());
+  app.use(express.json({ limit: "220kb" }));
   app.use(
     cors({
       origin: process.env.APP_ORIGIN || false,

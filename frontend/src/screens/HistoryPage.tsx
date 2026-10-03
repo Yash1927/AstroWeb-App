@@ -6,8 +6,10 @@ import {
   BookingListSkeleton,
   Button,
   Card,
+  PageHeader,
   UserSignIn,
 } from '../components'
+import { formatCallsLeft } from '../subscription-display'
 
 type HistoryState = 'loading' | 'signed-out' | 'ready' | 'error'
 
@@ -58,7 +60,7 @@ export default function HistoryPage() {
 
   return (
     <section className="screen user-screen">
-      <h1>History</h1>
+      <PageHeader title="History" />
       {state === 'loading' ? (
         <BookingListSkeleton />
       ) : state === 'signed-out' ? (
@@ -75,7 +77,7 @@ export default function HistoryPage() {
         <div className="stack">
           {bookings.subscriptionCredits > 0 ? (
             <p className="booking-notice" role="status">
-              Subscription calls left: {bookings.subscriptionCredits}
+              Subscription: {formatCallsLeft(bookings.subscriptionCredits)}
             </p>
           ) : null}
           <BookingLists audience="user" bookings={bookings} />
@@ -84,4 +86,3 @@ export default function HistoryPage() {
     </section>
   )
 }
-

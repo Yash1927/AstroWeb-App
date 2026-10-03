@@ -11,6 +11,7 @@ const paymentEntitySchema = z.object({
   id: z.string().min(1).max(100),
   order_id: z.string().min(1).max(100),
   amount: z.coerce.number().int().positive(),
+  fee: z.coerce.number().int().nonnegative().nullable().optional(),
 }).passthrough();
 
 export const razorpayWebhookSchema = z.object({

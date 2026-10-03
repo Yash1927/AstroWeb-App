@@ -143,12 +143,17 @@ function verifySignature() {
     .digest("hex");
 }
 
-function webhook(eventId = "evt_1", amountPaise = 30_000) {
+function webhook(eventId = "evt_1", amountPaise = 30_000, feePaise?: number) {
   const raw = Buffer.from(JSON.stringify({
     event: "payment.captured",
     payload: {
       payment: {
-        entity: { id: paymentId, order_id: orderId, amount: amountPaise },
+        entity: {
+          id: paymentId,
+          order_id: orderId,
+          amount: amountPaise,
+          ...(feePaise === undefined ? {} : { fee: feePaise }),
+        },
       },
     },
   }));
@@ -224,6 +229,17 @@ describe("DefaultPaymentService", () => {
     expect(repository.payment.status).toBe("paid");
   });
 
+  it("confirms an Urgent webhook when Razorpay adds a customer fee", async () => {
+    const repository = new MemoryPaymentRepository();
+    const current = service(repository).service;
+    const event = webhook("evt_urgent_customer_fee", 30_600, 600);
+
+    await expect(current.webhook(event.raw, event.signature, event.eventId)).resolves.toBe("confirmed");
+
+    expect(repository.confirmedWrites).toBe(1);
+    expect(repository.payment.status).toBe("paid");
+  });
+
   it("adds a paid Subscription pack and consumes this booking exactly once", async () => {
     const repository = new MemoryPaymentRepository();
     repository.payment = {
@@ -265,6 +281,29 @@ describe("DefaultPaymentService", () => {
     }));
   });
 
+  it("adds Subscription credits when Razorpay adds a customer fee", async () => {
+    const repository = new MemoryPaymentRepository();
+    repository.payment = {
+      ...repository.payment,
+      amountPaise: 99_900,
+      purpose: "subscription_pack",
+      creditsPurchased: 4,
+      booking: {
+        ...repository.payment.booking!,
+        callType: "subscription",
+        pricePaise: 99_900,
+      },
+    };
+    const current = service(repository).service;
+    const event = webhook("evt_pack_customer_fee", 101_898, 1_998);
+
+    await expect(current.webhook(event.raw, event.signature, event.eventId)).resolves.toBe("confirmed");
+
+    expect(repository.confirmedWrites).toBe(1);
+    expect(repository.subscriptionCredits).toBe(3);
+    expect(repository.payment.booking?.usedCredit).toBe(true);
+  });
+
   it("refunds a late payment when confirming would take an occupied slot", async () => {
     const repository = new MemoryPaymentRepository();
     repository.overlap = true;
@@ -283,7 +322,6 @@ describe("DefaultPaymentService", () => {
     });
     expect(current.payments.refundPayment).toHaveBeenCalledWith(
       paymentId,
-      30_000,
       "payment-record-id",
     );
     expect(repository.refundedWrites).toBe(1);

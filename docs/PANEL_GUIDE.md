@@ -2,9 +2,9 @@
 
 Plain-language instructions for running the app day to day, written for people who aren't technical. Update this guide whenever something in the owner panel or the astrologer panel changes.
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
-The owner route at `/owner` and astrologer route at `/astrologer` are working. Both are separate from the user app and do not show its bottom tabs.
+The owner route at `/owner` and astrologer route at `/astrologer` are working. Both use the same Astromaitreyi logo app bar and centred content width as the user app. Their section tabs wrap when space is limited, and they do not show the user navigation tabs.
 
 ## For the owner
 
@@ -26,7 +26,7 @@ Each card has these actions:
 
 | Action | What it does |
 |---|---|
-| **View and edit** | Shows the name, email, expertise, languages, experience and whether the profile has been saved. The owner can change the name or email. |
+| **View and edit** | Shows the photo, name, email, expertise, languages, experience and whether the profile has been saved. The owner can change the name or email, or remove the photo for moderation. |
 | **Hide from Home** / **Show on Home** | Removes or restores an active, saved profile on public Home. Unsaved profiles remain off Home. |
 | **Deactivate** | Stops login, hides the account from Home and ends all of that astrologer's signed-in sessions. |
 | **Reactivate** | Restores the account, but leaves it hidden until you choose **Show on Home**. |
@@ -67,11 +67,12 @@ Five failed attempts for the same email and internet address use the login allow
 ### Fill in and preview your profile
 
 1. Open **Profile**.
-2. Enter the display name users should see.
-3. Add expertise tags. Vedic, Tarot and Numerology are suggestions; another short label is allowed.
-4. Add the languages you speak and set whole years of experience from 0 to 60.
-5. Choose **Preview** to see the exact card used on Home. Preview uses the unsaved form values. Its **Call** button does nothing.
-6. Choose **Save profile**. The first save makes the profile eligible for Home immediately while the owner has it shown and the account is active.
+2. To add or change the profile photo, choose **Upload photo** and select a JPG, PNG or WebP file up to 5 MB. In the square crop, adjust **Zoom**, **Move left or right** and **Move up or down**, then choose **Use this crop**. Check the circular preview and choose **Save photo**. **Remove photo** asks for confirmation before returning to initials.
+3. Enter the display name users should see.
+4. Add expertise tags. Vedic, Tarot and Numerology are suggestions; another short label is allowed.
+5. Add the languages you speak and set whole years of experience from 0 to 60.
+6. Choose **Preview** to see the exact card used on Home, including the selected photo. Preview uses the unsaved form values. Its **Call** button does nothing.
+7. Choose **Save profile**. The first save makes the profile eligible for Home immediately while the owner has it shown and the account is active.
 
 ### Set availability
 
@@ -97,13 +98,14 @@ The cards change as the start and end times pass without reloading the page.
 ### Write and manage blogs
 
 1. Open **Blogs** and choose **Write a post**.
-2. Enter a title of up to 120 characters and a plain-text body.
-3. Choose **Save draft** to keep it private, or **Publish** to make it appear on the user Blogs tab.
-4. Choose **Edit** on an existing post. A published post can be updated with **Publish changes** or returned to a private draft with **Unpublish**.
-5. Comments on the selected post appear below the editor. Choose **Delete** to remove a comment from your post.
-6. To remove a post, choose **Delete**, then confirm **Delete post**. Its likes and comments are removed with it.
+2. Enter a title of up to 120 characters. Select text to open the formatting bar for bold, italic, underline, H2, H3, quote, lists and a safe web link. Ctrl/Cmd+B, I, U and K work too.
+3. Put the cursor on an empty line and use the **+** button beside that line. Wait for upload to finish, then type an optional caption directly under the image. Return to that field later to edit the caption. At the top, upload a separate cover or pick one of the body images; without a cover, the first body image is used in the public list.
+4. Watch **Saving…** change to **Saved** during autosave. A failed attempt shows **Not saved** and waits for the next edit before trying again. **Save draft** keeps the post private; **Publish** makes it appear on the user Blogs tab.
+5. Choose **Edit** on an existing post. A published post can be updated with **Publish changes** or returned to a private draft with **Unpublish**.
+6. Comments on the selected post appear below the editor. Choose **Delete**, review the confirmation, then choose **Delete comment** to remove one from your post.
+7. To remove a post, choose **Delete**, then confirm **Delete post**. Its likes, comments and stored post images are removed with it.
 
-The editor never treats the body as HTML. Paragraph breaks remain visible, and text that looks like a script stays ordinary text.
+The app stores structured rich text, not HTML, and renders only supported formatting. Like and comment counts refresh after closing the editor and when you return to the browser window.
 
 ### Join a Normal call
 

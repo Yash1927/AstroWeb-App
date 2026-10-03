@@ -377,14 +377,13 @@ export class DefaultPaymentService {
   private async settle(
     stored: StoredPayment,
     paymentId: string,
-    amountPaise: number,
     eventId?: string,
   ): Promise<VerifyPaymentResult | SettlementResult> {
     try {
       const outcome = await this.repository.settle({
         orderId: stored.razorpayOrderId,
         paymentId,
-        amountPaise,
+        amountPaise: stored.amountPaise,
         eventId,
       });
       if (outcome.kind === "confirmed") {
@@ -402,7 +401,7 @@ export class DefaultPaymentService {
       return outcome;
     } catch (error) {
       if (!isBookingOverlapConstraintError(error)) throw error;
-      await this.gateway.refundPayment(paymentId, stored.amountPaise, stored.id);
+      await this.gateway.refundPayment(paymentId, stored.id);
       await this.repository.markRefunded(stored.razorpayOrderId, paymentId, eventId);
       return { status: "refunded", message: REFUND_MESSAGE };
     }
@@ -422,7 +421,6 @@ export class DefaultPaymentService {
       const outcome = await this.settle(
         stored,
         input.razorpayPaymentId,
-        stored.amountPaise,
       );
       if ("status" in outcome) return outcome;
       if (outcome.kind === "invalid" || outcome.kind === "ignored") {
@@ -462,8 +460,33 @@ export class DefaultPaymentService {
         });
         return outcome.kind;
       }
-      const outcome = await this.settle(stored, payment.id, payment.amount, eventId);
+      const feePaise = payment.fee ?? 0;
+      const amountMatchesOrder = payment.amount === stored.amountPaise
+        || payment.amount - feePaise === stored.amountPaise;
+      if (!amountMatchesOrder) {
+        console.error("Razorpay webhook payment amount did not match its stored order.", {
+          event: parsed.event,
+          feePaise,
+          paymentAmountPaise: payment.amount,
+          storedAmountPaise: stored.amountPaise,
+        });
+        const outcome = await this.repository.settle({
+          orderId: stored.razorpayOrderId,
+          paymentId: payment.id,
+          amountPaise: payment.amount,
+          eventId,
+        });
+        return outcome.kind;
+      }
+      const outcome = await this.settle(stored, payment.id, eventId);
       if ("status" in outcome) return outcome.status;
+      if (outcome.kind === "invalid") {
+        console.error("Razorpay webhook settlement was invalid.", {
+          event: parsed.event,
+          paymentAmountPaise: payment.amount,
+          storedAmountPaise: stored.amountPaise,
+        });
+      }
       return outcome.kind;
     });
   }

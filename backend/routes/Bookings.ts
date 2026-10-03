@@ -13,6 +13,7 @@ import {
 } from "../src/booking/booking-service";
 import { createBookingSchema } from "../src/booking/booking-schemas";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import { userService, type UserService } from "../src/user/user-service";
 
 type Dependencies = {
@@ -36,6 +37,7 @@ function respondWithBookingError(error: unknown, response: Response) {
     response.status(409).json({ error: error.message });
     return;
   }
+  logRouteError("user.bookings.create", error);
   response.status(503).json({ error: "Booking is unavailable. Please try again." });
 }
 

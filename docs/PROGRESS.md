@@ -1,6 +1,6 @@
 # Progress
 
-Last updated: 2026-10-02
+Last updated: 2026-10-03
 
 ## Build steps
 
@@ -27,7 +27,7 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 
 ## Next up
 
-Apply every item in `docs/PENDING_FIXES.md`, then start Step 16.
+Pending-fix items 1–16 are complete. Start Step 16 when requested.
 
 ## Known issues
 
@@ -35,7 +35,6 @@ Bugs, limitations and loose ends that aren't fixed yet. When one is fixed, remov
 
 | Issue | Where | Found | Plan |
 |---|---|---|---|
-| **16 items are open in PENDING_FIXES.md: bugs 1–10 from the Steps 12–15 reviews (3 high severity: webhook fee, blog post delete, session revocation) and owner change requests 11–16 (brand "Astro Shashank" and logo, font precache, R2 media, astrologer photos, Medium-style blogs, UI polish; spec in README §19)** | See [PENDING_FIXES.md](PENDING_FIXES.md) | Steps 12–15 reviews (2026-10-02) | Apply every item in PENDING_FIXES.md before Step 16 |
 | Owner and astrologer login throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/auth/login-rate-limit.ts` | Step 3 | Choose the production topology or a shared limiter store in Step 16 |
 | Blog comment throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/blog/comment-rate-limit.ts` | Step 14 | Choose the production topology or a shared limiter store in Step 16 |
 | `npm audit` reports 5 moderate and 8 high issues in the backend development dependency tree; the production-only audit reports 0 | `backend/package-lock.json` | Step 1 | Review dependency upgrades with the Prisma stable upgrade before launch |

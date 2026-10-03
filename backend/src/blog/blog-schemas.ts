@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { blogDocumentSchema, documentText, imageUrls } from "./blog-content";
 
 const trimmedText = (maximum: number) => z.string().trim().min(1).max(maximum);
 
@@ -21,11 +22,15 @@ export const blogListQuerySchema = z.object({
 
 export const blogWriteSchema = z.object({
   title: trimmedText(120),
-  body: z.string().trim().min(1),
+  body: blogDocumentSchema,
+  coverMediaId: z.uuid().nullable(),
   status: z.enum(["draft", "published"]),
-}).strict();
+}).strict().superRefine((value, context) => {
+  const hasText = documentText(value.body).length > 0;
+  const hasImage = imageUrls(value.body).length > 0;
+  if (!hasText && !hasImage) context.addIssue({ code: "custom", path: ["body"], message: "Add some content to the post." });
+});
 
 export const blogCommentSchema = z.object({
   body: trimmedText(500),
 }).strict();
-

@@ -233,7 +233,7 @@ describe('CallRoomPage', () => {
     mockApi('2099-10-01T10:00:00Z', '2099-10-01T10:15:00Z')
     renderUserCall()
 
-    expect(await screen.findByText('Please wait. Your call will start at 3:30 PM.')).toBeDefined()
+    expect(await screen.findByText('Please wait. Your call will start at 3:30 pm.')).toBeDefined()
     expect(document.querySelector('.breathe-circle')).not.toBeNull()
     expect(getUserMedia).not.toHaveBeenCalled()
 
@@ -550,4 +550,3 @@ describe('CallRoomPage', () => {
     expect(screen.getByRole('button', { name: 'Try again' })).toBeDefined()
   })
 })
-

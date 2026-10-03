@@ -5,6 +5,7 @@ import {
   Button,
   Card,
   PolicyLinks,
+  PageHeader,
   Skeleton,
   Toast,
   UserDetailsForm,
@@ -101,8 +102,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <section className="screen user-screen">
-      <h1>Settings</h1>
+    <section className="screen user-screen reading-screen">
+      <PageHeader title="Settings" />
 
       {loading ? (
         <Card className="stack" aria-busy="true">
@@ -134,7 +135,7 @@ export default function SettingsPage() {
             <h2>Your details</h2>
             <label className="field settings-email">
               <span className="field__label">Email</span>
-              <input className="input" readOnly value={user.email} />
+              <input aria-disabled="true" className="input" readOnly value={user.email} />
               <span className="field__hint">Your email comes from Google and can’t be edited.</span>
             </label>
             <UserDetailsForm

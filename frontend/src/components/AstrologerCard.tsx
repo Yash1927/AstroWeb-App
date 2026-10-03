@@ -8,6 +8,7 @@ export type AstrologerCardProfile = {
   experienceYears: number
   id: string
   languages: string[]
+  photoUrl?: string | null
 }
 
 type AstrologerCardProps = {
@@ -19,7 +20,7 @@ export function AstrologerCard({ onCall, profile }: AstrologerCardProps) {
   return (
     <Card className="astrologer-card" interactive>
       <div className="astrologer-card__header">
-        <Avatar id={profile.id} name={profile.displayName} size={56} />
+        <Avatar id={profile.id} name={profile.displayName} size={56} src={profile.photoUrl} />
         <div>
           <h3>{profile.displayName || 'Your display name'}</h3>
           <p className="astrologer-card__experience">

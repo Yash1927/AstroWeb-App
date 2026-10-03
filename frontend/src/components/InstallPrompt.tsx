@@ -80,9 +80,9 @@ export function InstallPrompt() {
     }
 
     return (
-      <aside aria-label="Install AstroWebApp" className="install-banner">
+      <aside aria-label="Install Astromaitreyi" className="install-banner">
         <div>
-          <strong>Install AstroWebApp</strong>
+          <strong>Install Astromaitreyi</strong>
           <p>Open it from your home screen whenever you need it.</p>
         </div>
         <div className="install-banner__actions">
@@ -100,7 +100,7 @@ export function InstallPrompt() {
     }
 
     return (
-      <aside aria-label="Install AstroWebApp" className="install-banner">
+      <aside aria-label="Install Astromaitreyi" className="install-banner">
         <p>To install: tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>.</p>
         <Button onClick={dismiss} variant="text">Got it</Button>
       </aside>

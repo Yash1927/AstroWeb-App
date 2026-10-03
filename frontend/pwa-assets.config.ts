@@ -11,24 +11,24 @@ function assetName(type: AssetType, size: ResolvedAssetSize) {
 }
 
 export default defineConfig({
-  images: ['public/app-icon.svg'],
+  images: ['public/app-icon-source.png'],
   logLevel: 'silent',
   manifestIconsEntry: false,
   preset: {
     apple: {
-      padding: 0,
+      padding: 0.06,
       resizeOptions: { background: '#FFFBEB', fit: 'contain' },
       sizes: [180],
     },
     assetName,
     maskable: {
-      padding: 0,
+      padding: 0.2,
       resizeOptions: { background: '#FFFBEB', fit: 'contain' },
       sizes: [512],
     },
     png: { compressionLevel: 9, quality: 85 },
     transparent: {
-      padding: 0,
+      padding: 0.06,
       resizeOptions: { background: '#FFFBEB', fit: 'contain' },
       sizes: [192, 512],
     },

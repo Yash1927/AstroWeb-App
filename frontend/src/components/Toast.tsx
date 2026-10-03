@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 
 type ToastProps = {
@@ -14,6 +14,15 @@ export function Toast({
   onDismiss,
   open,
 }: ToastProps) {
+  const toastRef = useRef<HTMLDivElement>(null)
+
+  useLayoutEffect(() => {
+    const toast = toastRef.current
+    if (!toast) return
+    if (open) toast.dataset.wasOpen = 'true'
+    toast.dataset.state = open ? 'open' : toast.dataset.wasOpen === 'true' ? 'closed' : 'idle'
+  }, [open])
+
   useEffect(() => {
     if (!open) return
 
@@ -26,7 +35,8 @@ export function Toast({
       aria-hidden={!open}
       aria-live={kind === 'error' ? 'assertive' : 'polite'}
       className={`toast toast--${kind}`}
-      data-state={open ? 'open' : 'closed'}
+      data-state={open ? 'open' : 'idle'}
+      ref={toastRef}
       role={kind === 'error' ? 'alert' : 'status'}
     >
       <p className="toast__message">{message}</p>

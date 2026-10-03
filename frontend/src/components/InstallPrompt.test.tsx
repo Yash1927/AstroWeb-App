@@ -31,13 +31,13 @@ describe('InstallPrompt', () => {
     renderPrompt()
     window.dispatchEvent(event)
 
-    expect(await screen.findByText('Install AstroWebApp')).toBeDefined()
+    expect(await screen.findByText('Install Astromaitreyi')).toBeDefined()
     await userEvent.setup().click(screen.getByRole('button', { name: 'Not now' }))
-    expect(screen.queryByText('Install AstroWebApp')).toBeNull()
+    expect(screen.queryByText('Install Astromaitreyi')).toBeNull()
     expect(window.localStorage.getItem('astrowebapp-install-dismissed')).toBe('true')
 
     window.dispatchEvent(installEvent())
-    expect(screen.queryByText('Install AstroWebApp')).toBeNull()
+    expect(screen.queryByText('Install Astromaitreyi')).toBeNull()
   })
 
   it('calls the browser install prompt', async () => {
@@ -89,6 +89,6 @@ describe('InstallPrompt', () => {
     renderPrompt()
     window.dispatchEvent(installEvent())
 
-    expect(screen.queryByText('Install AstroWebApp')).toBeNull()
+    expect(screen.queryByText('Install Astromaitreyi')).toBeNull()
   })
 })

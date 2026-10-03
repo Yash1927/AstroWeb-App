@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ReactNode } from 'react'
 import {
   Link,
   NavLink,
@@ -6,8 +6,6 @@ import {
   Route,
   Routes,
 } from 'react-router-dom'
-import OwnerPage from './screens/OwnerPage'
-import AstrologerPage from './screens/AstrologerPage'
 import HomePage from './screens/HomePage'
 import HistoryPage from './screens/HistoryPage'
 import SettingsPage from './screens/SettingsPage'
@@ -15,11 +13,23 @@ import CallRoomPage from './screens/CallRoomPage'
 import BlogsPage from './screens/BlogsPage'
 import BlogPostPage from './screens/BlogPostPage'
 import PolicyPage, { type PolicyPageKind } from './screens/PolicyPage'
-import { InstallPrompt } from './components'
+import { AppBar, AppBrand, InstallPrompt } from './components'
 
 const DesignPage = import.meta.env.DEV
   ? lazy(() => import('./screens/DesignPage'))
   : null
+const AstrologerPage = lazy(() => import('./screens/AstrologerPage'))
+const OwnerPage = lazy(() => import('./screens/OwnerPage'))
+
+function PanelFallback() {
+  return (
+    <main aria-busy="true" className="standalone-page screen">
+      <section className="card home-state">
+        <p>Loading panel…</p>
+      </section>
+    </main>
+  )
+}
 
 type TabIconProps = {
   name: 'home' | 'history' | 'blogs' | 'settings'
@@ -65,12 +75,12 @@ const tabs = [
   { label: 'Settings', name: 'settings' as const, path: '/settings' },
 ]
 
-function BottomTabBar() {
+function MainNavigation() {
   return (
-    <nav aria-label="Main navigation" className="bottom-tab-bar">
+    <nav aria-label="Main navigation" className="main-navigation">
       {tabs.map((tab) => (
         <NavLink
-          className="bottom-tab-bar__link"
+          className="main-navigation__link"
           end={tab.end}
           key={tab.path}
           to={tab.path}
@@ -87,10 +97,23 @@ function UserShell() {
   return (
     <div className="app-shell">
       <InstallPrompt />
+      <div className="app-bar-wrap">
+        <AppBar actions={<MainNavigation />} />
+      </div>
       <main className="app-main">
         <Outlet />
       </main>
-      <BottomTabBar />
+    </div>
+  )
+}
+
+function CallShell({ children, panelLabel }: { children: ReactNode; panelLabel?: string }) {
+  return (
+    <div className="call-shell">
+      <div className="app-bar-wrap">
+        <AppBar panelLabel={panelLabel} />
+      </div>
+      {children}
     </div>
   )
 }
@@ -99,6 +122,7 @@ function NotFound() {
   return (
     <main className="standalone-page screen">
       <section className="card">
+        <AppBrand large to="/" />
         <h1>Page not found</h1>
         <p>This page does not exist.</p>
         <Link className="button button--secondary" to="/">
@@ -140,7 +164,7 @@ function OfflinePage() {
   return (
     <main className="standalone-page offline-page screen">
       <section className="card">
-        <div aria-hidden="true" className="offline-page__mark">A</div>
+        <AppBrand large />
         <h1>You're offline</h1>
         <p role="status">You're offline. Please check your internet connection.</p>
       </section>
@@ -164,13 +188,13 @@ function App() {
           <Route key={path} path={path} element={<PolicyPage kind={path} />} />
         ))}
       </Route>
-      <Route path="call/:bookingId" element={<CallRoomPage audience="user" />} />
-      <Route path="astrologer" element={<AstrologerPage />} />
+      <Route path="call/:bookingId" element={<CallShell><CallRoomPage audience="user" /></CallShell>} />
+      <Route path="astrologer" element={<Suspense fallback={<PanelFallback />}><AstrologerPage /></Suspense>} />
       <Route
         path="astrologer/call/:bookingId"
-        element={<CallRoomPage audience="astrologer" />}
+        element={<CallShell panelLabel="Astrologer panel"><CallRoomPage audience="astrologer" /></CallShell>}
       />
-      <Route path="owner" element={<OwnerPage />} />
+      <Route path="owner" element={<Suspense fallback={<PanelFallback />}><OwnerPage /></Suspense>} />
       {DesignPage ? (
         <Route
           path="_design"

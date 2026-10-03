@@ -7,6 +7,7 @@ import {
   type SessionManager,
 } from "../src/auth/session";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
+import { logRouteError } from "../src/http/route-error-log";
 import {
   activeSchema,
   astrologerIdSchema,
@@ -25,10 +26,12 @@ import {
 } from "../src/owner/owner-service";
 import { blogService, BlogNotFoundError, type BlogService } from "../src/blog/blog-service";
 import { ownerCommentParamsSchema } from "../src/blog/blog-schemas";
+import { getMediaService, MediaUploadError, type MediaService } from "../src/media/media-service";
 
 type OwnerRouterDependencies = {
   owners: OwnerService;
   blogs?: BlogService;
+  media?: MediaService;
   sessions: SessionManager;
 };
 
@@ -43,10 +46,11 @@ function respondWithOwnerError(error: unknown, response: Response) {
     return;
   }
 
+  logRouteError("owner.route", error);
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
-export function createOwnerRouter({ owners, blogs = blogService, sessions }: OwnerRouterDependencies) {
+export function createOwnerRouter({ owners, blogs = blogService, media, sessions }: OwnerRouterDependencies) {
   const router = Router();
 
   router.use(requireOwner(sessions, owners));
@@ -70,7 +74,8 @@ export function createOwnerRouter({ owners, blogs = blogService, sessions }: Own
         clearSessionCookieOptions("owner"),
       );
       response.status(204).end();
-    } catch {
+    } catch (error) {
+      logRouteError("owner.logout", error);
       response.status(503).json({ error: "The service is unavailable. Please try again." });
     }
   });
@@ -110,6 +115,20 @@ export function createOwnerRouter({ owners, blogs = blogService, sessions }: Own
       response.json({ astrologer: await owners.getAstrologer(params.id) });
     } catch (error) {
       respondWithOwnerError(error, response);
+    }
+  });
+
+  router.delete("/astrologers/:id/photo", async (request, response) => {
+    if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
+    const params = parseOrRespond(astrologerIdSchema, request.params, response);
+    if (!params) return;
+    if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
+    try {
+      await (media ?? getMediaService()).removeProfileAsOwner(params.id);
+      response.status(204).end();
+    } catch (error) {
+      if (error instanceof MediaUploadError) response.status(error.status).json({ error: error.message });
+      else respondWithOwnerError(error, response);
     }
   });
 
@@ -201,7 +220,8 @@ export function createOwnerRouter({ owners, blogs = blogService, sessions }: Own
     if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
     try {
       response.json({ comments: await blogs.listRecentComments() });
-    } catch {
+    } catch (error) {
+      logRouteError("owner.blog-comments.list", error);
       response.status(503).json({ error: "Comments are unavailable. Please try again." });
     }
   });
@@ -216,7 +236,10 @@ export function createOwnerRouter({ owners, blogs = blogService, sessions }: Own
       response.status(204).end();
     } catch (error) {
       if (error instanceof BlogNotFoundError) response.status(404).json({ error: error.message });
-      else response.status(503).json({ error: "The comment could not be deleted. Please try again." });
+      else {
+        logRouteError("owner.blog-comments.delete", error);
+        response.status(503).json({ error: "The comment could not be deleted. Please try again." });
+      }
     }
   });
 

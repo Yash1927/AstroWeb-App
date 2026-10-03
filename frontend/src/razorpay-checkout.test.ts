@@ -50,6 +50,8 @@ describe('openRazorpayCheckout', () => {
       order_id: 'order_test',
       amount: 30_000,
       currency: 'INR',
+      image: 'http://localhost:3000/logo.jpg',
+      name: 'Astromaitreyi',
       prefill: {
         name: 'Maya Shah',
         email: 'maya@example.com',

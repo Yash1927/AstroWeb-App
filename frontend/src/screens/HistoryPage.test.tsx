@@ -35,10 +35,9 @@ describe('HistoryPage', () => {
 
     expect(await screen.findByText('No upcoming calls.')).toBeDefined()
     expect(screen.getByText('No past calls yet.')).toBeDefined()
-    expect(screen.getByText('Subscription calls left: 3')).toBeDefined()
+    expect(screen.getByText('Subscription: 3 calls left')).toBeDefined()
     expect(fetchMock).toHaveBeenCalledWith('/api/me/bookings', expect.objectContaining({
       credentials: 'same-origin',
     }))
   })
 })
-
