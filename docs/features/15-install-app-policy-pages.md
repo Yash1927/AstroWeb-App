@@ -49,9 +49,9 @@ Make AstroWebApp installable with a placeholder manifest and icons, an auto-upda
 4. In iPhone/iPad Safari over HTTPS, confirm the one-time **Share → Add to Home Screen** hint appears before installation and not after dismissal or standalone launch.
 5. Install and launch the app on Android/desktop. Turn off the connection after the shell has loaded and confirm the exact offline message. Confirm `/api`, `/ws`, call-room and payment requests are absent from the precache.
 6. With the normal backend and frontend development servers running, open `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about` and `/pricing` from Home and signed-in Settings. Compare Pricing with the owner’s current Settings values.
-7. Before launch, replace every text block beginning with `[Owner:` and complete the real Razorpay policy review.
+7. Before launch, fill the five remaining `[OWNER: ...]` business facts and complete legal and Razorpay policy review.
 
 ## Follow-ups and known issues
 
 - Real install, standalone launch and installed-iPhone Google sign-in behavior require physical devices and HTTPS.
-- The owner must replace every clearly marked policy placeholder before requesting Razorpay live-mode approval.
+- The dated policy copy is in place. Five business-contact, tax and jurisdiction facts remain clearly marked for the owner before Razorpay live-mode approval.

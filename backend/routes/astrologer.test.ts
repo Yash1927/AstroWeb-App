@@ -17,6 +17,7 @@ import { createAstrologerRouter } from "./Astrologer";
 import { createAstrologerAuthRouter } from "./AstrologerAuth";
 import { BlogMediaValidationError, type BlogService } from "../src/blog/blog-service";
 import type { MediaService } from "../src/media/media-service";
+import { MediaUploadRateLimiter } from "../src/media/media-upload-rate-limit";
 
 const astrologerId = "ee6438fd-fc87-4d4c-a3ec-ebac07a814f0";
 const ownBookingId = "4090cd52-cb14-4167-834d-ee7024fd9bda";
@@ -170,6 +171,7 @@ function testApp(
   bookings = fakeBookings(),
   blogs = fakeBlogs(),
   media = fakeMedia(),
+  uploadRateLimiter = new MediaUploadRateLimiter(),
 ) {
   const app = express();
   app.use(express.json());
@@ -179,7 +181,7 @@ function testApp(
   );
   app.use(
     "/api/astrologer",
-    createAstrologerRouter({ astrologers, availability, bookings, blogs, media: media as unknown as MediaService, sessions }),
+    createAstrologerRouter({ astrologers, availability, bookings, blogs, media: media as unknown as MediaService, uploadRateLimiter, sessions }),
   );
   return { app, astrologers, availability, bookings, blogs, media, sessions };
 }
@@ -258,6 +260,39 @@ describe("protected astrologer routes", () => {
     const inactive = fakeAstrologers();
     inactive.astrologerIsActive = vi.fn(async () => false);
     expect((await request(testApp(inactive).app).get("/api/astrologer/session")).status).toBe(401);
+  });
+
+  it("does not let a user session call any astrologer route that takes an id", async () => {
+    const bookings = fakeBookings();
+    const blogs = fakeBlogs();
+    const media = fakeMedia();
+    const userSession: ResolvedSession = { id: "user-session", role: "user", subjectId: "user-1" };
+    const { app } = testApp(
+      fakeAstrologers(),
+      fakeSessions(userSession),
+      new LoginRateLimiter(),
+      fakeAvailability(),
+      bookings,
+      blogs,
+      media,
+    );
+    const blogId = "43f7d52f-98aa-4f2d-bc32-3baa7382080f";
+    const commentId = "8b834d55-89c3-47d2-ab28-b8373842fd40";
+    const mediaId = "6fab01f4-20a8-4822-9de2-8d625ca26d29";
+    const responses = await Promise.all([
+      request(app).get(`/api/astrologer/bookings/${ownBookingId}`),
+      request(app).put(`/api/astrologer/blogs/${blogId}`).send({}),
+      request(app).delete(`/api/astrologer/blogs/${blogId}`),
+      request(app).delete(`/api/astrologer/blogs/${blogId}/comments/${commentId}`),
+      request(app).delete(`/api/astrologer/media/${mediaId}`),
+    ]);
+
+    expect(responses.every((response) => response.status === 401)).toBe(true);
+    expect(bookings.getAstrologerBooking).not.toHaveBeenCalled();
+    expect(blogs.saveAstrologerPost).not.toHaveBeenCalled();
+    expect(blogs.deleteAstrologerPost).not.toHaveBeenCalled();
+    expect(blogs.deleteAstrologerComment).not.toHaveBeenCalled();
+    expect(media.deleteOwnAsset).not.toHaveBeenCalled();
   });
 
   it("reports the password gate and deletes the session on logout", async () => {
@@ -510,6 +545,36 @@ describe("protected astrologer routes", () => {
     );
 
     expect((await request(app).delete("/api/astrologer/profile/photo")).status).toBe(401);
+    expect((await request(app).post("/api/astrologer/profile/photo").attach("image", Buffer.from("image"), "photo.png")).status).toBe(401);
     expect(media.removeOwnProfile).not.toHaveBeenCalled();
+    expect(media.uploadProfile).not.toHaveBeenCalled();
+  });
+
+  it("rate-limits profile and blog image uploads before reading another file", async () => {
+    const media = fakeMedia();
+    const limiter = new MediaUploadRateLimiter({ limit: 1, windowMs: 60_000 });
+    const { app } = testApp(
+      fakeAstrologers(),
+      fakeSessions(),
+      new LoginRateLimiter(),
+      fakeAvailability(),
+      fakeBookings(),
+      fakeBlogs(),
+      media,
+      limiter,
+    );
+
+    const first = await request(app)
+      .post("/api/astrologer/profile/photo")
+      .attach("image", Buffer.from("first"), "photo.png");
+    const blocked = await request(app)
+      .post("/api/astrologer/blog-images")
+      .attach("image", Buffer.from("second"), "blog.png");
+
+    expect(first.status).toBe(201);
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers["retry-after"]).toBe("60");
+    expect(media.uploadProfile).toHaveBeenCalledOnce();
+    expect(media.uploadBlogImage).not.toHaveBeenCalled();
   });
 });

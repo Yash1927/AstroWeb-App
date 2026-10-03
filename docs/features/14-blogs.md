@@ -51,5 +51,5 @@ Fill this in when the step is done.
 
 ## Follow-ups and known issues
 
-- Comment throttling is process-local. A shared production limiter remains part of the Step 16 topology review.
+- Launch uses one backend instance so process-local comment throttling is authoritative; multiple instances require a shared limiter store.
 - Real Google redirect and three-role browser moderation remain manual checks.

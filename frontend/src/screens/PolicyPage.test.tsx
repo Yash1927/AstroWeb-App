@@ -29,12 +29,73 @@ afterEach(() => {
 })
 
 describe('PolicyPage', () => {
-  it('shows the required shipping statement and an owner placeholder', () => {
+  it.each([
+    ['about', 'About us'],
+    ['contact', 'Contact us'],
+    ['privacy', 'Privacy policy'],
+    ['refunds', 'Cancellation and refunds'],
+    ['shipping', 'Shipping policy'],
+    ['terms', 'Terms and conditions'],
+  ] as const)('shows dated real copy on the %s page', (kind, title) => {
+    render(<MemoryRouter><PolicyPage kind={kind} /></MemoryRouter>)
+
+    expect(screen.getByRole('heading', { name: title })).toBeDefined()
+    expect(screen.getByText('Last updated: 2026-10-03')).toBeDefined()
+    expect(screen.queryByText(/\[Owner:/)).toBeNull()
+  })
+
+  it('explains digital delivery for every call type', () => {
     render(<MemoryRouter><PolicyPage kind="shipping" /></MemoryRouter>)
 
-    expect(screen.getByRole('heading', { name: 'Shipping policy' })).toBeDefined()
-    expect(screen.getByText('Services are delivered online or by phone. Nothing is shipped.')).toBeDefined()
-    expect(screen.getByText(/\[Owner: add any other service-delivery details/)).toBeDefined()
+    expect(screen.getByText(/Nothing is shipped and there are no delivery charges/)).toBeDefined()
+    expect(screen.getByText(/Normal consultation is delivered as an audio call inside the app/)).toBeDefined()
+    expect(screen.getByText(/Urgent or Subscription consultation is delivered by phone/)).toBeDefined()
+  })
+
+  it('includes the terms disclaimer, account rules and consumer grievance timing', () => {
+    render(<MemoryRouter><PolicyPage kind="terms" /></MemoryRouter>)
+
+    expect(screen.getByText(/must be at least 18 years old/)).toBeDefined()
+    expect(screen.getByText(/not a substitute for medical, legal, financial or psychological advice/)).toBeDefined()
+    expect(screen.getByText(/independent consultants and are not employees/)).toBeDefined()
+    expect(screen.getByText(/Payments are processed by Razorpay/)).toBeDefined()
+    expect(screen.getByText(/acknowledge a consumer complaint within 48 hours/)).toBeDefined()
+    expect(screen.getByText(/resolve it within one month/)).toBeDefined()
+  })
+
+  it('describes privacy law, processors, phone use and deletion requests', () => {
+    render(<MemoryRouter><PolicyPage kind="privacy" /></MemoryRouter>)
+
+    expect(screen.getByText(/Digital Personal Data Protection Act, 2023/)).toBeDefined()
+    expect(screen.getByText(/treat birth details as sensitive/)).toBeDefined()
+    expect(screen.getByText(/phone number is not used for marketing/)).toBeDefined()
+    expect(screen.getByText(/Google Identity Services/)).toBeDefined()
+    expect(screen.getByText(/Cloudflare R2/)).toBeDefined()
+    expect(screen.getByText(/request access, correction or deletion/)).toBeDefined()
+  })
+
+  it('states the implemented payment, conflict-refund and missed-call rules', () => {
+    render(<MemoryRouter><PolicyPage kind="refunds" /></MemoryRouter>)
+
+    expect(screen.getByText(/Normal calls are free, so there is no payment to refund/)).toBeDefined()
+    expect(screen.getByText(/automatically asks Razorpay to refund/)).toBeDefined()
+    expect(screen.getByText(/does not issue an automatic refund or automatically restore a Subscription credit/)).toBeDefined()
+    expect(screen.getByText(/usually appears within 5–7 working days/)).toBeDefined()
+  })
+
+  it('keeps only the five requested owner-fact placeholders', () => {
+    render(<MemoryRouter><PolicyPage kind="contact" /></MemoryRouter>)
+
+    const pageText = document.body.textContent ?? ''
+    expect(pageText).toContain('Shashank Pokhariyal')
+    expect(pageText).toContain('[OWNER: registered address]')
+    expect(pageText).toContain('[OWNER: support email]')
+    expect(pageText).toContain('[OWNER: support phone]')
+    expect(pageText).toContain('[OWNER: GSTIN if any]')
+
+    cleanup()
+    render(<MemoryRouter><PolicyPage kind="terms" /></MemoryRouter>)
+    expect(document.body.textContent).toContain('[OWNER: city for jurisdiction]')
   })
 
   it('loads every displayed price and duration from public Settings', async () => {
@@ -46,6 +107,8 @@ describe('PolicyPage', () => {
     expect(screen.getByText('₹999 for 4 calls')).toBeDefined()
     expect(screen.getByText('15 minutes · Talk inside the app')).toBeDefined()
     expect(screen.getAllByText(/15 minutes/)).toHaveLength(3)
+    expect(screen.getByText(/inclusive of applicable taxes, if any/)).toBeDefined()
+    expect(screen.getByText('Last updated: 2026-10-03')).toBeDefined()
   })
 
   it('keeps the public Pricing page usable when Settings cannot load', async () => {

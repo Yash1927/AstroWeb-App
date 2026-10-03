@@ -180,6 +180,36 @@ describe("protected owner routes", () => {
     expect(response.status).toBe(401);
   });
 
+  it("does not let a user session call any owner route that takes an id", async () => {
+    const owners = fakeOwners();
+    const blogs = fakeBlogs();
+    const media = fakeMedia();
+    const userSession: ResolvedSession = { id: "user-session", role: "user", subjectId: "user-1" };
+    const { app } = testApp(
+      owners,
+      fakeSessions(userSession),
+      new LoginRateLimiter(),
+      blogs,
+      media,
+    );
+    const commentId = "8b834d55-89c3-47d2-ab28-b8373842fd40";
+    const responses = await Promise.all([
+      request(app).get(`/api/owner/astrologers/${astrologerId}`),
+      request(app).delete(`/api/owner/astrologers/${astrologerId}/photo`),
+      request(app).patch(`/api/owner/astrologers/${astrologerId}`).send({}),
+      request(app).patch(`/api/owner/astrologers/${astrologerId}/listing`).send({}),
+      request(app).patch(`/api/owner/astrologers/${astrologerId}/active`).send({}),
+      request(app).post(`/api/owner/astrologers/${astrologerId}/reset-password`).send({}),
+      request(app).delete(`/api/owner/comments/${commentId}`),
+    ]);
+
+    expect(responses.every((response) => response.status === 401)).toBe(true);
+    expect(owners.getAstrologer).not.toHaveBeenCalled();
+    expect(owners.updateAstrologer).not.toHaveBeenCalled();
+    expect(blogs.deleteOwnerComment).not.toHaveBeenCalled();
+    expect(media.removeProfileAsOwner).not.toHaveBeenCalled();
+  });
+
   it("rejects unexpected data on otherwise empty owner requests", async () => {
     const { app } = testApp();
     const query = await request(app).get("/api/owner/session?unexpected=true");

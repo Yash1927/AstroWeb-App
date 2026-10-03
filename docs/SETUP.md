@@ -60,6 +60,8 @@ npm install
 | What | Folder | Command |
 |---|---|---|
 | Backend dev server | `backend/` | `npm run dev` |
+| Production frontend/backend build | `backend/` | `npm run build` |
+| Production server | `backend/` | `npm start` |
 | Create a development Normal booking | `backend/` | `npm run dev:make-booking -- --user USER_EMAIL --astrologer ASTROLOGER_EMAIL --starts-in MINUTES --duration MINUTES` |
 | Backend type check | `backend/` | `npm run typecheck` |
 | Backend tests | `backend/` | `npm test` |
@@ -137,6 +139,7 @@ The backend uses the official `razorpay` Node SDK. Orders and refunds require ba
 7. Run `npm run db:migrate` before the first upload. Schedule `npm run media:cleanup` at least daily in the production job runner. It deletes only media older than 24 hours that is not a profile photo, post cover or post-body image.
 
 Uploads accept real JPG, PNG or WebP bytes up to 5 MB. The backend re-encodes them to metadata-free WebP before R2 receives them. A changed or removed profile image and images belonging to a deleted post are removed from both R2 and `MediaAsset`.
+Profile and blog-image routes share a limit of 30 upload attempts per 10 minutes for one astrologer and IP. The limiter is held in the one backend process described under Production.
 
 ## Database setup
 
@@ -179,7 +182,16 @@ Vite continues to proxy `/api` and `/ws` to the one backend listener, so the bro
 
 ## Production
 
-_Write in Step 16:_ building and starting the app, production env vars, HTTPS and WebSockets, and switching Razorpay to live keys.
+1. Install both workspaces with `npm ci --prefix frontend` and `npm ci --prefix backend` from the repository root. Run `npm --prefix backend run build`; it builds the frontend, bundles the backend to `backend/dist/index.js`, and copies the frontend to `backend/dist/public`.
+2. Set `NODE_ENV=production`, `APP_ORIGIN=https://<your-domain>`, `SESSION_SECRET`, pooled `DATABASE_URL`, Google, TURN, R2 and Razorpay variables from the table above. Set `PORT` only when the host does not provide it. Keep `DIRECT_DATABASE_URL`, owner seed credentials and all secrets out of frontend/build-time variables; only `VITE_GOOGLE_CLIENT_ID` is public.
+3. Start from `backend/` with `npm start`. The one Node listener serves the SPA, `/api` and `/ws`; direct navigation falls back to `index.html`, but API and WebSocket paths never do.
+4. Put the service behind the host's HTTPS proxy. The app trusts exactly one proxy hop, redirects non-secure HTTP requests to `APP_ORIGIN`, and sends HSTS. Configure the proxy to preserve `X-Forwarded-Proto`, the client IP and WebSocket upgrades, with no short request timeout on `/ws`.
+5. Add the exact HTTPS origin and callback to Google. Use an HTTPS custom domain for R2 media and schedule `npm run media:cleanup` at least daily.
+6. Fill the five remaining `[OWNER: ...]` facts on the policy pages, obtain legal review and complete Razorpay site approval. Then replace all three test Razorpay variables with matching live-mode values, configure the live webhook at `https://<your-domain>/api/razorpay/webhook`, select the documented events, enable auto-capture, and perform the test-mode/manual checks before accepting money.
+
+Launch assumes exactly one backend process. Its login, booking, comment and media-upload limiters therefore see every request. Do not add a second backend instance until those maps are replaced with one shared rate-limit store.
+
+As of 2026-10-03, Prisma's official release-status page and npm still list Prisma 8 as release candidate `8.0.0-rc.19`, so no stable upgrade exists. `npm audit --omit=dev` in `backend/` and `npm audit` in `frontend/` report 0 vulnerabilities. The full backend audit reports 5 moderate and 8 high findings only through the Prisma 8 RC development/CLI tree. Keep those tools private and do not force npm's proposed Prisma 7 downgrade; reassess when Prisma 8 reaches general availability.
 
 ## Troubleshooting
 

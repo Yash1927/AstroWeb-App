@@ -112,7 +112,7 @@ Last updated: 2026-10-03
 | Blog post | `/blogs/:id` | Public loading/not-found/rich-document states, cover, author photo/date/read time, viewer-aware like, Google gate, oldest-first comments, route-scoped session draft restoration and confirmed commenter deletion | 14, pending fix 15 |
 | Settings | `/settings` | Session loading/error, signed-out Google screen, profile avatar, read-only email, editable details, upcoming-phone-call removal error, all seven policy links, save toast and logout | 6, 12, 15 |
 | Call room | `/call/:bookingId` | Protected loading/error/sign-in, before-start, waiting-for-astrologer, connected and ended states; microphone denial/retry; countdown/notice; mute, conditional Speaker, transient chat, device-change feedback, speaking rings, leave and rejoin | 9–11 |
-| Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Public readable content with owner placeholders; Pricing loading/error/live Settings states | 15 |
+| Policy pages | `/terms`, `/privacy`, `/refunds`, `/shipping`, `/contact`, `/about`, `/pricing` | Dated public policy copy with explicit remaining owner-fact placeholders; Pricing loading/error/live Settings states | 15 |
 | Offline | Current route while disconnected | Large Astromaitreyi logo/name and exact offline status message; current route returns when online | 15, pending fix 11 |
 | Astrologer panel | `/astrologer` | Session check, login, forced password change, own profile-photo preview/save/change/remove, availability, bookings, and rich draft/published blog authoring and moderation | 4, 7, 9, 12, 14; pending fixes 14–15 |
 | Astrologer call | `/astrologer/call/:bookingId` | The same four call states and complete controls, with caller-first-name waiting text and astrologer session protection | 9–11 |
@@ -130,7 +130,7 @@ Messages shown in the UI, so the same situation always uses the same words.
 | Offline | “You're offline. Please check your internet connection.” | Global offline screen |
 | Install banner | “Install Astromaitreyi” with **Install app** and **Not now** | Home in supported Android/desktop browsers |
 | iOS installation | “To install: tap Share, then Add to Home Screen.” | Home in iPhone/iPad Safari |
-| Shipping | “Services are delivered online or by phone. Nothing is shipped.” | Shipping policy |
+| Shipping | “Astromaitreyi provides digital consultation services. Nothing is shipped and there are no delivery charges.” | Shipping policy |
 | Design success toast | “Your changes were saved.” | Development design page |
 | Owner login error | “The email or password is incorrect.” | Owner login |
 | Settings scope | “Changes apply to new bookings only.” | Owner pricing and call settings |

@@ -57,5 +57,5 @@ Add the reusable server-side session foundation and the protected owner panel. T
 
 ## Follow-ups and known issues
 
-- The login limiter is process-local. A production deployment with multiple backend instances will need a shared limiter store; deployment topology is decided in Step 16.
+- Launch uses one backend instance so the process-local login limiter is authoritative; multiple instances require a shared limiter store.
 - The automated suite and live Neon smoke test passed. The owner's Chrome test then found four overlay/form issues; they were corrected with a frontend jsdom regression. The four cases need a final manual Chrome retest.

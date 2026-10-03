@@ -16,6 +16,7 @@ import {
   type CreatedBooking,
 } from "../src/booking/booking-service";
 import type { UserService } from "../src/user/user-service";
+import { BookingRateLimiter } from "../src/booking/booking-rate-limit";
 import { createBookingsRouter } from "./Bookings";
 
 const userA = "30f7af37-09f6-47d3-b24a-508d718f17c1";
@@ -56,11 +57,16 @@ function successfulBooking(): CreatedBooking {
   };
 }
 
-function testApp(bookings: BookingService, sessions = sessionsFor()) {
+function testApp(
+  bookings: BookingService,
+  sessions = sessionsFor(),
+  rateLimiter = new BookingRateLimiter(),
+) {
   const app = express();
   app.use(express.json());
   app.use("/api/bookings", createBookingsRouter({
     bookings,
+    rateLimiter,
     sessions,
     users: usersFor(),
   }));
@@ -136,6 +142,18 @@ describe("POST /api/bookings", () => {
       "Sorry, this time was just booked. Please pick another time.",
     );
 
+  });
+
+  it("rate-limits booking attempts by signed-in user and IP", async () => {
+    const bookings: BookingService = { createBooking: vi.fn(async () => ({ booking: successfulBooking() })) };
+    const app = testApp(bookings, sessionsFor(), new BookingRateLimiter({ limit: 1, windowMs: 60_000 }));
+
+    expect((await bookingRequest(app)).status).toBe(201);
+    const blocked = await bookingRequest(app);
+
+    expect(blocked.status).toBe(429);
+    expect(blocked.headers["retry-after"]).toBe("60");
+    expect(bookings.createBooking).toHaveBeenCalledOnce();
   });
 
   it("allows exactly one of two simultaneous requests for the same slot", async () => {

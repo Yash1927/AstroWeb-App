@@ -6,7 +6,7 @@ Last updated: 2026-10-03
 
 ## Current state
 
-Steps 1–15 are built. Pending-fix items 1–16 are complete; Step 16 remains.
+Steps 1–16 and pending-fix items 1–16 are built.
 
 - `frontend/` is an installable React single-page app branded Astromaitreyi, with a shared logo app bar, public Home, Blogs and policy pages, Normal/Urgent/Subscription booking, History, Settings, authenticated Normal-call rooms, and protected owner and astrologer workflows. Blog reading is public; liking and commenting use the existing Google sign-in without requiring booking details. `frontend/src/design.css` is the only app stylesheet.
 - `backend/` separates `app.ts` from the main HTTP/WebSocket listener so HTTP routers can be tested without opening a port. HTTP routes are mounted at `/api`; the authenticated WebSocket endpoint is attached at `/ws` on that same server.
@@ -93,7 +93,7 @@ flowchart LR
     Payments -->|late refund| Razorpay
 ```
 
-Production hosting is not built yet. README §1 requires the frontend, API and WebSocket endpoint to use one HTTPS domain; install prompts and service workers also require HTTPS outside localhost.
+In production, the backend trusts one hosting proxy, redirects browser HTTP requests to `APP_ORIGIN`, serves the built frontend with an SPA fallback, and handles `/api` plus `/ws` on the same listener. The platform terminates HTTPS and must forward WebSocket upgrades.
 
 ## Folder structure
 
@@ -179,6 +179,7 @@ docs/
 | `cors` | Credentialed allow-origin response headers | Boilerplate; moved to runtime dependencies in 1 |
 | `dotenv` | Load backend environment variables | Boilerplate; applied at server entry in 1 |
 | `tsx` | Watch and run backend TypeScript in development | 1 |
+| `esbuild` | Bundle the production backend while keeping runtime packages external | 16 (development only) |
 | TypeScript | Backend type-checking and frontend compilation | Direct backend dependency added in 1 |
 | Vitest | Backend tests plus frontend component regression tests | 1; frontend use added after 3 |
 | Prisma 8 packages | Contract emission, migration tooling and PostgreSQL runtime | Boilerplate; upgraded and completed in 2 |
@@ -460,7 +461,7 @@ Replacing a temporary password deletes all of that astrologer's sessions with on
 
 Cookie configurations for user, astrologer and owner roles live together with separate names. User and astrologer cookies use path `/` so shared APIs and `/ws` receive them; the owner cookie remains scoped to `/api/owner`. User sessions last 30 days; panel sessions last 12 hours.
 
-The login limiter is held in the backend process. It is correct for the current single-process development setup. A multi-instance production topology needs a shared rate-limit store in Step 16.
+Login, comment and media-upload limiters are held in the backend process. This is correct for the accepted single-instance launch topology. A multi-instance topology requires a shared rate-limit store before scaling out.
 
 ## Blog flow
 
@@ -470,9 +471,9 @@ Likes use the `BlogLike` composite key, so one user can have at most one like pe
 
 ## Media and rich-blog flow
 
-Multipart routes accept one in-memory file with a 5 MB parser limit. `MediaService` detects JPG, PNG or WebP bytes, auto-orients, resizes and re-encodes through Sharp without carrying metadata. Profile images become 512×512 WebP; blog images are at most 1600px wide. The service writes a random object key through the S3-compatible R2 client before recording dimensions, byte size, owner and key in `MediaAsset`. Replacements and removals delete both stores. `npm run media:cleanup` scans assets older than 24 hours and deletes only rows not referenced by a profile, cover or body URL.
+Multipart routes share a 30-attempt-per-10-minute limiter keyed by astrologer and IP, then accept one in-memory file with a 5 MB parser limit. `MediaService` detects JPG, PNG or WebP bytes, auto-orients, resizes and re-encodes through Sharp without carrying metadata. Profile images become 512×512 WebP; blog images are at most 1600px wide. The service writes a random object key through the S3-compatible R2 client before recording dimensions, byte size, owner and key in `MediaAsset`. Replacements and removals delete both stores. `npm run media:cleanup` scans assets older than 24 hours and deletes only rows not referenced by a profile, cover or body URL.
 
-TipTap sends JSON rather than HTML. The backend permits the documented block and mark set, rejects non-HTTP links, limits serialized content to 200 KB and 20 images, and confirms every image URL and cover belong to that astrologer. It normalizes link security attributes, derives the excerpt and 200-word-per-minute reading time, and saves those values with the document. The migration splits every former plain-text body on blank lines into TipTap paragraph nodes.
+TipTap sends JSON rather than HTML. The backend permits the documented block and mark set, rejects non-HTTP links and undeclared image attributes, limits serialized content to 200 KB and 20 images, and confirms every image URL and cover belong to that astrologer. It normalizes link security attributes, derives the excerpt and 200-word-per-minute reading time, and saves those values with the document. The migration splits every former plain-text body on blank lines into TipTap paragraph nodes.
 
 ## Differences from the spec
 

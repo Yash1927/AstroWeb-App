@@ -37,7 +37,19 @@ function inspectNode(node: unknown, issues: string[], depth = 0, parentType?: st
   };
   if (parentType && !allowedChildren[parentType]?.has(value.type)) issues.push("The post contains an invalid block order.");
   if (value.type === "heading" && ![2, 3].includes(Number(value.attrs?.level))) issues.push("Only level 2 and 3 headings are allowed.");
-  if (value.type === "image" && !validUrl(value.attrs?.src)) issues.push("Every image must have a valid HTTPS URL.");
+  if (value.type === "image") {
+    if (!validUrl(value.attrs?.src)) issues.push("Every image must have a valid HTTPS URL.");
+    const imageAttributes = value.attrs && !Array.isArray(value.attrs) ? Object.keys(value.attrs) : [];
+    if (imageAttributes.some((attribute) => !["src", "alt", "title"].includes(attribute))) {
+      issues.push("The post contains unsupported image details.");
+    }
+    if (value.attrs?.alt !== undefined && value.attrs.alt !== null && typeof value.attrs.alt !== "string") {
+      issues.push("The post contains invalid image details.");
+    }
+    if (value.attrs?.title !== undefined && value.attrs.title !== null && typeof value.attrs.title !== "string") {
+      issues.push("The post contains invalid image details.");
+    }
+  }
   if (value.type === "text" && typeof value.text !== "string") issues.push("The post contains invalid text.");
   for (const mark of value.marks ?? []) {
     if (!mark || !markTypes.has(mark.type)) issues.push("The post contains unsupported formatting.");

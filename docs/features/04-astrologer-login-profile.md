@@ -57,4 +57,4 @@ Add the protected astrologer panel and complete the reusable email/password sess
 
 ## Follow-ups and known issues
 
-- The login limiter is process-local. A shared production limiter remains part of the Step 16 deployment decision.
+- Launch uses one backend instance so the process-local login limiter is authoritative; multiple instances require a shared limiter store.

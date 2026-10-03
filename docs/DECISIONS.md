@@ -171,3 +171,17 @@ Use this format:
 - **Context:** README §19.1 requires unused uploads older than 24 hours to be removed, but it does not choose a scheduler and the current backend has no job-runner service.
 - **Decision:** Provide `npm run media:cleanup` as an idempotent command and have the production platform invoke it at least daily. The command rechecks profile, cover and body references immediately before each deletion.
 - **Consequences:** No scheduler library or always-on timer is added to the web process. The owner must configure one recurring deployment job; missed runs delay cleanup without deleting referenced media.
+
+## D-022: Launch with one backend instance and accept Prisma CLI audit findings
+- **Date:** 2026-10-03
+- **Status:** Accepted for launch
+- **Context:** Login, booking, comment and upload throttles use process memory. Horizontal instances would not share counters. The current frontend and backend production audits are clean, while the backend's 5 moderate and 8 high findings come only through the Prisma 8 RC development/CLI tree; npm's forced fix proposes a breaking Prisma 7 downgrade.
+- **Decision:** Launch one backend instance, keeping all four limiter groups authoritative. Keep Prisma/migration tooling private and accept its development-only audit findings until the stable Prisma review instead of forcing a breaking downgrade.
+- **Consequences:** A shared rate-limit store is required before a second backend instance. Production dependency audits remain a release gate; Prisma tooling must not be exposed as an application service.
+
+## D-023: One proxy hop and one production Node service
+- **Date:** 2026-10-03
+- **Status:** Accepted for launch
+- **Context:** README §1 requires the frontend, API and WebSocket endpoint on one HTTPS domain. Render and Railway terminate TLS before forwarding to Node.
+- **Decision:** Bundle the backend with esbuild, copy the Vite build beside it, serve the SPA from Express, and trust exactly one production proxy hop.
+- **Consequences:** `/api`, `/ws` and browser routes share first-party cookies. The host must preserve HTTPS protocol/client IP headers and WebSocket upgrades; a different proxy chain requires an explicit trust setting review.

@@ -17,12 +17,51 @@ describe("rich blog content", () => {
     });
   });
 
-  it("rejects unsafe links, unsupported nodes, more than 20 images and bodies over 200 KB", () => {
-    expect(blogDocumentSchema.safeParse({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Bad", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }] }] }).success).toBe(false);
-    expect(blogDocumentSchema.safeParse({ type: "doc", content: [{ type: "video" }] }).success).toBe(false);
+  it("rejects javascript links", () => {
+    const result = blogDocumentSchema.safeParse({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "Bad", marks: [{ type: "link", attrs: { href: "javascript:alert(1)" } }] }] }] });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map((issue) => issue.message)).toContain("Links must use HTTP or HTTPS.");
+  });
+
+  it("rejects unknown node types", () => {
+    const result = blogDocumentSchema.safeParse({ type: "doc", content: [{ type: "video" }] });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map((issue) => issue.message)).toContain("The post contains an unsupported block.");
+  });
+
+  it("rejects extra image attributes", () => {
+    const result = blogDocumentSchema.safeParse({
+      type: "doc",
+      content: [{ type: "image", attrs: { src: "https://media.example/image.webp", alt: "A chart", title: null, onerror: "alert(1)" } }],
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map((issue) => issue.message)).toContain("The post contains unsupported image details.");
+  });
+
+  it("allows 20 images and rejects the twenty-first", () => {
+    const images = (count: number) => ({
+      type: "doc",
+      content: Array.from({ length: count }, (_, index) => ({ type: "image", attrs: { src: `https://media.example/${index}.webp` } })),
+    });
+    expect(blogDocumentSchema.safeParse(images(20)).success).toBe(true);
+    const result = blogDocumentSchema.safeParse(images(21));
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map((issue) => issue.message)).toContain("A post can contain up to 20 images.");
+  });
+
+  it("allows exactly 200 KB and rejects one byte more", () => {
+    const emptyDocument = { type: "doc", content: [paragraph("")] };
+    const overhead = Buffer.byteLength(JSON.stringify(emptyDocument), "utf8");
+    const document = (bytes: number) => ({ type: "doc", content: [paragraph("x".repeat(bytes - overhead))] });
+    expect(Buffer.byteLength(JSON.stringify(document(200 * 1024)), "utf8")).toBe(200 * 1024);
+    expect(blogDocumentSchema.safeParse(document(200 * 1024)).success).toBe(true);
+    const result = blogDocumentSchema.safeParse(document(200 * 1024 + 1));
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.issues.map((issue) => issue.message)).toContain("The post is larger than 200 KB.");
+  });
+
+  it("rejects unsupported formatting", () => {
     expect(blogDocumentSchema.safeParse({ type: "doc", content: [{ type: "paragraph", content: [{ type: "text", text: "No strike", marks: [{ type: "strike" }] }] }] }).success).toBe(false);
-    expect(blogDocumentSchema.safeParse({ type: "doc", content: Array.from({ length: 21 }, (_, index) => ({ type: "image", attrs: { src: `https://media.example/${index}.webp` } })) }).success).toBe(false);
-    expect(blogDocumentSchema.safeParse({ type: "doc", content: [paragraph("x".repeat(205 * 1024))] }).success).toBe(false);
   });
 
   it("extracts text and image URLs for excerpts, reading time and ownership checks", () => {

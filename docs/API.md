@@ -32,7 +32,7 @@ Last updated: 2026-10-03
 | GET | `/api/me/bookings/:bookingId` | User | Returns one owned Normal booking for protected call-room navigation | 9 |
 | POST | `/api/auth/logout` | User | Deletes the current user session and clears its cookie | 6 |
 | GET | `/api/blogs?page=N` | Public | Returns 20 published post summaries, newest first | 14 |
-| GET | `/api/blogs/:id` | Public | Returns one published plain-text post and oldest-first comments; a valid user cookie adds viewer state | 14 |
+| GET | `/api/blogs/:id` | Public | Returns one published allow-listed rich post and oldest-first comments; a valid user cookie adds viewer state | 14 |
 | PUT | `/api/blogs/:id/like` | User | Toggles the signed-in user's one like | 14 |
 | POST | `/api/blogs/:id/comments` | User | Adds a rate-limited plain-text comment of up to 500 characters | 14 |
 | DELETE | `/api/blogs/:id/comments/:commentId` | Commenter | Deletes only that user's own comment | 14 |
@@ -156,6 +156,7 @@ Each item contains the booking id, call type/mode, UTC start/end, duration, stor
 - **Response:** `{booking}` contains id, astrologer id, call type/mode, UTC start/end, status, stored price, duration and `usedCredit`. Subscription confirmations also return the remaining `subscriptionCredits`.
 - **Transaction:** Before inserting, one explicit SQL bulk update changes all elapsed `pending_payment` holds for that astrologer to `expired`, then the server checks the one-upcoming-Normal rule where applicable. PostgreSQL's `Booking_no_overlap` exclusion constraint decides a simultaneous conflict.
 - **Errors:** Malformed required input returns `400`; no valid user session returns `401`; a missing or ineligible astrologer returns `404`. Incomplete details, an invalid/missing required phone, an unavailable/overlapping slot and a second upcoming Normal booking return `409` with a friendly message. Prisma 8 exposes the exclusion violation as `SqlQueryError.sqlState = "23P01"`; the mapper also follows a transaction `cause`. Order/database failures return `503` with a generic message.
+- **Rate limit:** Ten attempts per minute for one signed-in user and IP. Further attempts return `429` with `Retry-After`.
 
 ### POST /api/payments/verify
 
@@ -235,12 +236,12 @@ The role guard resolves only an astrologer session and then checks the matching 
 |---|---|---|
 | `GET /api/astrologer/profile` | No body or query | `{profile}` with id, email, display name, tags, experience, `profileSavedAt` and nullable `photoUrl` |
 | `PUT /api/astrologer/profile` | `displayName` 2–80 chars; zero to 20 expertise tags; zero to 20 language tags; each tag 1–40 chars; integer `experienceYears` 0–60 | `{profile}` after trimming and case-insensitive tag de-duplication |
-| `POST /api/astrologer/profile/photo` | `multipart/form-data` with one `image`; real JPG, PNG or WebP bytes, maximum 5 MB | `201` with processed `{asset}`; replaces only the signed-in astrologer's photo |
+| `POST /api/astrologer/profile/photo` | `multipart/form-data` with one `image`; real JPG, PNG or WebP bytes, maximum 5 MB | `201` with processed `{asset}`; replaces only the signed-in astrologer's photo; shared upload limit returns `429` with `Retry-After` |
 | `DELETE /api/astrologer/profile/photo` | Empty body, params and query | `204`; removes only the signed-in astrologer's photo |
-| `POST /api/astrologer/blog-images` | `multipart/form-data` with one `image`; real JPG, PNG or WebP bytes, maximum 5 MB | `201` with processed `{asset}` owned by the signed-in astrologer |
+| `POST /api/astrologer/blog-images` | `multipart/form-data` with one `image`; real JPG, PNG or WebP bytes, maximum 5 MB | `201` with processed `{asset}` owned by the signed-in astrologer; shared upload limit returns `429` with `Retry-After` |
 | `DELETE /api/astrologer/media/:id` | UUID media id; empty body and query | `204` for an owned, unreferenced image; foreign/missing ids return `404` and referenced media returns `409` |
 
-Both endpoints use the session subject id rather than accepting an astrologer id. The first successful save sets `profileSavedAt`; later saves keep that original time.
+Both upload endpoints use the session subject id rather than accepting an astrologer id and share 30 attempts per 10 minutes for one astrologer and IP. The first successful profile save sets `profileSavedAt`; later saves keep that original time.
 
 ### Own availability endpoints
 

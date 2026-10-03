@@ -15,6 +15,8 @@ Delete this file once every item is Done.
 
 Last updated: 2026-10-03
 
+Code audit confirmed on 2026-10-03: every numbered item and every C3 review item below is implemented and marked **Done**. Automated coverage is recorded in [TESTING.md](TESTING.md).
+
 ## Summary
 
 | # | Area | Problem | Severity | Status |
@@ -234,8 +236,7 @@ Items 2, 3 and the badge part of 10 belong here too.
 
 - **Razorpay:** switch the fee bearer to the business (see item 1).
 - **Cloudflare R2:** create the account, enable R2, create the bucket and an API token, and put the values in `backend/.env` (item 13).
-- **Logo:** confirm or replace it, since the wordmark reads "Astromaitreyi" (item 11).
-- **Policy pages:** replace every "[Owner: …]" placeholder before applying for Razorpay live mode.
+- **Policy pages:** Done in code. Before applying for Razorpay live mode, supply the five remaining business-contact, tax and jurisdiction facts shown as `[OWNER: ...]` placeholders and obtain legal review.
 
 ## Verified working in the reviews
 

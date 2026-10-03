@@ -12,6 +12,7 @@ import {
   type BookingService,
 } from "../src/booking/booking-service";
 import { createBookingSchema } from "../src/booking/booking-schemas";
+import { bookingRateLimiter, type BookingRateLimiter } from "../src/booking/booking-rate-limit";
 import { emptyObjectSchema, parseOrRespond } from "../src/http/validation";
 import { logRouteError } from "../src/http/route-error-log";
 import { userService, type UserService } from "../src/user/user-service";
@@ -20,6 +21,7 @@ type Dependencies = {
   bookings: BookingService;
   sessions: SessionManager;
   users: Pick<UserService, "userExists">;
+  rateLimiter?: BookingRateLimiter;
 };
 
 function respondWithBookingError(error: unknown, response: Response) {
@@ -41,11 +43,20 @@ function respondWithBookingError(error: unknown, response: Response) {
   response.status(503).json({ error: "Booking is unavailable. Please try again." });
 }
 
-export function createBookingsRouter({ bookings, sessions, users }: Dependencies) {
+export function createBookingsRouter({ bookings, rateLimiter = bookingRateLimiter, sessions, users }: Dependencies) {
   const router = Router();
   const userGuard = requireUser(sessions, users);
 
   router.post("/", userGuard, async (request, response) => {
+    const rate = rateLimiter.consume(rateLimiter.key(
+      response.locals.userSession.subjectId,
+      request.ip || request.socket.remoteAddress || "unknown",
+    ));
+    if (!rate.allowed) {
+      response.set("Retry-After", String(rate.retryAfterSeconds));
+      response.status(429).json({ error: "Too many booking attempts. Please wait before trying again." });
+      return;
+    }
     if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
     if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
     const body = parseOrRespond(createBookingSchema, request.body, response);

@@ -16,6 +16,30 @@ Last updated: 2026-10-03
 
 ---
 
+## 2026-10-03: Public policy copy
+- **Changed:** replaced draft copy on all seven public policy pages with dated, implementation-matched terms and notices.
+- **Covered:** service rules, privacy, digital delivery, pricing, payments, refunds, complaints and consumer grievance timing.
+- **Kept:** Pricing reads live Settings values; five owner-supplied contact, tax and jurisdiction facts remain explicit placeholders.
+- **Files:** `frontend/src/screens/PolicyPage.tsx`, its tests and affected as-built docs.
+- **Database / env vars:** none.
+- **Checks:** backend type-check and 151 tests pass (4 opt-in skipped); frontend lint, build and all 78 tests pass.
+
+## 2026-10-03: Step 16, security review and launch checklist
+- **Added:** cross-platform backend build/start scripts, one-domain production SPA hosting, one-proxy trust and HTTPS redirect handling.
+- **Fixed:** booking throttling and strict input checks on health/public/webhook routes.
+- **Verified:** README §12 controls, protected id-route access, production-disabled helpers and current Prisma 8 RC status.
+- **Files:** backend app/build/booking code and tests; Step 16 and affected as-built docs.
+- **Database / env vars:** none; `esbuild` added as a development dependency.
+- **Checks:** production build/start, type-check and lint pass; backend 151 pass/4 skipped, frontend 68 pass; production audits have 0 findings.
+
+## 2026-10-03: Media and rich-blog security follow-up
+- **Added:** one-process upload throttling at 30 attempts per 10 minutes per astrologer and IP, shared by both upload routes.
+- **Verified:** 5 MB/magic-byte checks, metadata-free WebP output, random keys, owner scoping and 24-hour orphan cleanup now have focused coverage.
+- **Hardened:** rich-blog tests cover JavaScript links, unknown nodes, strict image attributes, 200 KB and 20-image boundaries.
+- **Audits:** frontend and backend production dependencies have 0 findings; 13 backend findings remain confined to the Prisma RC development tree.
+- **Files:** media limiter/service tests, astrologer route tests, blog validator/tests and affected docs.
+- **Checks/docs:** no database or env changes; frontend lint/build and 68 tests pass; backend type-check and 142 tests pass with 4 opt-in tests skipped; affected docs updated.
+
 ## 2026-10-03: C3 browser-review fixes
 - **Changed:** renamed all user-visible branding to Astromaitreyi and added a 4.5 KB header icon.
 - **Fixed:** stable blog editing/autosave, initial overlay flashes, italics, neutral email, image-button positioning, styled uploads/crop sliders and confirmed photo removal.

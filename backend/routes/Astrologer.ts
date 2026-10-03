@@ -1,4 +1,4 @@
-import { Router, type Response } from "express";
+import { Router, type RequestHandler, type Response } from "express";
 import multer from "multer";
 import { requireAstrologer } from "../src/auth/require-astrologer";
 import {
@@ -33,6 +33,7 @@ import { logRouteError } from "../src/http/route-error-log";
 import { blogService, BlogMediaValidationError, BlogNotFoundError, type BlogService } from "../src/blog/blog-service";
 import { blogCommentParamsSchema, blogIdParamsSchema, blogWriteSchema } from "../src/blog/blog-schemas";
 import { getMediaService, MAX_UPLOAD_BYTES, MediaUploadError, type MediaService } from "../src/media/media-service";
+import { mediaUploadRateLimiter, type MediaUploadRateLimiter } from "../src/media/media-upload-rate-limit";
 import { z } from "zod";
 
 type Dependencies = {
@@ -41,6 +42,7 @@ type Dependencies = {
   bookings: BookingHistoryService;
   blogs?: BlogService;
   media?: MediaService;
+  uploadRateLimiter?: MediaUploadRateLimiter;
   sessions: SessionManager;
 };
 
@@ -85,9 +87,23 @@ function respondWithAstrologerError(error: unknown, response: Response) {
   response.status(503).json({ error: "The service is unavailable. Please try again." });
 }
 
-export function createAstrologerRouter({ astrologers, availability, bookings, blogs = blogService, media, sessions }: Dependencies) {
+export function createAstrologerRouter({ astrologers, availability, bookings, blogs = blogService, media, uploadRateLimiter = mediaUploadRateLimiter, sessions }: Dependencies) {
   const router = Router();
   router.use(requireAstrologer(sessions, astrologers));
+
+  const limitMediaUpload: RequestHandler = (request, response, next) => {
+    const key = uploadRateLimiter.key(
+      response.locals.astrologerSession.subjectId,
+      request.ip ?? request.socket.remoteAddress ?? "unknown",
+    );
+    const result = uploadRateLimiter.consume(key);
+    if (!result.allowed) {
+      response.set("Retry-After", String(result.retryAfterSeconds));
+      response.status(429).json({ error: "Too many images were uploaded. Please wait before trying again." });
+      return;
+    }
+    next();
+  };
 
   router.get("/session", async (request, response) => {
     if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
@@ -197,7 +213,7 @@ export function createAstrologerRouter({ astrologers, availability, bookings, bl
     }
   });
 
-  router.post("/profile/photo", receiveImage, async (request, response) => {
+  router.post("/profile/photo", limitMediaUpload, receiveImage, async (request, response) => {
     if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
     if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
     if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;
@@ -221,7 +237,7 @@ export function createAstrologerRouter({ astrologers, availability, bookings, bl
     } catch (error) { respondWithMediaError(error, response); }
   });
 
-  router.post("/blog-images", receiveImage, async (request, response) => {
+  router.post("/blog-images", limitMediaUpload, receiveImage, async (request, response) => {
     if (!parseOrRespond(emptyObjectSchema, request.params, response)) return;
     if (!parseOrRespond(emptyObjectSchema, request.query, response)) return;
     if (!parseOrRespond(emptyObjectSchema, request.body ?? {}, response)) return;

@@ -23,18 +23,14 @@ The steps come from [BUILD_PROMPTS.md](../BUILD_PROMPTS.md). Each status is one 
 | 13 | Subscription packs | Done | [13-subscription-packs.md](features/13-subscription-packs.md) | Existing credits confirm atomically; zero balances buy a snapshotted one-time pack through Razorpay. |
 | 14 | Blogs | Done | [14-blogs.md](features/14-blogs.md) | Public reading, Google-gated reactions, own authoring and scoped comment moderation are in place. |
 | 15 | Install as an app, policy pages | Done | [15-install-app-policy-pages.md](features/15-install-app-policy-pages.md) | Install assets, auto-updating app-shell service worker, offline handling, install guidance and public policy pages are in place. |
-| 16 | Security review and launch checklist | Not started | — | |
+| 16 | Security review and launch checklist | Done | [16-security-launch.md](features/16-security-launch.md) | Security audit, access regressions and one-domain production hosting are complete; real-device/provider checks remain manual. |
 
 ## Next up
 
-Pending-fix items 1–16 are complete. Start Step 16 when requested.
+All 16 build steps and pending-fix items 1–16 are complete. Follow the production and real-device launch checks in [SETUP.md](SETUP.md) and [TESTING.md](TESTING.md).
 
 ## Known issues
 
 Bugs, limitations and loose ends that aren't fixed yet. When one is fixed, remove it here and mention the fix in [CHANGELOG.md](CHANGELOG.md).
 
-| Issue | Where | Found | Plan |
-|---|---|---|---|
-| Owner and astrologer login throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/auth/login-rate-limit.ts` | Step 3 | Choose the production topology or a shared limiter store in Step 16 |
-| Blog comment throttling is stored in one backend process, so multiple production instances would not share attempt counts | `backend/src/blog/comment-rate-limit.ts` | Step 14 | Choose the production topology or a shared limiter store in Step 16 |
-| `npm audit` reports 5 moderate and 8 high issues in the backend development dependency tree; the production-only audit reports 0 | `backend/package-lock.json` | Step 1 | Review dependency upgrades with the Prisma stable upgrade before launch |
+The public policy copy is complete, but five owner-supplied contact, tax and jurisdiction facts remain as visible placeholders and require legal review before launch. The accepted single-instance launch topology and development-only audit findings are documented in [SETUP.md](SETUP.md) and [DECISIONS.md](DECISIONS.md).
